@@ -6,10 +6,10 @@ import {
   Dashboard,
   OrderDetail,
   OrdersView,
-  RecordsView,
   ReportsView,
 } from "../components/views";
-import { ConfirmModal } from "../components/ui";
+import { ConfirmModal, Toast } from "../components/ui";
+import { AdminView, SettingsView } from "../components/admin-view";
 import { orders } from "../lib/mock-data";
 import type { PedidoResponse } from "../lib/types";
 
@@ -20,6 +20,7 @@ export default function Home() {
     label: string;
     action: () => void;
   } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const select = (order: PedidoResponse) => {
     setSelected(order);
     setPage("detail");
@@ -81,10 +82,12 @@ export default function Home() {
     );
   else if (["clients", "vehicles", "catalog", "audit"].includes(page))
     content = (
-      <RecordsView
-        type={page as "clients" | "vehicles" | "catalog" | "audit"}
+      <AdminView
+        resource={page as "clients" | "vehicles" | "catalog" | "audit"}
+        notify={setToast}
       />
     );
+  else if (page === "settings") content = <SettingsView notify={setToast} />;
   else content = <ReportsView />;
   return (
     <AppShell page={page} onPage={setPage} onNewOrder={() => setPage("create")}>
@@ -100,9 +103,13 @@ export default function Home() {
         onClose={() => setConfirmation(null)}
         onConfirm={() => {
           confirmation?.action();
+          setToast(
+            "Acción confirmada como demostración. Los datos mock no cambiaron.",
+          );
           setConfirmation(null);
         }}
       />
+      <Toast message={toast} onClose={() => setToast(null)} />
     </AppShell>
   );
 }

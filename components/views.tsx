@@ -81,7 +81,11 @@ export function Dashboard({
           </div>
           <div className="compact-orders">
             {orders.slice(0, 5).map((order) => (
-              <button className={activeOrder.id === order.id ? "selected" : ""} key={order.id} onClick={() => setActiveOrder(order)}>
+              <button
+                className={activeOrder.id === order.id ? "selected" : ""}
+                key={order.id}
+                onClick={() => setActiveOrder(order)}
+              >
                 <div>
                   <strong>{order.numero}</strong>
                   <span>
@@ -95,13 +99,48 @@ export function Dashboard({
           </div>
         </div>
         <div className="panel dossier-preview">
-          <div className="dossier-kicker"><span>Dossier del pedido</span><StatusBadge status={activeOrder.estado} /></div>
+          <div className="dossier-kicker">
+            <span>Dossier del pedido</span>
+            <StatusBadge status={activeOrder.estado} />
+          </div>
           <h2>{activeOrder.numero}</h2>
-          <div className="dossier-identity"><div><span>Cliente</span><strong>{activeOrder.cliente}</strong></div><div><span>Moto</span><strong>{activeOrder.moto}</strong><small>{activeOrder.patente}</small></div></div>
-          <div className="dossier-note"><span>Motivo de ingreso</span><p>{activeOrder.observaciones}</p></div>
-          <div className="dossier-lines"><span>Ítems a revisar</span>{activeOrder.items.map(item=><div key={item.id}><b>{item.descripcion}</b><small>{item.tipo} · {money(item.subtotal)}</small></div>)}</div>
-          <div className="dossier-total"><span>Total estimado</span><strong>{money(activeOrder.total)}</strong></div>
-          <button className="button primary" onClick={() => onSelect(activeOrder)}><Edit3 size={17}/>Abrir pedido</button>
+          <div className="dossier-identity">
+            <div>
+              <span>Cliente</span>
+              <strong>{activeOrder.cliente}</strong>
+            </div>
+            <div>
+              <span>Moto</span>
+              <strong>{activeOrder.moto}</strong>
+              <small>{activeOrder.patente}</small>
+            </div>
+          </div>
+          <div className="dossier-note">
+            <span>Motivo de ingreso</span>
+            <p>{activeOrder.observaciones}</p>
+          </div>
+          <div className="dossier-lines">
+            <span>Ítems a revisar</span>
+            {activeOrder.items.map((item) => (
+              <div key={item.id}>
+                <b>{item.descripcion}</b>
+                <small>
+                  {item.tipo} · {money(item.subtotal)}
+                </small>
+              </div>
+            ))}
+          </div>
+          <div className="dossier-total">
+            <span>Total estimado</span>
+            <strong>{money(activeOrder.total)}</strong>
+          </div>
+          <button
+            className="button primary"
+            onClick={() => onSelect(activeOrder)}
+          >
+            <Edit3 size={17} />
+            Abrir pedido
+          </button>
         </div>
       </section>
     </div>
@@ -133,16 +172,26 @@ export function OrdersView({
 }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"Todos" | OrderStatus>("Todos");
+  const [documentType, setDocumentType] = useState("Todos");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const orderDate = (value: string) => {
+    const [day, month, year] = value.split("/");
+    return `${year}-${month}-${day}`;
+  };
   const list = useMemo(
     () =>
       orders.filter(
         (order) =>
           (status === "Todos" || order.estado === status) &&
+          (documentType === "Todos" || order.documento === documentType) &&
+          (!dateFrom || orderDate(order.creadoEn) >= dateFrom) &&
+          (!dateTo || orderDate(order.creadoEn) <= dateTo) &&
           `${order.numero} ${order.cliente} ${order.moto} ${order.patente}`
             .toLowerCase()
             .includes(query.toLowerCase()),
       ),
-    [query, status],
+    [query, status, documentType, dateFrom, dateTo],
   );
   return (
     <div className="page">
@@ -182,6 +231,43 @@ export function OrdersView({
               ))}
             </select>
           </label>
+          <label>
+            Tipo
+            <select
+              value={documentType}
+              onChange={(event) => setDocumentType(event.target.value)}
+            >
+              <option>Todos</option>
+              <option>Presupuesto</option>
+              <option>Factura</option>
+            </select>
+          </label>
+          <input
+            className="filter-date"
+            type="date"
+            value={dateFrom}
+            onChange={(event) => setDateFrom(event.target.value)}
+            aria-label="Fecha desde"
+          />
+          <input
+            className="filter-date"
+            type="date"
+            value={dateTo}
+            onChange={(event) => setDateTo(event.target.value)}
+            aria-label="Fecha hasta"
+          />
+          <button
+            className="button secondary"
+            onClick={() => {
+              setQuery("");
+              setStatus("Todos");
+              setDocumentType("Todos");
+              setDateFrom("");
+              setDateTo("");
+            }}
+          >
+            Limpiar filtros
+          </button>
           <button
             className="button secondary"
             onClick={() =>
@@ -399,6 +485,29 @@ export function OrderDetail({
             Cancelar pedido
           </button>
           <button
+            className="button secondary"
+            onClick={() =>
+              exportExcel(
+                order.numero,
+                order.items.map((item) => ({
+                  Descripción: item.descripcion,
+                  Tipo: item.tipo,
+                  Cantidad: item.cantidad,
+                  Precio: money(item.precioUnitario),
+                  Subtotal: money(item.subtotal),
+                })),
+              )
+            }
+          >
+            Exportar Excel
+          </button>
+          <button
+            className="button secondary"
+            onClick={() => onConfirm("Duplicar pedido", () => {})}
+          >
+            Duplicar pedido
+          </button>
+          <button
             className="button danger-outline"
             onClick={() => onConfirm("Eliminar lógicamente", () => {})}
           >
@@ -554,6 +663,20 @@ export function RecordsView({
   );
 }
 export function ReportsView() {
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const reportPeriod: Record<string, string> = {
+    Ene: "2026-01-01",
+    Feb: "2026-02-01",
+    Mar: "2026-03-01",
+    Abr: "2026-04-01",
+    May: "2026-05-01",
+  };
+  const visibleReportData = reportData.filter(
+    (item) =>
+      (!from || reportPeriod[item.etiqueta] >= from) &&
+      (!to || reportPeriod[item.etiqueta] <= to),
+  );
   return (
     <div className="page">
       <div className="page-heading">
@@ -563,7 +686,7 @@ export function ReportsView() {
         </div>
         <button
           className="button secondary"
-          onClick={() => exportExcel("reporte-mensual", reportData)}
+          onClick={() => exportExcel("reporte-mensual", visibleReportData)}
         >
           {" "}
           <Download size={17} />
@@ -576,6 +699,40 @@ export function ReportsView() {
         <Metric label="Ticket promedio" value={money(92500)} tone="blue" />
         <Metric label="Pedidos del mes" value="37" tone="blue" />
       </div>
+      <section className="panel report-filters">
+        <div>
+          <h2>Período del informe</h2>
+          <p>
+            Los gráficos se recalcularán cuando el backend suministre datos
+            reales.
+          </p>
+        </div>
+        <label>
+          Desde
+          <input
+            type="date"
+            value={from}
+            onChange={(event) => setFrom(event.target.value)}
+          />
+        </label>
+        <label>
+          Hasta
+          <input
+            type="date"
+            value={to}
+            onChange={(event) => setTo(event.target.value)}
+          />
+        </label>
+        <button
+          className="button secondary"
+          onClick={() => {
+            setFrom("");
+            setTo("");
+          }}
+        >
+          Limpiar
+        </button>
+      </section>
       <section className="desk-grid report-grid">
         <div className="panel">
           <div className="panel-head">
@@ -585,7 +742,7 @@ export function ReportsView() {
             </div>
           </div>
           <div className="bar-chart">
-            {reportData.map((item) => (
+            {visibleReportData.map((item) => (
               <div key={item.etiqueta}>
                 <i style={{ height: `${item.valor / 7500}px` }} />
                 <span>{item.etiqueta}</span>
@@ -609,6 +766,50 @@ export function ReportsView() {
             </div>
           ))}
         </div>
+      </section>
+      <section className="panel report-table">
+        <div className="panel-head">
+          <div>
+            <h2>Clientes con más pedidos</h2>
+            <p>Tabla exportable con datos de demostración.</p>
+          </div>
+          <button
+            className="button secondary"
+            onClick={() =>
+              exportExcel(
+                "clientes-con-pedidos",
+                clients.map((client) => ({
+                  Cliente: client.nombre,
+                  Pedidos: client.pedidos,
+                  Motos: client.motos,
+                })),
+              )
+            }
+          >
+            <Download size={17} />
+            Exportar tabla
+          </button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Pedidos</th>
+              <th>Motos</th>
+              <th>Total presupuestado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {clients.map((client, index) => (
+              <tr key={client.id}>
+                <td>{client.nombre}</td>
+                <td>{client.pedidos}</td>
+                <td>{client.motos}</td>
+                <td>{money([285000, 172000, 121000, 384000, 35000][index])}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
     </div>
   );

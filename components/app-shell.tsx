@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Menu,
   Package,
+  Plus,
   Settings,
   Users,
 } from "lucide-react";
@@ -66,14 +67,14 @@ export function AppShell({
         </nav>
         <div className="sidebar-bottom">
           <button className="button sidebar-new" onClick={onNewOrder}>
-            + <span>Nuevo pedido</span>
+            <Plus size={17} /> <span>Nuevo pedido</span>
           </button>
           <p>
             Taller Avianto
             <br />
             Buenos Aires, Argentina
           </p>
-          <button className="settings">
+          <button className="settings" onClick={() => go("settings")}>
             <Settings size={18} /> Administración
           </button>
         </div>
@@ -87,11 +88,11 @@ export function AppShell({
             AviantoSoftware
           </button>
           <button
-            className="button icon-only"
+            className="button mobile-new"
             onClick={onNewOrder}
             aria-label="Nuevo pedido"
           >
-            +
+            <Plus size={17} /> <span>Nuevo pedido</span>
           </button>
         </header>
         {children}
