@@ -9,6 +9,7 @@ import {
   Menu,
   Package,
   Plus,
+  LogOut,
   Settings,
   Users,
 } from "lucide-react";
@@ -26,11 +27,13 @@ export function AppShell({
   page,
   onPage,
   onNewOrder,
+  onLogout,
 }: {
   children: ReactNode;
   page: string;
   onPage: (page: string) => void;
   onNewOrder: () => void;
+  onLogout: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const go = (target: string) => {
@@ -76,6 +79,9 @@ export function AppShell({
           </p>
           <button className="settings" onClick={() => go("settings")}>
             <Settings size={18} /> Administración
+          </button>
+          <button className="settings" onClick={onLogout}>
+            <LogOut size={18} /> Cerrar sesión
           </button>
         </div>
       </aside>
@@ -124,6 +130,9 @@ export function AppShell({
             }}
           >
             + Nuevo pedido
+          </button>
+          <button className="settings mobile-logout" onClick={onLogout}>
+            <LogOut size={18} /> Cerrar sesión
           </button>
         </div>
       )}

@@ -11,16 +11,51 @@ Base URL: `/api`. El frontend usa DTOs; no expone entidades de persistencia.
 
 ## Recursos
 
-| Recurso | Endpoints |
-| --- | --- |
-| Clientes | `GET/POST /clientes`, `GET/PUT/DELETE /clientes/{id}`, `GET /clientes/autocomplete?q=` |
-| Motovehículos | `GET/POST /motovehiculos`, `GET/PUT/DELETE /motovehiculos/{id}`, `GET /motovehiculos/autocomplete?q=` |
-| Catálogo | `GET/POST /catalogo-items`, `GET/PUT/DELETE /catalogo-items/{id}`, `GET /catalogo-items/{id}/price-history`, `GET /catalogo-items/duplicates?descripcion=` |
-| Pedidos | `GET/POST /pedidos`, `GET/PUT/DELETE /pedidos/{id}`, `PATCH /pedidos/{id}/estado`, `POST /pedidos/{id}/duplicate` |
-| Auditoría | `GET /auditoria` |
-| Reportes | `GET /reportes/resumen`, `GET /reportes/evolucion`, `GET /reportes/top-items` |
+| Recurso       | Endpoints                                                                                                                                                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Clientes      | `GET/POST /clientes`, `GET/PUT/DELETE /clientes/{id}`, `GET /clientes/autocomplete?q=`                                                                                                                                                                  |
+| Motovehículos | `GET/POST /motovehiculos`, `GET/PUT/DELETE /motovehiculos/{id}`, `GET /motovehiculos/autocomplete?q=`                                                                                                                                                   |
+| Catálogo      | `GET/POST /catalogo-items`, `GET/PUT/DELETE /catalogo-items/{id}`, `GET /catalogo-items/{id}/price-history`, `GET /catalogo-items/duplicates?descripcion=`                                                                                              |
+| Pedidos       | `GET/POST /pedidos`, `GET/PUT/DELETE /pedidos/{id}`, `PATCH /pedidos/{id}/estado`, `POST /pedidos/{id}/duplicate`                                                                                                                                       |
+| Auditoría     | `GET /auditoria`                                                                                                                                                                                                                                        |
+| Reportes      | `GET /reportes/resumen`, `GET /reportes/evolucion`, `GET /reportes/top-items`                                                                                                                                                                           |
+| Configuración | `GET/POST /configuracion/marcas-moto`, `GET/PUT/DELETE /configuracion/marcas-moto/{id}`, `GET/POST /configuracion/categorias-catalogo`, `GET/PUT/DELETE /configuracion/categorias-catalogo/{id}`, `GET/POST /usuarios`, `GET/PUT/DELETE /usuarios/{id}` |
+| Autenticación | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`                                                                                                                                                                           |
+
+## Autenticación
+
+- `POST /auth/login` recibe `{ username, password }` y devuelve `{ accessToken, refreshToken, user: { id, nombre, rol } }`.
+- `POST /auth/refresh` recibe `{ refreshToken }` y devuelve el mismo objeto de sesión renovado.
+- `POST /auth/logout` recibe `{ refreshToken }` e invalida la sesión asociada.
+- `GET /auth/me` requiere `Authorization: Bearer <accessToken>` y devuelve el usuario activo sin credenciales.
+- Los roles son `ADMINISTRACION` y `OPERARIO`. Los endpoints de configuración y usuarios requieren `ADMINISTRACION`.
+
+## Filtros permitidos
+
+- `GET /clientes`: `q`, `activo`, `includeDeleted`.
+- `GET /motovehiculos`: `q`, `clienteId`, `marcaId`, `activo`, `includeDeleted`.
+- `GET /catalogo-items`: `q`, `tipo`, `categoriaId`, `activo`, `includeDeleted`.
+- `GET /pedidos`: `q`, `clienteId`, `patente`, `numero`, `estado`, `documento`, `fechaDesde`, `fechaHasta`, `includeDeleted`.
+- `GET /auditoria`: `q`, `usuarioId`, `modulo`, `accion`, `fechaDesde`, `fechaHasta`.
+- Los endpoints de exportación reciben exactamente los filtros del recurso, además de `sortBy`, `direction` y `columns` opcional.
+
+## DTOs de dominio
+
+- `MarcaMoto`: `id`, `nombre`, `activo`, `createdAt`, `updatedAt`.
+- `CategoriaCatalogo`: `id`, `nombre`, `activo`, `createdAt`, `updatedAt`.
+- `Usuario`: `id`, `nombre`, `email`, `rol` (`ADMINISTRACION` | `OPERARIO`), `activo`, `createdAt`, `updatedAt`. Las credenciales y su hash no se devuelven nunca.
+- `MotovehiculoRequest`: `clienteId`, `marcaId`, `modelo`, `patente`, `anio?`, `kilometraje?`, `color?`, `cilindrada?`, `observaciones?`. La respuesta expone adicionalmente `cliente` y `marca` como etiquetas de lectura.
+- `ItemCatalogoRequest`: `descripcion`, `tipo` (`Pieza` | `Trabajo`), `categoriaId`, `precioBase` numérico no negativo, `observaciones?`. **No existe código interno.** La respuesta expone `categoria` como etiqueta de lectura.
+- `PedidoRequest`: `clienteId`, `motovehiculoId`, `documento` (`Presupuesto` | `Factura`), `vencimiento`, `observaciones`, `descuentoGlobal`, `iva` e `items`. El backend debe validar que la moto pertenezca al cliente.
 
 `PedidoRequest` incluye cliente, motovehículo, tipo de documento, vencimiento, observaciones, descuentos, IVA e `items[]`. Cada línea porta un snapshot de descripción, tipo, cantidad, precio y descuento: el cambio futuro de catálogo no altera el documento histórico.
+
+## Reglas de configuración
+
+- Las marcas y categorías se eliminan lógicamente. No se permite desactivarlas (`409`) si tienen motos o ítems activos asociados; se debe informar la dependencia.
+- Los usuarios se eliminan lógicamente. No puede desactivarse el último usuario con rol `ADMINISTRACION` (`409`).
+- Las marcas y categorías se entregan ordenadas alfabéticamente y solo las activas se usan en los selectores de alta/edición.
+- `PATCH /pedidos/{id}/estado` recibe `{ "estado": "En proceso|Aprobado|Pagado|Cancelado" }`; el backend responde el pedido actualizado y registra auditoría.
 
 ## Exportaciones y PDF
 
@@ -33,4 +68,4 @@ Base URL: `/api`. El frontend usa DTOs; no expone entidades de persistencia.
 
 ## Cache
 
-El cliente indexa consultas por recurso, página, tamaño, orden y filtros; invalida tras alta, edición, borrado lógico, cambio de estado o precio. El backend debe usar Spring Cache con Caffeine para catálogo/autocomplete/consultas frecuentes y evaluar Redis al escalar. Verificación: primera consulta miss, segunda hit, mutación evacúa, tercera devuelve datos nuevos.
+El cliente indexa consultas por recurso, página, tamaño, orden y filtros; invalida tras alta, edición, borrado lógico, cambio de estado o precio. El backend debe usar Spring Cache con Caffeine para catálogo, marcas, categorías, autocomplete y consultas frecuentes; evaluar Redis al escalar. Verificación: primera consulta miss, segunda hit, mutación evacúa, tercera devuelve datos nuevos.

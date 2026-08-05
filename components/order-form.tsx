@@ -5,26 +5,8 @@ import { catalog, clients, vehicles } from "../lib/mock-data";
 import { money } from "../lib/format";
 import { exportPdf } from "../lib/export";
 import type { DocumentType, PedidoItemResponse } from "../lib/types";
-import { ConfirmModal, Dialog } from "./ui";
-
-const motorcycleBrands = [
-  "Honda",
-  "Yamaha",
-  "Bajaj",
-  "Zanella",
-  "Gilera",
-  "Motomel",
-  "Corven",
-  "Keller",
-  "Guerrero",
-  "Mondial",
-  "Benelli",
-  "Kawasaki",
-  "Suzuki",
-  "KTM",
-  "TVS",
-  "Royal Enfield",
-];
+import { ConfirmModal } from "./ui";
+import { VehicleAbmModal } from "./modal/abm-form-modal";
 
 export function OrderForm({
   onClose,
@@ -364,71 +346,32 @@ export function OrderForm({
           </button>
         </aside>
       </div>
-      <Dialog
+      <VehicleAbmModal
         open={newVehicleOpen}
-        title="Nueva moto"
+        mode="agregar"
+        clientId={clientId}
+        clientName={clients.find((client) => client.id === clientId)?.nombre}
+        brands={[
+          "Honda",
+          "Yamaha",
+          "Bajaj",
+          "Zanella",
+          "Gilera",
+          "Motomel",
+          "Corven",
+          "Keller",
+          "Guerrero",
+          "Mondial",
+          "Benelli",
+          "Kawasaki",
+          "Suzuki",
+          "KTM",
+          "TVS",
+          "Royal Enfield",
+        ]}
         onClose={() => setNewVehicleOpen(false)}
-      >
-        <p className="dialog-intro">
-          La moto quedará asociada a{" "}
-          <strong>
-            {clients.find((client) => client.id === clientId)?.nombre}
-          </strong>
-          . Este alta es solo demostrativa.
-        </p>
-        <form
-          className="record-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setNewVehicleOpen(false);
-          }}
-        >
-          <label className="form-field-wide">
-            Cliente
-            <input
-              value={
-                clients.find((client) => client.id === clientId)?.nombre ?? ""
-              }
-              readOnly
-            />
-          </label>
-          <label>
-            Marca
-            <select required defaultValue="">
-              <option value="" disabled>
-                Seleccionar marca
-              </option>
-              {motorcycleBrands.map((brand) => (
-                <option key={brand}>{brand}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Modelo
-            <input required placeholder="Ej.: Wave 110" />
-          </label>
-          <label>
-            Patente
-            <input placeholder="AA 123 BB" />
-          </label>
-          <label>
-            Año
-            <input type="number" min="1950" max="2030" placeholder="2026" />
-          </label>
-          <div className="modal-actions">
-            <button
-              type="button"
-              className="button secondary"
-              onClick={() => setNewVehicleOpen(false)}
-            >
-              Cancelar
-            </button>
-            <button className="button primary" type="submit">
-              Guardar moto
-            </button>
-          </div>
-        </form>
-      </Dialog>
+        onSubmit={() => setNewVehicleOpen(false)}
+      />
       <ConfirmModal
         open={closeConfirmation}
         title="¿Cerrar pedido?"

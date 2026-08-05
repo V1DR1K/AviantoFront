@@ -12,8 +12,11 @@ import { ConfirmModal, Toast } from "../components/ui";
 import { AdminView, SettingsView } from "../components/admin-view";
 import { orders } from "../lib/mock-data";
 import type { PedidoResponse } from "../lib/types";
+import { LoginView } from "../components/login-view";
+import { clearSession, getSession, type AuthSession } from "../lib/auth";
 
 export default function Home() {
+  const [session, setSession] = useState<AuthSession | null>(() => getSession());
   const [page, setPage] = useState("dashboard");
   const [selected, setSelected] = useState<PedidoResponse>(orders[0]);
   const [confirmation, setConfirmation] = useState<{
@@ -21,6 +24,7 @@ export default function Home() {
     action: () => void;
   } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  if (!session) return <LoginView />;
   const select = (order: PedidoResponse) => {
     setSelected(order);
     setPage("detail");
@@ -90,7 +94,15 @@ export default function Home() {
   else if (page === "settings") content = <SettingsView notify={setToast} />;
   else content = <ReportsView />;
   return (
-    <AppShell page={page} onPage={setPage} onNewOrder={() => setPage("create")}>
+    <AppShell
+      page={page}
+      onPage={setPage}
+      onNewOrder={() => setPage("create")}
+      onLogout={() => {
+        clearSession();
+        setSession(null);
+      }}
+    >
       {content}
       <ConfirmModal
         open={Boolean(confirmation)}

@@ -1,18 +1,15 @@
 "use client";
 import { useMemo, useState } from "react";
-import {
-  Download,
-  Edit3,
-  Eye,
-  Filter,
-  History,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { Download, Edit3, Eye, Filter, Plus, Trash2 } from "lucide-react";
 import { audit, catalog, clients, vehicles } from "../lib/mock-data";
 import { exportExcel } from "../lib/export";
 import { money } from "../lib/format";
 import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox } from "./ui";
+import {
+  AbmFormModal,
+  type AbmField,
+  VehicleAbmModal,
+} from "./modal/abm-form-modal";
 
 type Resource = "clients" | "vehicles" | "catalog" | "audit";
 type Row = Record<string, string | number | boolean | undefined>;
@@ -97,7 +94,6 @@ const specification: Record<
       { key: "tipo", label: "Tipo", options: ["Pieza", "Trabajo"] },
       { key: "descripcion", label: "Descripción estandarizada" },
       { key: "categoria", label: "Categoría" },
-      { key: "codigo", label: "Código interno" },
       { key: "precioBase", label: "Precio base", type: "number" },
       { key: "observaciones", label: "Observaciones" },
     ],
@@ -106,7 +102,6 @@ const specification: Record<
       tipo: row.tipo,
       descripcion: row.descripcion,
       categoria: row.categoria,
-      codigo: row.codigo,
       precioBase: row.precioBase,
       estado: row.activo ? "Activo" : "Inactivo",
       observaciones: "",
@@ -153,9 +148,6 @@ if (categoryField) categoryField.options = catalogCategories;
 specification.catalog.columns = specification.catalog.columns.filter(
   (column) => column !== "Código",
 );
-specification.catalog.fields = specification.catalog.fields.filter(
-  (field) => field.key !== "codigo",
-);
 
 function readCell(
   resource: Exclude<Resource, "audit">,
@@ -170,7 +162,6 @@ function readCell(
   if (column === "KM") return row.kilometraje;
   if (column === "Descripción") return row.descripcion;
   if (column === "Categoría") return row.categoria;
-  if (column === "Código") return row.codigo;
   if (column === "Precio") return money(Number(row.precioBase));
   if (column === "Estado")
     return (
@@ -200,7 +191,6 @@ export function AdminView({
   const [editing, setEditing] = useState<Row | null>(null);
   const [detail, setDetail] = useState<Row | null>(null);
   const [deleting, setDeleting] = useState<Row | null>(null);
-  const [submitted, setSubmitted] = useState(false);
   const setup = resource === "audit" ? null : specification[resource];
   const visible = useMemo(
     () =>
@@ -216,7 +206,6 @@ export function AdminView({
   if (resource === "audit") return <AuditView notify={notify} />;
   if (!setup) return null;
   const submit = () => {
-    setSubmitted(true);
     setEditing(null);
     notify(
       `La acción sobre ${setup.singular} se registró como demostración. Los mocks no se modificaron.`,
@@ -232,7 +221,6 @@ export function AdminView({
         <button
           className="button primary"
           onClick={() => {
-            setSubmitted(false);
             setEditing({});
           }}
         >
@@ -291,7 +279,6 @@ export function AdminView({
                     </button>
                     <button
                       onClick={() => {
-                        setSubmitted(false);
                         setEditing(row);
                       }}
                       aria-label={`Editar ${setup.singular}`}
@@ -328,7 +315,6 @@ export function AdminView({
         open={editing !== null}
         setup={setup}
         record={editing}
-        submitted={submitted}
         onClose={() => setEditing(null)}
         onSubmit={submit}
       />
@@ -363,94 +349,54 @@ function RecordForm({
   open,
   setup,
   record,
-  submitted,
   onClose,
   onSubmit,
 }: {
   open: boolean;
   setup: typeof specification.clients;
   record: Row | null;
-  submitted: boolean;
   onClose: () => void;
   onSubmit: () => void;
 }) {
-  const [values, setValues] = useState<Record<string, string>>({});
   const effective = record ?? {};
+  const mode = effective.id ? "modificar" : ("agregar" as const);
+  if (setup.singular === "motovehículo")
+    return (
+      <VehicleAbmModal
+        open={open}
+        mode={mode}
+        initialValues={effective}
+        brands={motorcycleBrands}
+        clients={clients.map((client) => client.nombre)}
+        onClose={onClose}
+        onSubmit={onSubmit}
+      />
+    );
   return (
-    <Dialog
+    <AbmFormModal
       open={open}
-      title={`${effective.id ? "Editar" : "Nuevo"} ${setup.singular}`}
+      resource={setup.singular}
+      mode={mode}
+      initialValues={effective}
       onClose={onClose}
-      wide
-    >
-      <p className="dialog-intro">
-        Los campos se cargan para revisar el flujo. Guardar no modifica los
-        datos del MVP.
-      </p>
-      <form
-        className="record-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSubmit();
-        }}
-      >
-        {setup.fields.map((field) => (
-          <label
-            key={field.key}
-            className={
-              field.key === "observaciones" ? "form-field-wide" : undefined
-            }
-          >
-            {field.label}
-            {field.options ? (
-              <select
-                value={values[field.key] ?? String(effective[field.key] ?? "")}
-                onChange={(event) =>
-                  setValues({ ...values, [field.key]: event.target.value })
-                }
-              >
-                <option value="">Seleccionar</option>
-                {field.options.map((option) => (
-                  <option key={option}>{option}</option>
-                ))}
-              </select>
-            ) : field.key === "observaciones" ? (
-              <textarea
-                value={values[field.key] ?? String(effective[field.key] ?? "")}
-                onChange={(event) =>
-                  setValues({ ...values, [field.key]: event.target.value })
-                }
-              />
-            ) : (
-              <input
-                type={field.type ?? "text"}
-                value={values[field.key] ?? String(effective[field.key] ?? "")}
-                onChange={(event) =>
-                  setValues({ ...values, [field.key]: event.target.value })
-                }
-              />
-            )}
-          </label>
-        ))}
-        {setup.singular === "ítem" && (
-          <div className="duplicate-note">
-            <History size={17} />
-            <span>
-              Posible coincidencia: “Cambio de aceite” ya existe en catálogo.
-              Revisá antes de estandarizar.
-            </span>
-          </div>
-        )}
-        <div className="modal-actions">
-          <button type="button" className="button secondary" onClick={onClose}>
-            Cancelar
-          </button>
-          <button className="button primary" type="submit">
-            {submitted ? "Guardado" : "Guardar demostración"}
-          </button>
-        </div>
-      </form>
-    </Dialog>
+      onSubmit={onSubmit}
+      fields={
+        setup.fields.map((field) => ({
+          ...field,
+          type:
+            field.key === "observaciones"
+              ? "textarea"
+              : field.options
+                ? "select"
+                : field.type === "number" ||
+                    field.type === "email" ||
+                    field.type === "tel"
+                  ? field.type
+                  : "text",
+          wide: field.key === "observaciones",
+        })) as AbmField[]
+      }
+    />
   );
 }
 function RecordDetail({
@@ -605,31 +551,6 @@ export function SettingsView({
           <p>Preferencias preparadas para conectarse al backend.</p>
         </div>
       </div>
-      <section className="panel record-detail">
-        <div>
-          <p className="eyebrow">Taller</p>
-          <h2>Avianto Software</h2>
-          <p>Buenos Aires, Argentina · Moneda ARS · IVA configurable.</p>
-        </div>
-        <div className="form-actions">
-          <button
-            className="button secondary"
-            onClick={() =>
-              notify(
-                "La configuración de la demo no cambia datos persistentes.",
-              )
-            }
-          >
-            Revisar integraciones
-          </button>
-          <button
-            className="button primary"
-            onClick={() => notify("Preferencias guardadas como demostración.")}
-          >
-            Guardar preferencias
-          </button>
-        </div>
-      </section>
       <section className="settings-grid">
         <ConfigSection
           title="Marcas de motos"
@@ -672,6 +593,17 @@ function ConfigSection({
 }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("Todos");
+  const [page, setPage] = useState(1);
+  const filtered = entries.filter(
+    (entry) =>
+      (status === "Todos" || status === "Activo") &&
+      entry.toLowerCase().includes(query.toLowerCase()),
+  );
+  const pageSize = 5;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
   return (
     <section className="panel config-section">
       <div className="config-head">
@@ -684,8 +616,30 @@ function ConfigSection({
           Agregar
         </button>
       </div>
+      <div className="config-filter">
+        <SearchBox
+          value={query}
+          onChange={(value) => {
+            setQuery(value);
+            setPage(1);
+          }}
+          placeholder={`Buscar ${inputLabel.toLowerCase()}`}
+        />
+        <select
+          value={status}
+          onChange={(event) => {
+            setStatus(event.target.value);
+            setPage(1);
+          }}
+          aria-label={`Estado de ${inputLabel.toLowerCase()}`}
+        >
+          <option>Todos</option>
+          <option>Activo</option>
+          <option>Inactivo</option>
+        </select>
+      </div>
       <ul className="config-list">
-        {entries.map((entry) => (
+        {visible.map((entry) => (
           <li key={entry}>
             <span>{entry}</span>
             <div className="table-actions">
@@ -706,46 +660,36 @@ function ConfigSection({
           </li>
         ))}
       </ul>
-      <Dialog
+      <p className="config-count">
+        {filtered.length} {inputLabel.toLowerCase()}
+        {filtered.length === 1 ? "" : "s"} encontrados
+      </p>
+      <Pagination page={page} total={totalPages} onPage={setPage} />
+      <AbmFormModal
         open={editing !== null}
-        title={`${editing ? "Editar" : "Agregar"} ${inputLabel.toLowerCase()}`}
+        resource={inputLabel.toLowerCase()}
+        mode={editing ? "modificar" : "agregar"}
+        initialValues={{ nombre: editing ?? "" }}
         onClose={() => setEditing(null)}
-      >
-        <form
-          className="record-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setEditing(null);
-            notify(`${inputLabel} guardado como demostración.`);
-          }}
-        >
-          <label className="form-field-wide">
-            {inputLabel}
-            <input defaultValue={editing ?? ""} required />
-          </label>
-          {inputLabel === "Usuario" && (
-            <label className="form-field-wide">
-              Perfil
-              <select defaultValue="Operario">
-                <option>Administración</option>
-                <option>Operario</option>
-              </select>
-            </label>
-          )}
-          <div className="modal-actions">
-            <button
-              type="button"
-              className="button secondary"
-              onClick={() => setEditing(null)}
-            >
-              Cancelar
-            </button>
-            <button className="button primary" type="submit">
-              Guardar
-            </button>
-          </div>
-        </form>
-      </Dialog>
+        onSubmit={() => {
+          setEditing(null);
+          notify(`${inputLabel} guardado como demostración.`);
+        }}
+        fields={[
+          { key: "nombre", label: inputLabel, required: true, wide: true },
+          ...(inputLabel === "Usuario"
+            ? [
+                {
+                  key: "perfil",
+                  label: "Perfil",
+                  type: "select" as const,
+                  options: ["Administración", "Operario"],
+                  wide: true,
+                },
+              ]
+            : []),
+        ]}
+      />
       <ConfirmModal
         open={deleting !== null}
         title={`Eliminar ${inputLabel.toLowerCase()}`}
