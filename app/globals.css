@@ -147,6 +147,10 @@ textarea:focus-visible {
   color: var(--red);
   background: #fff;
 }
+.button.danger-outline:hover {
+  background: #fff2f1;
+  border-color: var(--red);
+}
 .button.large {
   width: 100%;
   padding: 13px;
@@ -525,6 +529,24 @@ td small {
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
+.order-form .two-col {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+.add-vehicle {
+  align-self: end;
+  min-height: 42px;
+}
+.form-close {
+  min-height: 44px;
+  padding-inline: 16px;
+  box-shadow: 0 1px 0 rgba(18, 53, 91, 0.08);
+}
+.summary .button.secondary {
+  width: 100%;
+  min-height: 46px;
+  border-color: #8eacc6;
+  font-weight: 800;
+}
 .form-section label,
 .summary label {
   display: grid;
@@ -770,6 +792,14 @@ td small {
 .record-form .modal-actions {
   grid-column: 1/-1;
 }
+.form-field-wide {
+  grid-column: 1/-1;
+}
+.record-form textarea.form-field-wide,
+.record-form .form-field-wide textarea {
+  min-height: 108px;
+  line-height: 1.45;
+}
 .duplicate-note {
   grid-column: 1/-1;
   display: flex;
@@ -814,6 +844,45 @@ td small {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
+}
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+.config-section {
+  padding: 20px;
+}
+.config-head {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.config-head h2 {
+  margin: 0 0 5px;
+  font-size: 17px;
+}
+.config-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.config-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.config-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
 }
 .table-actions {
   display: flex;
@@ -1128,11 +1197,17 @@ td small {
     padding: 0 17px;
   }
   .compact-orders > button {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr;
+    gap: 7px;
     padding: 13px 17px;
   }
   .compact-orders > button > strong {
-    display: none;
+    display: block;
+    color: var(--navy);
+    justify-self: start;
+  }
+  .compact-orders > button .status {
+    justify-self: start;
   }
   .status-panel {
     display: none;
@@ -1169,6 +1244,12 @@ td small {
   .two-col {
     grid-template-columns: 1fr;
   }
+  .order-form .two-col {
+    grid-template-columns: 1fr;
+  }
+  .add-vehicle {
+    width: 100%;
+  }
   .line-item {
     grid-template-columns: 1fr 74px 82px 28px;
   }
@@ -1200,6 +1281,9 @@ td small {
 }
 
 @media (max-width: 680px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
   .report-filters {
     display: grid;
     align-items: stretch;

@@ -5,6 +5,26 @@ import { catalog, clients, vehicles } from "../lib/mock-data";
 import { money } from "../lib/format";
 import { exportPdf } from "../lib/export";
 import type { DocumentType, PedidoItemResponse } from "../lib/types";
+import { ConfirmModal, Dialog } from "./ui";
+
+const motorcycleBrands = [
+  "Honda",
+  "Yamaha",
+  "Bajaj",
+  "Zanella",
+  "Gilera",
+  "Motomel",
+  "Corven",
+  "Keller",
+  "Guerrero",
+  "Mondial",
+  "Benelli",
+  "Kawasaki",
+  "Suzuki",
+  "KTM",
+  "TVS",
+  "Royal Enfield",
+];
 
 export function OrderForm({
   onClose,
@@ -38,6 +58,8 @@ export function OrderForm({
   const [notes, setNotes] = useState("");
   const [query, setQuery] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
+  const [closeConfirmation, setCloseConfirmation] = useState(false);
+  const [newVehicleOpen, setNewVehicleOpen] = useState(false);
   const photoInput = useRef<HTMLInputElement>(null);
   const currentVehicle =
     vehicles.find((v) => v.id === vehicleId) ?? vehicles[0];
@@ -57,6 +79,8 @@ export function OrderForm({
   );
   const iva = documento === "Factura" ? subtotal * 0.21 : 0;
   const total = subtotal + iva;
+  const hasDraftContent =
+    items.length > 0 || Boolean(notes) || photos.length > 0;
   const addItem = (name: string, type: "Pieza" | "Trabajo", price: number) =>
     setItems((previous) => [
       ...previous,
@@ -80,7 +104,12 @@ export function OrderForm({
             y condiciones después.
           </p>
         </div>
-        <button className="button secondary" onClick={onClose}>
+        <button
+          className="button secondary form-close"
+          onClick={() =>
+            hasDraftContent ? setCloseConfirmation(true) : onClose()
+          }
+        >
           <X size={18} />
           Cerrar
         </button>
@@ -124,6 +153,15 @@ export function OrderForm({
                     ))}
                 </select>
               </label>
+              <button
+                className="button secondary add-vehicle"
+                type="button"
+                onClick={() => setNewVehicleOpen(true)}
+                aria-label="Agregar moto al cliente seleccionado"
+              >
+                <Plus size={17} />
+                <span>Agregar moto</span>
+              </button>
             </div>
           </section>
           <section className="form-section">
@@ -233,12 +271,30 @@ export function OrderForm({
                 placeholder="Describí la falla o las piezas detectadas si no encontraste el ítem exacto."
               />
             </label>
-            <input ref={photoInput} hidden type="file" accept="image/*" multiple onChange={(event)=>setPhotos(Array.from(event.target.files??[]).map(file=>file.name))}/>
-            <button className="photo-button" onClick={()=>photoInput.current?.click()}>
+            <input
+              ref={photoInput}
+              hidden
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(event) =>
+                setPhotos(
+                  Array.from(event.target.files ?? []).map((file) => file.name),
+                )
+              }
+            />
+            <button
+              className="photo-button"
+              onClick={() => photoInput.current?.click()}
+            >
               <Camera size={19} />
               Adjuntar fotos <small>Se guardarán como base64 en el MVP</small>
             </button>
-            {photos.length > 0 && <p className="photo-count">{photos.length} archivos listos para adjuntar.</p>}
+            {photos.length > 0 && (
+              <p className="photo-count">
+                {photos.length} archivos listos para adjuntar.
+              </p>
+            )}
           </section>
         </div>
         <aside className="summary">
@@ -293,12 +349,94 @@ export function OrderForm({
             <Save size={19} />
             Guardar pedido
           </button>
-          <button className="button secondary" onClick={()=>exportPdf("PREVISUALIZACION", clients.find((c)=>c.id===clientId)?.nombre??"", total)}>
+          <button
+            className="button secondary"
+            onClick={() =>
+              exportPdf(
+                "PREVISUALIZACION",
+                clients.find((c) => c.id === clientId)?.nombre ?? "",
+                total,
+              )
+            }
+          >
             <FileDown size={18} />
             Vista previa PDF
           </button>
         </aside>
       </div>
+      <Dialog
+        open={newVehicleOpen}
+        title="Nueva moto"
+        onClose={() => setNewVehicleOpen(false)}
+      >
+        <p className="dialog-intro">
+          La moto quedará asociada a{" "}
+          <strong>
+            {clients.find((client) => client.id === clientId)?.nombre}
+          </strong>
+          . Este alta es solo demostrativa.
+        </p>
+        <form
+          className="record-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setNewVehicleOpen(false);
+          }}
+        >
+          <label className="form-field-wide">
+            Cliente
+            <input
+              value={
+                clients.find((client) => client.id === clientId)?.nombre ?? ""
+              }
+              readOnly
+            />
+          </label>
+          <label>
+            Marca
+            <select required defaultValue="">
+              <option value="" disabled>
+                Seleccionar marca
+              </option>
+              {motorcycleBrands.map((brand) => (
+                <option key={brand}>{brand}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Modelo
+            <input required placeholder="Ej.: Wave 110" />
+          </label>
+          <label>
+            Patente
+            <input placeholder="AA 123 BB" />
+          </label>
+          <label>
+            Año
+            <input type="number" min="1950" max="2030" placeholder="2026" />
+          </label>
+          <div className="modal-actions">
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => setNewVehicleOpen(false)}
+            >
+              Cancelar
+            </button>
+            <button className="button primary" type="submit">
+              Guardar moto
+            </button>
+          </div>
+        </form>
+      </Dialog>
+      <ConfirmModal
+        open={closeConfirmation}
+        title="¿Cerrar pedido?"
+        body="Hay información cargada en este pedido. Si cerrás ahora, se descartará el borrador de demostración."
+        confirmLabel="Sí, cerrar pedido"
+        onClose={() => setCloseConfirmation(false)}
+        onConfirm={onClose}
+      />
     </section>
   );
 }

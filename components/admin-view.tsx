@@ -114,6 +114,49 @@ const specification: Record<
   },
 };
 
+const motorcycleBrands = [
+  "Honda",
+  "Yamaha",
+  "Bajaj",
+  "Zanella",
+  "Gilera",
+  "Motomel",
+  "Corven",
+  "Keller",
+  "Guerrero",
+  "Mondial",
+  "Benelli",
+  "Kawasaki",
+  "Suzuki",
+  "KTM",
+  "TVS",
+  "Royal Enfield",
+];
+const catalogCategories = [
+  "Service",
+  "Mecánica",
+  "Frenos",
+  "Transmisión",
+  "Electricidad",
+  "Motor",
+  "Neumáticos",
+  "Accesorios",
+];
+const brandField = specification.vehicles.fields.find(
+  (field) => field.key === "marca",
+);
+const categoryField = specification.catalog.fields.find(
+  (field) => field.key === "categoria",
+);
+if (brandField) brandField.options = motorcycleBrands;
+if (categoryField) categoryField.options = catalogCategories;
+specification.catalog.columns = specification.catalog.columns.filter(
+  (column) => column !== "Código",
+);
+specification.catalog.fields = specification.catalog.fields.filter(
+  (field) => field.key !== "codigo",
+);
+
 function readCell(
   resource: Exclude<Resource, "audit">,
   row: Row,
@@ -352,7 +395,12 @@ function RecordForm({
         }}
       >
         {setup.fields.map((field) => (
-          <label key={field.key}>
+          <label
+            key={field.key}
+            className={
+              field.key === "observaciones" ? "form-field-wide" : undefined
+            }
+          >
             {field.label}
             {field.options ? (
               <select
@@ -582,6 +630,133 @@ export function SettingsView({
           </button>
         </div>
       </section>
+      <section className="settings-grid">
+        <ConfigSection
+          title="Marcas de motos"
+          description="Opciones disponibles en el alta y edición de motos."
+          entries={motorcycleBrands}
+          inputLabel="Marca"
+          notify={notify}
+        />
+        <ConfigSection
+          title="Categorías de catálogo"
+          description="Clasificación disponible para piezas y trabajos."
+          entries={catalogCategories}
+          inputLabel="Categoría"
+          notify={notify}
+        />
+        <ConfigSection
+          title="Usuarios del sistema"
+          description="Usuarios y perfiles previstos para la futura autenticación."
+          entries={["Avril · Administración", "Operario · Operario"]}
+          inputLabel="Usuario"
+          notify={notify}
+        />
+      </section>
     </div>
+  );
+}
+
+function ConfigSection({
+  title,
+  description,
+  entries,
+  inputLabel,
+  notify,
+}: {
+  title: string;
+  description: string;
+  entries: string[];
+  inputLabel: string;
+  notify: (message: string) => void;
+}) {
+  const [editing, setEditing] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  return (
+    <section className="panel config-section">
+      <div className="config-head">
+        <div>
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+        <button className="button secondary" onClick={() => setEditing("")}>
+          <Plus size={16} />
+          Agregar
+        </button>
+      </div>
+      <ul className="config-list">
+        {entries.map((entry) => (
+          <li key={entry}>
+            <span>{entry}</span>
+            <div className="table-actions">
+              <button
+                onClick={() => setEditing(entry)}
+                aria-label={`Editar ${entry}`}
+              >
+                <Edit3 size={16} />
+              </button>
+              <button
+                className="danger-action"
+                onClick={() => setDeleting(entry)}
+                aria-label={`Eliminar ${entry}`}
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <Dialog
+        open={editing !== null}
+        title={`${editing ? "Editar" : "Agregar"} ${inputLabel.toLowerCase()}`}
+        onClose={() => setEditing(null)}
+      >
+        <form
+          className="record-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setEditing(null);
+            notify(`${inputLabel} guardado como demostración.`);
+          }}
+        >
+          <label className="form-field-wide">
+            {inputLabel}
+            <input defaultValue={editing ?? ""} required />
+          </label>
+          {inputLabel === "Usuario" && (
+            <label className="form-field-wide">
+              Perfil
+              <select defaultValue="Operario">
+                <option>Administración</option>
+                <option>Operario</option>
+              </select>
+            </label>
+          )}
+          <div className="modal-actions">
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => setEditing(null)}
+            >
+              Cancelar
+            </button>
+            <button className="button primary" type="submit">
+              Guardar
+            </button>
+          </div>
+        </form>
+      </Dialog>
+      <ConfirmModal
+        open={deleting !== null}
+        title={`Eliminar ${inputLabel.toLowerCase()}`}
+        body={`¿Querés eliminar “${deleting ?? ""}”? Esta acción se simula y no modifica los datos mock.`}
+        confirmLabel="Sí, eliminar"
+        onClose={() => setDeleting(null)}
+        onConfirm={() => {
+          notify(`${inputLabel} eliminado como demostración.`);
+          setDeleting(null);
+        }}
+      />
+    </section>
   );
 }
