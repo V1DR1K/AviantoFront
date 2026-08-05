@@ -1,0 +1,5 @@
+import { jsPDF } from "jspdf";
+import * as XLSX from "xlsx";
+import { money } from "./format";
+export function exportExcel(name: string, rows: Record<string, unknown>[]) { const worksheet=XLSX.utils.json_to_sheet(rows); XLSX.utils.sheet_add_aoa(worksheet, [[`Exportado: ${new Date().toLocaleString("es-AR")}`]], {origin:"A1"}); const workbook=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook,worksheet,"Resultados"); XLSX.writeFile(workbook,`${name}.xlsx`); }
+export function exportPdf(numero: string, cliente: string, total: number) { const pdf=new jsPDF(); pdf.setFillColor(18,53,91); pdf.rect(0,0,210,35,"F"); pdf.setTextColor(255,255,255); pdf.setFontSize(21); pdf.text("AviantoSoftware",18,21); pdf.setTextColor(18,53,91); pdf.setFontSize(16); pdf.text(`Presupuesto ${numero}`,18,55); pdf.setFontSize(11); pdf.text(`Cliente: ${cliente}`,18,68); pdf.text(`Total: ${money(total)}`,18,83); pdf.setDrawColor(18,53,91); pdf.line(18,90,192,90); pdf.setFontSize(10); pdf.text("Documento generado desde el MVP. Los importes y datos se confirmarán al integrar el backend.",18,104,{maxWidth:170}); pdf.save(`${numero}.pdf`); }

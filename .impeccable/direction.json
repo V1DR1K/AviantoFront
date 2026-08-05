@@ -1,0 +1,45 @@
+{
+  "title": "Definimos el lenguaje de AviantoSoftware",
+  "question": "Elijo una dirección que mantiene el taller legible y operativo; podés aceptarla, tomar una alternativa o pedir otra ronda.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Registro de servicio",
+      "kicker": "DIRECCIÓN PROPUESTA",
+      "lineage": "libretas de mantenimiento y fichas técnicas de taller",
+      "thesis": "Cada pedido se lee como una ficha de servicio clara: vehículo, diagnóstico, acciones y resultado.",
+      "palette": ["#12355b", "#eef3f7", "#1f9d68", "#b42318"],
+      "materials": ["papel técnico", "marcas de revisión", "reglas de medición"],
+      "viewport": "Una cabecera de orden con identidad de moto y un botón Nuevo pedido que permanece inequívoco.",
+      "risk": "Requiere disciplina para que la densidad administrativa nunca opaque las acciones del operario.",
+      "sketch": ".impeccable/sketches/assigned.webp"
+    },
+    {
+      "id": "challenger-teletext",
+      "label": "Índice de taller",
+      "lineage": "tableros de turnos y teletexto de servicio",
+      "thesis": "Los pedidos se organizan como un índice de estados: disponibles de un vistazo y accionables por nombre.",
+      "case": "Funde bien para estados y filas, pero su grilla rígida puede ser dura para visión reducida.",
+      "sketch": ".impeccable/sketches/challenger-teletext.webp",
+      "hero": "https://impeccable.style/worlds/cards/broadcast-programming-teletext-service-hero.webp"
+    },
+    {
+      "id": "challenger-folds",
+      "label": "Orden paso a paso",
+      "lineage": "instrucciones visuales de reparación",
+      "thesis": "El pedido se revela por etapas, priorizando el siguiente dato necesario para avanzar.",
+      "case": "Funde bien con el flujo móvil, pero es menos expresivo para las tablas administrativas extensas.",
+      "sketch": ".impeccable/sketches/challenger-folds.webp",
+      "hero": "https://impeccable.style/worlds/cards/paper-folds-pleats-deployable-orizuru-crane-sequence-hero.webp"
+    }
+  ],
+  "reroll": true,
+  "canon": true,
+  "canonCard": {
+    "label": "Estándar profesional",
+    "thesis": "La consola administrativa convencional, ejecutada con gran claridad.",
+    "viewport": "Sidebar, métricas y tabla de pedidos con el nivel de calidad de un producto terminado.",
+    "sketch": ".impeccable/sketches/canon.webp"
+  },
+  "steer": true
+}

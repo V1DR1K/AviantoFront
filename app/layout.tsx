@@ -1,0 +1,4 @@
+import type { Metadata } from "next";
+import "./globals.css";
+export const metadata: Metadata = { title:"AviantoSoftware | Gestión de taller",description:"Gestión de pedidos, reparaciones y presupuestos para Avianto.", icons:{icon:"/favicon.svg"} };
+export default function RootLayout({children}:{children:React.ReactNode}) { return <html lang="es"><body>{/* THESIS: una cola y un dossier hacen visible el paso de diagnóstico a presupuesto. OWN-WORLD: azul técnico, reglas de registro y superficies de papel frío. STORY: operario captura, administración estandariza y conserva historial. FIRST VIEWPORT: navegación lateral, pedido visible y acción Nuevo pedido inmediata. FORM: registro de servicio, seed 10b6a92c. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md */}{children}</body></html>; }

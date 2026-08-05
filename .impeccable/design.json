@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-05T11:41:13.3156407-03:00",
+  "title": "Design System: AviantoSoftware",
+  "extensions": {
+    "colorMeta": {
+      "navy": { "role": "primary", "displayName": "Service Navy", "canonical": "#12355b" },
+      "navy-2": { "role": "primary", "displayName": "Pressed Navy", "canonical": "#0b294a" },
+      "blue": { "role": "secondary", "displayName": "Working Blue", "canonical": "#2468a5" },
+      "paper": { "role": "neutral", "displayName": "Cool Paper", "canonical": "#f4f7fa" },
+      "line": { "role": "neutral", "displayName": "Drafting Line", "canonical": "#c9d6e2" },
+      "ink": { "role": "neutral", "displayName": "Technical Ink", "canonical": "#13243b" },
+      "muted": { "role": "neutral", "displayName": "Record Muted", "canonical": "#607188" },
+      "green": { "role": "tertiary", "displayName": "Completion Green", "canonical": "#137a4d" },
+      "red": { "role": "tertiary", "displayName": "Risk Red", "canonical": "#b42318" },
+      "white": { "role": "neutral", "displayName": "White Document", "canonical": "#fff" }
+    },
+    "elevation": {
+      "document": "0 12px 28px rgba(18, 53, 91, 0.09)",
+      "modal": "0 20px 65px rgba(0, 0, 0, 0.3)"
+    },
+    "focus": {
+      "outline": "3px solid #77b7ec",
+      "outlineOffset": "2px"
+    },
+    "breakpoints": {
+      "compactRail": "1000px",
+      "mobile": "680px"
+    },
+    "narrative": {
+      "northStar": "The Technical Service Record",
+      "overview": "AviantoSoftware is a calm operational workspace: a cool-paper canvas, fixed deep-navy navigation, and white record surfaces that make workshop data readable at a glance. It treats orders as dossiers—identity, status, notes, line items, totals, and audit history are separated by clear rules rather than decorative treatment. The system is dense enough for desktop administration but deliberately legible for workshop use: strong labels, labeled actions, generous controls, and high-contrast content.",
+      "keyCharacteristics": [
+        "Deep-navy shell with cool-paper workspace and white documents.",
+        "Queue-and-dossier topology for active order review.",
+        "Explicit action hierarchy, semantic status colors, and visible keyboard focus.",
+        "Responsive reflow that preserves task access on phone screens."
+      ],
+      "rules": [
+        { "name": "The Semantic Accent Rule", "body": "Green communicates a positive result; red communicates destructive or risk states. Do not use either as general decoration.", "section": "colors" },
+        { "name": "The Action Weight Rule", "body": "Primary actions and record identifiers use the heaviest available treatment; supporting descriptions stay muted rather than competing through weight.", "section": "typography" },
+        { "name": "The Paper Stack Rule", "body": "Elevation identifies a contained record surface or overlay; do not use shadows to decorate ordinary rows or text.", "section": "elevation" }
+      ],
+      "dos": [
+        "Do preserve the deep-navy rail, cool-paper canvas, and white record-surface relationship.",
+        "Do make important actions explicit with labels and pair icons with text where space permits.",
+        "Do retain the visible 3px keyboard focus treatment."
+      ],
+      "donts": [
+        "Don't introduce decorative workshop or motorcycle imagery as a substitute for information hierarchy.",
+        "Don't use green or red for non-semantic emphasis.",
+        "Don't shrink mobile tables to fit; retain their minimum width and allow their panel to scroll horizontally."
+      ]
+    }
+  }
+}
