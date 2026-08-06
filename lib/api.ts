@@ -58,3 +58,9 @@ export async function download(
   anchor.click();
   URL.revokeObjectURL(url);
 }
+
+export async function objectUrl(path: string) {
+  const response = await authenticatedFetch(apiUrl(path));
+  if (!response.ok) throw new ApiError(await messageFor(response), response.status);
+  return URL.createObjectURL(await response.blob());
+}

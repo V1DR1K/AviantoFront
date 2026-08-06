@@ -59,8 +59,6 @@ export interface MotovehiculoRequest {
   patente: string;
   anio?: number;
   kilometraje?: number;
-  color?: string;
-  cilindrada?: string;
   observaciones?: string;
 }
 export interface MotovehiculoResponse extends MotovehiculoRequest {
@@ -78,8 +76,10 @@ export interface ItemCatalogoRequest {
 }
 export interface ItemCatalogoResponse extends ItemCatalogoRequest {
   id: string;
+  categoria: string;
   activo: boolean;
-  actualizadoEn: string;
+  createdAt: string;
+  updatedAt: string;
 }
 export interface PedidoItemRequest {
   itemCatalogoId?: string;
@@ -92,6 +92,13 @@ export interface PedidoItemRequest {
 export interface PedidoItemResponse extends PedidoItemRequest {
   id: string;
   subtotal: number;
+}
+export interface PhotoResponse {
+  id: string;
+  filename: string;
+  contentType: string;
+  createdAt: string;
+  url: string;
 }
 export interface PedidoRequest {
   clienteId: string;
@@ -112,7 +119,7 @@ export interface PedidoResponse extends PedidoRequest {
   creadoEn: string;
   estado: OrderStatus;
   total: number;
-  fotos: string[];
+  fotos: PhotoResponse[];
   items: PedidoItemResponse[];
 }
 export interface AuditoriaResponse {

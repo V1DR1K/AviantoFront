@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Dialog } from "../ui";
+import { priceInput } from "../../lib/format";
 import type { ClienteResponse, MarcaMotoResponse } from "../../lib/types";
 
 export type SelectOption = { value: string; label: string };
@@ -9,7 +10,7 @@ export type SelectOption = { value: string; label: string };
 export type AbmField = {
   key: string;
   label: string;
-  type?: "text" | "email" | "tel" | "number" | "textarea" | "select";
+  type?: "text" | "email" | "tel" | "number" | "currency" | "textarea" | "select";
   options?: readonly SelectOption[];
   required?: boolean;
   readOnly?: boolean;
@@ -36,8 +37,7 @@ export function AbmFormModal({
   onSubmit: (values: Record<string, string>) => void;
 }) {
   const [values, setValues] = useState<Record<string, string>>({});
-  const valueFor = (field: AbmField) =>
-    values[field.key] ?? String(initialValues[field.key] ?? "");
+  const valueFor = (field: AbmField) => values[field.key] ?? (field.type === "currency" ? priceInput(initialValues[field.key]) : String(initialValues[field.key] ?? ""));
   return (
     <Dialog
       open={open}
@@ -91,7 +91,8 @@ export function AbmFormModal({
               />
             ) : (
               <input
-                type={field.type ?? "text"}
+                type={field.type === "currency" ? "text" : field.type ?? "text"}
+                inputMode={field.type === "currency" ? "decimal" : undefined}
                 min={field.min}
                 max={field.max}
                 value={valueFor(field)}
@@ -171,8 +172,7 @@ export function VehicleAbmModal({
         { key: "patente", label: "Patente", required: true },
         { key: "anio", label: "Año", type: "number", min: 1950, max: 2030 },
         { key: "kilometraje", label: "Kilometraje", type: "number", min: 0 },
-        { key: "color", label: "Color" },
-        { key: "cilindrada", label: "Cilindrada" },
+        { key: "observaciones", label: "Observaciones", type: "textarea", wide: true },
       ]}
     />
   );

@@ -179,6 +179,11 @@ export function Toast({
   message: string | null;
   onClose: () => void;
 }) {
+  useEffect(() => {
+    if (!message) return;
+    const timer = window.setTimeout(onClose, 4000);
+    return () => window.clearTimeout(timer);
+  }, [message, onClose]);
   if (!message) return null;
   return (
     <div className="toast" role="status">

@@ -646,6 +646,43 @@ td small {
   font-weight: 400;
   margin-top: 3px;
 }
+.photo-previews,
+.order-photos > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+.photo-previews figure {
+  position: relative;
+  width: 112px;
+  height: 88px;
+  margin: 0;
+}
+.photo-previews img,
+.order-photos img {
+  width: 112px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+.photo-previews button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  line-height: 0;
+  padding: 4px;
+}
+.order-photos {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
 .document-type {
   margin-top: 7px;
 }
