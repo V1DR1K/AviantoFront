@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "../components/app-shell";
 import { OrderForm } from "../components/order-form";
 import {
@@ -10,53 +10,48 @@ import {
 } from "../components/views";
 import { ConfirmModal, Toast } from "../components/ui";
 import { AdminView, SettingsView } from "../components/admin-view";
-import { orders } from "../lib/mock-data";
 import type { PedidoResponse } from "../lib/types";
 import { LoginView } from "../components/login-view";
-import { clearSession, getSession, type AuthSession } from "../lib/auth";
+import { clearSession, getSession, logout, refreshSession, type AuthSession } from "../lib/auth";
+import { api } from "../lib/api";
 
 export default function Home() {
-  const [session, setSession] = useState<AuthSession | null>(() => getSession());
+  const [session, setSession] = useState<AuthSession | null | undefined>(undefined);
   const [page, setPage] = useState("dashboard");
-  const [selected, setSelected] = useState<PedidoResponse>(orders[0]);
+  const [selected, setSelected] = useState<PedidoResponse | null>(null);
   const [confirmation, setConfirmation] = useState<{
     label: string;
     action: () => void;
   } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  if (!session) return <LoginView />;
+  useEffect(() => {
+    const bootstrap = async () => {
+      if (!getSession()) return setSession(null);
+      const next = await refreshSession();
+      if (!next) return setSession(null);
+      try {
+        const user = await api<AuthSession["user"]>("/auth/me");
+        const verified = { ...next, user };
+        sessionStorage.setItem("avianto.session", JSON.stringify(verified));
+        setSession(verified);
+      } catch {
+        clearSession();
+        setSession(null);
+      }
+    };
+    void bootstrap();
+    const expired = () => setSession(null);
+    window.addEventListener("avianto:session-expired", expired);
+    return () => window.removeEventListener("avianto:session-expired", expired);
+  }, []);
+  if (session === undefined) return null;
+  if (!session) return <LoginView onAuthenticated={setSession} />;
   const select = (order: PedidoResponse) => {
     setSelected(order);
     setPage("detail");
   };
-  const saveOrder = (payload: {
-    cliente: string;
-    moto: string;
-    patente: string;
-    documento: "Presupuesto" | "Factura";
-    items: PedidoResponse["items"];
-    total: number;
-    observaciones: string;
-  }) => {
-    setSelected({
-      id: "new",
-      numero: "PT-000190",
-      cliente: payload.cliente,
-      moto: payload.moto,
-      patente: payload.patente,
-      creadoEn: "Hoy",
-      vencimiento: "31/05/2026",
-      estado: "En proceso",
-      documento: payload.documento,
-      clienteId: "new",
-      motovehiculoId: "new",
-      observaciones: payload.observaciones,
-      descuentoGlobal: 0,
-      iva: payload.documento === "Factura",
-      total: payload.total,
-      fotos: [],
-      items: payload.items,
-    });
+  const saveOrder = (order: PedidoResponse) => {
+    setSelected(order);
     setPage("detail");
   };
   let content;
@@ -70,6 +65,7 @@ export default function Home() {
         onPage={setPage}
         onNewOrder={() => setPage("create")}
         onSelect={select}
+        userName={session.user.nombre}
       />
     );
   else if (page === "orders")
@@ -79,9 +75,10 @@ export default function Home() {
   else if (page === "detail")
     content = (
       <OrderDetail
-        order={selected}
+        order={selected!}
         onBack={() => setPage("orders")}
         onConfirm={(label, action) => setConfirmation({ label, action })}
+        onUpdated={setSelected}
       />
     );
   else if (["clients", "vehicles", "catalog", "audit"].includes(page))
@@ -98,8 +95,9 @@ export default function Home() {
       page={page}
       onPage={setPage}
       onNewOrder={() => setPage("create")}
-      onLogout={() => {
-        clearSession();
+      session={session}
+      onLogout={async () => {
+        await logout();
         setSession(null);
       }}
     >
@@ -114,9 +112,9 @@ export default function Home() {
         }
         onClose={() => setConfirmation(null)}
         onConfirm={() => {
-          confirmation?.action();
-          setToast(
-            "Acción confirmada como demostración. Los datos mock no cambiaron.",
+          void Promise.resolve(confirmation?.action()).then(
+            () => setToast("Acción completada."),
+            (reason) => setToast(reason instanceof Error ? reason.message : "No fue posible completar la acción."),
           );
           setConfirmation(null);
         }}

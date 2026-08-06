@@ -13,6 +13,7 @@ import {
   Settings,
   Users,
 } from "lucide-react";
+import type { AuthSession } from "../lib/auth";
 const nav = [
   { id: "dashboard", label: "Inicio", icon: LayoutDashboard },
   { id: "orders", label: "Pedidos", icon: ClipboardList },
@@ -28,14 +29,18 @@ export function AppShell({
   onPage,
   onNewOrder,
   onLogout,
+  session,
 }: {
   children: ReactNode;
   page: string;
   onPage: (page: string) => void;
   onNewOrder: () => void;
-  onLogout: () => void;
+  onLogout: () => void | Promise<void>;
+  session: AuthSession;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const isAdmin = session.user.rol === "ADMINISTRACION";
+  const visibleNav = nav.filter((item) => item.id !== "audit" || isAdmin);
   const go = (target: string) => {
     onPage(target);
     setMenuOpen(false);
@@ -54,7 +59,7 @@ export function AppShell({
           </span>
         </button>
         <nav>
-          {nav.map((item) => {
+          {visibleNav.map((item) => {
             const Icon = item.icon;
             return (
               <button
@@ -77,9 +82,9 @@ export function AppShell({
             <br />
             Buenos Aires, Argentina
           </p>
-          <button className="settings" onClick={() => go("settings")}>
+          {isAdmin && <button className="settings" onClick={() => go("settings")}>
             <Settings size={18} /> Administración
-          </button>
+          </button>}
           <button className="settings" onClick={onLogout}>
             <LogOut size={18} /> Cerrar sesión
           </button>
@@ -113,7 +118,7 @@ export function AppShell({
           <button className="drawer-close" onClick={() => setMenuOpen(false)}>
             Cerrar menú ×
           </button>
-          {nav.map((item) => {
+          {visibleNav.map((item) => {
             const Icon = item.icon;
             return (
               <button key={item.id} onClick={() => go(item.id)}>
@@ -137,7 +142,7 @@ export function AppShell({
         </div>
       )}
       <nav className="mobile-nav">
-        {nav.slice(0, 5).map((item) => {
+        {visibleNav.slice(0, 5).map((item) => {
           const Icon = item.icon;
           return (
             <button

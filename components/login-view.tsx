@@ -1,8 +1,12 @@
 "use client";
 
-import { LockKeyhole, LogIn } from "lucide-react";
+import { useState } from "react";
+import { LogIn } from "lucide-react";
+import { login, type AuthSession } from "../lib/auth";
 
-export function LoginView() {
+export function LoginView({ onAuthenticated }: { onAuthenticated: (session: AuthSession) => void }) {
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
   return (
     <main className="login-page">
       <section className="login-card">
@@ -16,7 +20,21 @@ export function LoginView() {
           <h1>Iniciar sesión</h1>
           <p>Accedé a la gestión operativa del taller.</p>
         </div>
-        <form onSubmit={(event) => event.preventDefault()}>
+        <form
+          onSubmit={async (event) => {
+            event.preventDefault();
+            const data = new FormData(event.currentTarget);
+            setPending(true);
+            setError(null);
+            try {
+              onAuthenticated(await login(String(data.get("username") ?? ""), String(data.get("password") ?? "")));
+            } catch (reason) {
+              setError(reason instanceof Error ? reason.message : "No fue posible iniciar sesión.");
+            } finally {
+              setPending(false);
+            }
+          }}
+        >
           <label>
             Nombre de usuario
             <input name="username" autoComplete="username" required />
@@ -30,15 +48,12 @@ export function LoginView() {
               required
             />
           </label>
-          <button className="button primary large" type="submit" disabled>
+          <button className="button primary large" type="submit" disabled={pending}>
             <LogIn size={18} />
-            Ingresar
+            {pending ? "Ingresando..." : "Ingresar"}
           </button>
         </form>
-        <p className="login-pending">
-          <LockKeyhole size={16} />
-          La autenticación estará disponible al conectar AviantoBack.
-        </p>
+        {error && <p className="login-pending" role="alert">{error}</p>}
       </section>
     </main>
   );

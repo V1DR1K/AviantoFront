@@ -1,12 +1,11 @@
 export type AuthSession = {
   accessToken: string;
-  refreshToken?: string;
-  user: { id: string; nombre: string; rol: "ADMINISTRACION" | "OPERARIO" };
+  refreshToken: string;
+  user: { id: string; nombre: string; email: string; rol: "ADMINISTRACION" | "OPERARIO"; activo: boolean };
 };
 
 const sessionKey = "avianto.session";
-const apiBase =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api";
+export const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
 export const getSession = (): AuthSession | null => {
   if (typeof window === "undefined") return null;
   try {
@@ -29,7 +28,10 @@ export const login = async (username: string, password: string) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
-  if (!response.ok) throw new Error("No fue posible iniciar sesión.");
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(body?.message ?? "No fue posible iniciar sesión.");
+  }
   const session = (await response.json()) as AuthSession;
   saveSession(session);
   return session;
@@ -75,6 +77,9 @@ export const authenticatedFetch = async (
       ...(session ? { Authorization: `Bearer ${session.accessToken}` } : {}),
     },
   });
-  if (response.status === 401) clearSession();
+  if (response.status === 401) {
+    clearSession();
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("avianto:session-expired"));
+  }
   return response;
 };

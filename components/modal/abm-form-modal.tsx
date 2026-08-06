@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { Dialog } from "../ui";
+import type { ClienteResponse, MarcaMotoResponse } from "../../lib/types";
+
+export type SelectOption = { value: string; label: string };
 
 export type AbmField = {
   key: string;
   label: string;
   type?: "text" | "email" | "tel" | "number" | "textarea" | "select";
-  options?: string[];
+  options?: readonly SelectOption[];
   required?: boolean;
   readOnly?: boolean;
   wide?: boolean;
@@ -74,7 +77,7 @@ export function AbmFormModal({
               >
                 <option value="">Seleccionar</option>
                 {field.options?.map((option) => (
-                  <option key={option}>{option}</option>
+                  <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
             ) : field.type === "textarea" ? (
@@ -130,8 +133,8 @@ export function VehicleAbmModal({
   clientId?: string;
   clientName?: string;
   initialValues?: Record<string, string | number | boolean | undefined>;
-  brands: string[];
-  clients?: string[];
+  brands: MarcaMotoResponse[];
+  clients?: ClienteResponse[];
   onClose: () => void;
   onSubmit: (values: Record<string, string>) => void;
 }) {
@@ -143,30 +146,29 @@ export function VehicleAbmModal({
       mode={mode}
       initialValues={{
         ...initialValues,
-        cliente: clientName,
-        clienteId: clientId,
+        clienteId: clientId ?? initialValues?.clienteId,
       }}
       onClose={onClose}
       onSubmit={onSubmit}
       fields={[
         {
-          key: "cliente",
+          key: "clienteId",
           label: "Cliente",
-          type: lockedClient ? "text" : "select",
-          options: lockedClient ? undefined : clients,
+          type: "select",
+          options: lockedClient ? [{ value: clientId!, label: clientName ?? "Cliente" }] : clients.map((client) => ({ value: client.id, label: client.nombre })),
           readOnly: lockedClient,
           required: true,
           wide: true,
         },
         {
-          key: "marca",
+          key: "marcaId",
           label: "Marca",
           type: "select",
-          options: brands,
+          options: brands.map((brand) => ({ value: brand.id, label: brand.nombre })),
           required: true,
         },
         { key: "modelo", label: "Modelo", required: true },
-        { key: "patente", label: "Patente" },
+        { key: "patente", label: "Patente", required: true },
         { key: "anio", label: "Año", type: "number", min: 1950, max: 2030 },
         { key: "kilometraje", label: "Kilometraje", type: "number", min: 0 },
         { key: "color", label: "Color" },

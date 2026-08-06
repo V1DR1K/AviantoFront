@@ -49,11 +49,12 @@ export interface UsuarioResponse {
   email: string;
   rol: "ADMINISTRACION" | "OPERARIO";
   activo: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 export interface MotovehiculoRequest {
   clienteId: string;
-  marca: string;
-  marcaId?: string;
+  marcaId: string;
   modelo: string;
   patente: string;
   anio?: number;
@@ -65,14 +66,14 @@ export interface MotovehiculoRequest {
 export interface MotovehiculoResponse extends MotovehiculoRequest {
   id: string;
   cliente: string;
+  marca: string;
   activo: boolean;
 }
 export interface ItemCatalogoRequest {
   descripcion: string;
   tipo: ItemType;
   precioBase: number;
-  categoria?: string;
-  categoriaId?: string;
+  categoriaId: string;
   observaciones?: string;
 }
 export interface ItemCatalogoResponse extends ItemCatalogoRequest {
