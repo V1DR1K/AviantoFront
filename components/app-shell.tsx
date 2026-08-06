@@ -77,11 +77,6 @@ export function AppShell({
           <button className="button sidebar-new" onClick={onNewOrder}>
             <Plus size={17} /> <span>Nuevo pedido</span>
           </button>
-          <p>
-            Taller Avianto
-            <br />
-            Buenos Aires, Argentina
-          </p>
           {isAdmin && <button className="settings" onClick={() => go("settings")}>
             <Settings size={18} /> Administración
           </button>}

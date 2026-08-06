@@ -134,6 +134,9 @@ export interface ReporteResponse {
   etiqueta: string;
   valor: number;
 }
+export interface DashboardDayResponse { fecha: string; total: number; }
+export interface DashboardOrderResponse { id: string; numero: string; cliente: string; moto: string; estado: OrderStatus; total: number; createdAt: string; }
+export interface DashboardResponse { fechaDesde: string; fechaHasta: string; pedidos: number; enProceso: number; aprobados: number; pagados: number; cancelados: number; presupuestado: number; facturado: number; evolucion: DashboardDayResponse[]; recientes: DashboardOrderResponse[]; }
 export interface AutocompleteResponse {
   id: string;
   label: string;
