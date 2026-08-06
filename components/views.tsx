@@ -9,6 +9,9 @@ import { EmptyState, Pagination, SearchBox, StatusBadge } from "./ui";
 
 const date = (value: string) => new Intl.DateTimeFormat("es-AR").format(new Date(value));
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
+function Metric({ label, value, tone }: { label: string; value: string; tone: string }) {
+  return <section className={`metric ${tone}`}><span>{label}</span><strong>{value}</strong><small>Período seleccionado</small></section>;
+}
 
 function OrderPhotos({ photos }: { photos: PhotoResponse[] }) {
   const [urls, setUrls] = useState<Record<string, string>>({});
