@@ -74,9 +74,6 @@ export function AppShell({
           })}
         </nav>
         <div className="sidebar-bottom">
-          <button className="button sidebar-new" onClick={onNewOrder}>
-            <Plus size={17} /> <span>Nuevo pedido</span>
-          </button>
           {isAdmin && <button className="settings" onClick={() => go("settings")}>
             <Settings size={18} /> Administración
           </button>}
