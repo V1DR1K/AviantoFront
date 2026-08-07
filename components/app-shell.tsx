@@ -76,6 +76,7 @@ export function AppShell({
                 key={item.id}
                 className={page === item.id ? "active" : ""}
                 onClick={() => go(item.id)}
+                title={item.label}
               >
                 <Icon size={20} />
                 <span>{item.label}</span>
@@ -84,16 +85,17 @@ export function AppShell({
           })}
         </nav>
         <div className="sidebar-bottom">
-          {isAdmin && <button className="settings" onClick={() => go("settings")}>
-            <Settings size={18} /> Administración
+          {isAdmin && <button className="settings" onClick={() => go("settings")} title="Administración">
+            <Settings size={18} /> <span>Administración</span>
           </button>}
-          <button className="settings" onClick={onLogout}>
-            <LogOut size={18} /> Cerrar sesión
+          <button className="settings" onClick={onLogout} title="Cerrar sesión">
+            <LogOut size={18} /> <span>Cerrar sesión</span>
           </button>
           <button
             className="settings collapse-toggle"
             onClick={() => setCollapsed((value) => !value)}
             aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
+            title={collapsed ? "Expandir menú" : "Contraer menú"}
           >
             {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
             <span>{collapsed ? "Expandir" : "Contraer"}</span>
@@ -162,10 +164,6 @@ export function AppShell({
         <button onClick={back}>
           <ChevronLeft size={20} />
           <span>Volver</span>
-        </button>
-        <button onClick={() => setMenuOpen(true)}>
-          <Plus size={20} />
-          <span>Más</span>
         </button>
       </nav>
     </div>

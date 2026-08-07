@@ -140,7 +140,7 @@ export function MotoDetail({
           {services.length ? (
             <table>
               <thead><tr><th>Fecha</th><th>Kilometraje</th><th>Observaciones</th></tr></thead>
-              <tbody>{services.map((service) => <tr key={service.id}><td>{date(service.fecha)}</td><td>{service.kilometraje}</td><td>{service.observaciones || "—"}</td></tr>)}</tbody>
+              <tbody>{services.map((service) => <tr key={service.id}><td data-label="Fecha">{date(service.fecha)}</td><td data-label="Kilometraje">{service.kilometraje}</td><td data-label="Observaciones">{service.observaciones || "—"}</td></tr>)}</tbody>
             </table>
           ) : <EmptyState title="Sin services" body="Registrá el primer service de la moto." />}
         </section>
@@ -151,7 +151,7 @@ export function MotoDetail({
           {fichas.length ? (
             <table>
               <thead><tr><th>Ficha</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
-              <tbody>{fichas.map((ficha) => <tr key={ficha.id}><td>{ficha.numero}</td><td><StatusBadge status={ficha.estado} /></td><td>{ficha.estadoPago}</td><td>{money(ficha.total)}</td><td className="table-actions"><button onClick={() => onOpenFicha(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
+              <tbody>{fichas.map((ficha) => <tr key={ficha.id}><td data-label="Ficha">{ficha.numero}</td><td data-label="Estado"><StatusBadge status={ficha.estado} /></td><td data-label="Pago">{ficha.estadoPago}</td><td data-label="Total">{money(ficha.total)}</td><td className="table-actions"><button onClick={() => onOpenFicha(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
             </table>
           ) : <EmptyState title="Sin fichas" body="Esta moto todavía no tiene fichas de trabajo." />}
         </section>
@@ -162,7 +162,7 @@ export function MotoDetail({
           {repuestos.length ? (
             <table>
               <thead><tr><th>Pedido</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
-              <tbody>{repuestos.map((repuesto) => <tr key={repuesto.id}><td>{repuesto.numero}</td><td><StatusBadge status={repuesto.estado} /></td><td>{repuesto.estadoPago}</td><td>{money(repuesto.total)}</td><td className="table-actions"><button onClick={() => onOpenRepuesto(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
+              <tbody>{repuestos.map((repuesto) => <tr key={repuesto.id}><td data-label="Pedido">{repuesto.numero}</td><td data-label="Estado"><StatusBadge status={repuesto.estado} /></td><td data-label="Pago">{repuesto.estadoPago}</td><td data-label="Total">{money(repuesto.total)}</td><td className="table-actions"><button onClick={() => onOpenRepuesto(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
             </table>
           ) : <EmptyState title="Sin repuestos" body="Aún no hay pedidos de repuestos para esta moto." />}
         </section>

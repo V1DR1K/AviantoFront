@@ -178,15 +178,24 @@ textarea:focus-visible {
   justify-content: center;
   padding: 5px 0 28px;
 }
-.sidebar.collapsed .brand > span:last-child,
-.sidebar.collapsed .sidebar nav span,
-.sidebar.collapsed .sidebar-bottom p,
-.sidebar.collapsed .settings {
+.sidebar.collapsed .brand > span:last-child {
   display: none;
 }
-.sidebar.collapsed .sidebar nav button {
+.sidebar.collapsed .sidebar-bottom p {
+  display: none;
+}
+.sidebar.collapsed nav span,
+.sidebar.collapsed .settings span,
+.sidebar.collapsed .sidebar-bottom .app-version {
+  display: none;
+}
+.sidebar.collapsed nav button,
+.sidebar.collapsed .sidebar-bottom .settings {
   justify-content: center;
   padding: 13px;
+}
+.sidebar.collapsed .settings {
+  width: 100%;
 }
 .sidebar.collapsed .collapse-toggle {
   display: flex;
@@ -1504,7 +1513,7 @@ td.table-actions {
   .mobile-nav {
     position: fixed;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     bottom: 0;
     left: 0;
     right: 0;
@@ -1591,10 +1600,52 @@ td.table-actions {
     justify-content: center;
   }
   .table-panel {
-    overflow: auto;
+    overflow: visible;
   }
   table {
-    min-width: 700px;
+    min-width: 0;
+  }
+  thead {
+    display: none;
+  }
+  tbody {
+    display: block;
+  }
+  tr {
+    display: block;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 4px 14px 10px;
+    margin-bottom: 12px;
+  }
+  td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 7px 0;
+    border: 0;
+  }
+  td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  td.table-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    border-top: 1px solid var(--line);
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+  td.table-actions::before {
+    content: none;
+  }
+  td .row-action {
+    width: 100%;
+    margin-top: 4px;
   }
   .detail-title {
     align-items: flex-start;

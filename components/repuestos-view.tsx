@@ -87,7 +87,7 @@ export function RepuestosView({
             <thead><tr><th>Pedido</th><th>Moto</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
             <tbody>{result.content.map((repuesto) => {
               const editable = repuesto.estado !== "Cancelado" && repuesto.estado !== "Completado";
-              return <tr key={repuesto.id}><td>{repuesto.numero}</td><td>{repuesto.patente}</td><td>{repuesto.cliente}</td><td>{date(repuesto.fecha)}</td><td><StatusBadge status={repuesto.estado} /></td><td><StatusBadge status={repuesto.estadoPago} /></td><td>{money(repuesto.total)}</td><td className="table-actions">
+              return <tr key={repuesto.id}><td data-label="Pedido">{repuesto.numero}</td><td data-label="Moto">{repuesto.patente}</td><td data-label="Cliente">{repuesto.cliente}</td><td data-label="Fecha">{date(repuesto.fecha)}</td><td data-label="Estado"><StatusBadge status={repuesto.estado} /></td><td data-label="Pago"><StatusBadge status={repuesto.estadoPago} /></td><td data-label="Total">{money(repuesto.total)}</td><td className="table-actions">
                 <button onClick={() => onOpen(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} /></button>
                 {editable ? (
                   <>
@@ -248,9 +248,9 @@ export function RepuestoDetail({
               <thead><tr><th>Ítem</th><th>Tipo</th><th>Cant.</th><th>Precio</th><th>Subtotal</th><th>Estado</th>{!locked ? <th /> : null}</tr></thead>
               <tbody>{repuesto.items.map((item) => (
                 <tr key={item.id}>
-                  <td>{item.descripcion}</td><td>{item.tipo}</td><td>{Number(item.cantidad)}</td><td>{money(item.precio)}</td><td>{money(item.subtotal)}</td>
-                  <td><StatusBadge status={item.estado} /></td>
-                  {!locked && <td>
+                  <td data-label="Ítem">{item.descripcion}</td><td data-label="Tipo">{item.tipo}</td><td data-label="Cant.">{Number(item.cantidad)}</td><td data-label="Precio">{money(item.precio)}</td><td data-label="Subtotal">{money(item.subtotal)}</td>
+                  <td data-label="Estado"><StatusBadge status={item.estado} /></td>
+                  {!locked && <td data-label="Cambiar">
                     <select value="" disabled={pending} onChange={(event) => event.target.value && void setItemState(item.id, event.target.value as RepuestoItemState)}>
                       <option value="">Cambiar…</option>
                       {itemStates.filter((option) => option !== item.estado).map((option) => <option key={option} value={option}>{option}</option>)}

@@ -285,12 +285,12 @@ export function FichasView({
                 const editable = ficha.estado !== "Entregada" && ficha.estado !== "Cancelada";
                 return (
                   <tr key={ficha.id}>
-                    <td>{ficha.numero}</td>
-                    <td>{ficha.cliente}</td>
-                    <td>{ficha.moto}<small>{ficha.patente}</small></td>
-                    <td><StatusBadge status={ficha.estado} /></td>
-                    <td><StatusBadge status={ficha.estadoPago} /></td>
-                    <td>{money(ficha.total)}</td>
+                    <td data-label="Ficha">{ficha.numero}</td>
+                    <td data-label="Cliente">{ficha.cliente}</td>
+                    <td data-label="Moto">{ficha.moto}<small>{ficha.patente}</small></td>
+                    <td data-label="Estado"><StatusBadge status={ficha.estado} /></td>
+                    <td data-label="Pago"><StatusBadge status={ficha.estadoPago} /></td>
+                    <td data-label="Total">{money(ficha.total)}</td>
                     <td className="table-actions">
                       <button onClick={() => onSelect(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} /></button>
                       {editable ? (
@@ -467,7 +467,7 @@ export function ReportsView() {
           <Metric key={item.etiqueta} label={item.etiqueta} value={money(item.valor)} tone="blue" />
         ))}
       </div>
-      <section className="panel"><h2>Clientes</h2><table><tbody>{clients.map((client) => <tr key={client.id}><td>{client.nombre}</td><td>{client.pedidos} fichas</td></tr>)}</tbody></table></section>
+      <section className="panel"><h2>Clientes</h2><table><tbody>{clients.map((client) => <tr key={client.id}><td data-label="Cliente">{client.nombre}</td><td data-label="Fichas">{client.pedidos} fichas</td></tr>)}</tbody></table></section>
     </div>
   );
 }
@@ -506,15 +506,15 @@ export function ServicesView({ onOpenMoto }: { onOpenMoto: (id: string) => void 
             <tbody>
               {rows.map((row) => (
                 <tr key={row.motoId}>
-                  <td>{row.patente}<small>{row.moto}</small></td>
-                  <td>{row.cliente}</td>
-                  <td>{row.kilometraje != null ? row.kilometraje.toLocaleString("es-AR") : "—"}</td>
-                  <td>{row.kmUltimoService != null ? `${row.kmUltimoService.toLocaleString("es-AR")} km` : "—"}</td>
-                  <td>{row.sinReferencia || row.atrasadoKm || row.atrasadoFecha
+                  <td data-label="Moto">{row.patente}<small>{row.moto}</small></td>
+                  <td data-label="Cliente">{row.cliente}</td>
+                  <td data-label="KM actual">{row.kilometraje != null ? row.kilometraje.toLocaleString("es-AR") : "—"}</td>
+                  <td data-label="Último service">{row.kmUltimoService != null ? `${row.kmUltimoService.toLocaleString("es-AR")} km` : "—"}</td>
+                  <td data-label="Próximo">{row.sinReferencia || row.atrasadoKm || row.atrasadoFecha
                     ? <span>{row.proximKm ? `KM ${row.proximKm.toLocaleString("es-AR")}` : "—"}{row.proximaFecha ? ` · ${date(row.proximaFecha)}` : ""}</span>
                     : <span>{row.proximKm ? `KM ${row.proximKm.toLocaleString("es-AR")}` : "—"}{row.kmFaltan != null ? ` (faltan ${row.kmFaltan.toLocaleString("es-AR")})` : ""}{row.proximaFecha ? ` · ${date(row.proximaFecha)}` : ""}</span>}</td>
-                  <td><StatusBadge status={row.sinReferencia ? "Sin configurar" : row.atrasadoKm || row.atrasadoFecha ? "Atrasado" : "Al día"} /></td>
-                  <td><button className="row-action" onClick={() => onOpenMoto(row.motoId)}>Ver moto</button></td>
+                  <td data-label="Estado"><StatusBadge status={row.sinReferencia ? "Sin configurar" : row.atrasadoKm || row.atrasadoFecha ? "Atrasado" : "Al día"} /></td>
+                  <td data-label="Acción"><button className="row-action" onClick={() => onOpenMoto(row.motoId)}>Ver moto</button></td>
                 </tr>
               ))}
             </tbody>
