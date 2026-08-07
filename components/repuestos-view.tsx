@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Plus } from "lucide-react";
+import { Download, Edit3, Eye, Plus, Trash2 } from "lucide-react";
 import { api, download } from "../lib/api";
 import { money, parsePrice, priceInput } from "../lib/format";
 import type {
@@ -14,7 +14,7 @@ import type {
   RepuestoResponse,
   RepuestoState,
 } from "../lib/types";
-import { Dialog, EmptyState, Pagination, SearchBox, StatusBadge } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, StatusBadge } from "./ui";
 
 const date = (value: string) => new Intl.DateTimeFormat("es-AR").format(new Date(value));
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
@@ -36,13 +36,17 @@ export function RepuestosView({
   const [result, setResult] = useState<PageResponse<RepuestoResponse> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<RepuestoResponse | null>(null);
+  const [deleting, setDeleting] = useState<RepuestoResponse | null>(null);
   const [clients, setClients] = useState<ClienteResponse[]>([]);
   useEffect(() => { void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { estado: estado === "Todos" ? undefined : estado, q: query || undefined, page: page - 1, size: 20 }).then(setResult).catch((err) => setError(errorMessage(err))); }, [query, estado, page]);
+  const loadClients = () => void api<PageResponse<ClienteResponse>>("/clientes", {}, { size: 100, activo: true }).then((r) => setClients(r.content)).catch(() => undefined);
+  const refresh = () => void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { estado: estado === "Todos" ? undefined : estado, q: query || undefined, page: page - 1, size: 20 }).then(setResult).catch((err) => setError(errorMessage(err)));
   return (
     <div className="page">
       <div className="page-heading">
         <div><h1>Pedidos de repuestos</h1><p>Control de compras, recepción y pago de repuestos y accesorios.</p></div>
-        <button className="button primary" onClick={() => { setCreateOpen(true); void api<PageResponse<ClienteResponse>>("/clientes", {}, { size: 100, activo: true }).then((r) => setClients(r.content)).catch(() => undefined); }}><Plus size={19} />Nuevo pedido</button>
+        <button className="button primary" onClick={() => { setCreateOpen(true); loadClients(); }}><Plus size={19} />Nuevo pedido</button>
       </div>
       {error && <p className="login-pending">{error}</p>}
       <section className="panel table-panel">
@@ -54,20 +58,40 @@ export function RepuestosView({
         {result?.content.length ? (
           <table>
             <thead><tr><th>Pedido</th><th>Moto</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
-            <tbody>{result.content.map((repuesto) => <tr key={repuesto.id}><td>{repuesto.numero}</td><td>{repuesto.patente}</td><td>{repuesto.cliente}</td><td>{date(repuesto.fecha)}</td><td><StatusBadge status={repuesto.estado} /></td><td><StatusBadge status={repuesto.estadoPago} /></td><td>{money(repuesto.total)}</td><td><button className="row-action" onClick={() => onOpen(repuesto)}>Ver</button></td></tr>)}</tbody>
+            <tbody>{result.content.map((repuesto) => {
+              const editable = repuesto.estado !== "Cancelado" && repuesto.estado !== "Completado";
+              return <tr key={repuesto.id}><td>{repuesto.numero}</td><td>{repuesto.patente}</td><td>{repuesto.cliente}</td><td>{date(repuesto.fecha)}</td><td><StatusBadge status={repuesto.estado} /></td><td><StatusBadge status={repuesto.estadoPago} /></td><td>{money(repuesto.total)}</td><td className="table-actions">
+                <button onClick={() => onOpen(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} /></button>
+                {editable ? (
+                  <>
+                    <button onClick={() => { setEditing(repuesto); loadClients(); }} aria-label={`Editar pedido ${repuesto.numero}`}><Edit3 size={17} /></button>
+                    <button className="danger-action" onClick={() => setDeleting(repuesto)} aria-label={`Eliminar pedido ${repuesto.numero}`}><Trash2 size={17} /></button>
+                  </>
+                ) : null}
+              </td></tr>;
+            })}</tbody>
           </table>
         ) : <EmptyState title="No hay pedidos de repuestos" body="Creá uno nuevo o ajustá los filtros." />}
         <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
       </section>
       <CreateRepuestoDialog
-        key={String(createOpen)}
-        open={createOpen}
+        key={createOpen ? "create" : editing ? `edit-${editing.id}` : "closed"}
+        open={createOpen || Boolean(editing)}
+        initial={editing}
         clients={clients}
         notify={notify}
         onLoadVehicles={async (clienteId) => { const r = await api<PageResponse<MotovehiculoResponse>>("/motovehiculos", {}, { clienteId, size: 100, activo: true }); return r.content; }}
-        onClose={() => setCreateOpen(false)}
-        onCreated={(repuesto) => { setCreateOpen(false); onOpen(repuesto); }}
+        onClose={() => { setCreateOpen(false); setEditing(null); }}
+        onSaved={(repuesto) => { setCreateOpen(false); setEditing(null); refresh(); onOpen(repuesto); }}
         onError={setError}
+      />
+      <ConfirmModal
+        open={Boolean(deleting)}
+        title="Eliminar pedido de repuesto"
+        body={`Vas a eliminar el pedido ${deleting?.numero ?? ""}. El historial conservará el registro para auditoría.`}
+        confirmLabel="Eliminar pedido"
+        onClose={() => setDeleting(null)}
+        onConfirm={() => { const sel = deleting; if (!sel) return; setDeleting(null); void api(`/repuestos/${sel.id}`, { method: "DELETE" }).then(() => { refresh(); notify(`Pedido ${sel.numero} eliminado.`); }).catch((reason) => setError(errorMessage(reason))); }}
       />
     </div>
   );
@@ -75,30 +99,39 @@ export function RepuestosView({
 
 function CreateRepuestoDialog({
   open,
+  initial,
   clients,
   onLoadVehicles,
   onClose,
-  onCreated,
+  onSaved,
   onError,
   notify,
 }: {
   open: boolean;
+  initial: RepuestoResponse | null;
   clients: ClienteResponse[];
   onLoadVehicles: (clienteId: string) => Promise<MotovehiculoResponse[]>;
   onClose: () => void;
-  onCreated: (repuesto: RepuestoResponse) => void;
+  onSaved: (repuesto: RepuestoResponse) => void;
   onError: (message: string) => void;
   notify: (message: string) => void;
 }) {
-  const [clientId, setClientId] = useState("");
-  const [motoId, setMotoId] = useState("");
-  const [proveedor, setProveedor] = useState("");
+  const [clientId, setClientId] = useState(initial?.clienteId ?? "");
+  const [motoId, setMotoId] = useState(initial?.motoId ?? "");
+  const [proveedor, setProveedor] = useState(initial?.proveedor ?? "");
   const [motoOptions, setMotoOptions] = useState<MotovehiculoResponse[]>([]);
-  const [rows, setRows] = useState<{ key: string; descripcion: string; tipo: string; cantidad: string; precio: string }[]>([{ key: crypto.randomUUID(), descripcion: "", tipo: "Repuesto", cantidad: "1", precio: "" }]);
+  const [rows, setRows] = useState<{ key: string; descripcion: string; tipo: string; cantidad: string; precio: string; estado?: string }[]>(initial?.items.length
+    ? initial.items.map((item) => ({ key: crypto.randomUUID(), descripcion: item.descripcion, tipo: item.tipo, cantidad: String(item.cantidad), precio: String(item.precio), estado: item.estado }))
+    : [{ key: crypto.randomUUID(), descripcion: "", tipo: "Repuesto", cantidad: "1", precio: "" }]);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     if (!clientId) return;
-    void onLoadVehicles(clientId).then(setMotoOptions).catch((reason) => onError(errorMessage(reason)));
+    void onLoadVehicles(clientId).then((loaded) => {
+      setMotoOptions(loaded);
+      if (initial?.motoId && !loaded.some((moto) => moto.id === initial.motoId)) {
+        void api<MotovehiculoResponse>(`/motovehiculos/${initial.motoId}`).then((moto) => setMotoOptions((all) => all.some((vehicle) => vehicle.id === moto.id) ? all : [moto, ...all])).catch(() => undefined);
+      }
+    }).catch((reason) => onError(errorMessage(reason)));
   }, [clientId]);
   const changeClient = (value: string) => {
     setClientId(value);
@@ -111,17 +144,22 @@ function CreateRepuestoDialog({
     if (!clientId || !motoId || !items.length) return onError("Seleccioná cliente, moto y al menos un ítem.");
     setSaving(true);
     try {
-      const repuesto = await api<RepuestoResponse>("/repuestos", {
-        method: "POST",
-        body: JSON.stringify({ motoVehiculoId: motoId, clienteId: clientId, fecha: new Date().toISOString().slice(0, 10), proveedor: proveedor || null, observaciones: null, items: items.map((item) => { const rest = { descripcion: item.descripcion, tipo: item.tipo, cantidad: item.cantidad, precio: item.precio }; return { ...rest, precio: parsePrice(item.precio), estado: "Pendiente de pedir" }; }) }),
-      });
-      notify(`Pedido ${repuesto.numero} creado.`);
-      onCreated(repuesto);
+      const repuesto = initial
+        ? await api<RepuestoResponse>(`/repuestos/${initial.id}`, {
+            method: "PUT",
+            body: JSON.stringify({ motoVehiculoId: motoId, clienteId: clientId, fecha: initial.fecha.slice(0, 10), proveedor: proveedor || null, observaciones: null, items: items.map((item) => ({ descripcion: item.descripcion, tipo: item.tipo, cantidad: item.cantidad, precio: parsePrice(item.precio), estado: item.estado ?? "Pendiente de pedir" })) }),
+          })
+        : await api<RepuestoResponse>("/repuestos", {
+            method: "POST",
+            body: JSON.stringify({ motoVehiculoId: motoId, clienteId: clientId, fecha: new Date().toISOString().slice(0, 10), proveedor: proveedor || null, observaciones: null, items: items.map((item) => ({ descripcion: item.descripcion, tipo: item.tipo, cantidad: item.cantidad, precio: parsePrice(item.precio), estado: "Pendiente de pedir" })) }),
+          });
+      notify(`Pedido ${repuesto.numero} ${initial ? "actualizado" : "creado"}.`);
+      onSaved(repuesto);
     } catch (reason) { onError(errorMessage(reason)); } finally { setSaving(false); }
   };
   const setRow = (key: string, changes: Partial<typeof rows[number]>) => setRows((all) => all.map((row) => row.key === key ? { ...row, ...changes } : row));
   return (
-    <Dialog open={open} title="Nuevo pedido de repuesto" onClose={onClose} wide>
+    <Dialog open={open} title={initial ? "Editar pedido de repuesto" : "Nuevo pedido de repuesto"} onClose={onClose} wide>
       <form className="record-form repuesto-form" onSubmit={(event) => { event.preventDefault(); void save(); }}>
         <div className="repuesto-pick">
           <label>Cliente<select value={clientId} onChange={(event) => changeClient(event.target.value)} required><option value="">Seleccionar</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.nombre}</option>)}</select></label>
@@ -143,7 +181,7 @@ function CreateRepuestoDialog({
           <button type="button" className="text-button" onClick={() => setRows((all) => [...all, { key: crypto.randomUUID(), descripcion: "", tipo: "Repuesto", cantidad: "1", precio: "" }])}><Plus size={17} />Agregar ítem</button>
         </div>
         <div className="repuesto-total"><span>Total del pedido</span><strong>{money(subtotal)}</strong></div>
-        <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Cancelar</button><button className="button primary" disabled={saving}>{saving ? "Guardando..." : "Guardar pedido"}</button></div>
+        <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Cancelar</button><button className="button primary" disabled={saving}>{saving ? "Guardando..." : initial ? "Guardar cambios" : "Guardar pedido"}</button></div>
       </form>
     </Dialog>
   );
@@ -160,12 +198,14 @@ export function RepuestoDetail({
 }) {
   const [repuesto, setRepuesto] = useState<RepuestoResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
   const load = () => void api<RepuestoResponse>(`/repuestos/${repuestoId}`).then(setRepuesto).catch((reason) => setError(errorMessage(reason)));
   useEffect(load, [repuestoId]);
   if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><p className="login-pending">{error}</p></div>;
   if (!repuesto) return <div className="page">Cargando…</div>;
   const locked = repuesto.estado === "Cancelado";
-  const setItemState = async (itemId: string, estado: RepuestoItemState) => { try { const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/items/${itemId}/estado`, { method: "PATCH", body: JSON.stringify({ estado }) }); setRepuesto(next); } catch (reason) { setError(errorMessage(reason)); } };
+  const setItemState = async (itemId: string, estado: RepuestoItemState) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/items/${itemId}/estado`, { method: "PATCH", body: JSON.stringify({ estado }) }); setRepuesto(next); } catch (reason) { setError(errorMessage(reason)); } finally { setPending(false); } };
+  const patch = async (path: string, body: Record<string, string>) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(path, { method: "PATCH", body: JSON.stringify(body) }); setRepuesto(next); return next; } catch (reason) { setError(errorMessage(reason)); return null; } finally { setPending(false); } };
   return (
     <div className="page">
       <button className="back" onClick={onBack}>← Volver a repuestos</button>
@@ -184,7 +224,7 @@ export function RepuestoDetail({
                   <td>{item.descripcion}</td><td>{item.tipo}</td><td>{Number(item.cantidad)}</td><td>{money(item.precio)}</td><td>{money(item.subtotal)}</td>
                   <td><StatusBadge status={item.estado} /></td>
                   {!locked && <td>
-                    <select value="" onChange={(event) => event.target.value && void setItemState(item.id, event.target.value as RepuestoItemState)}>
+                    <select value="" disabled={pending} onChange={(event) => event.target.value && void setItemState(item.id, event.target.value as RepuestoItemState)}>
                       <option value="">Cambiar…</option>
                       {itemStates.filter((option) => option !== item.estado).map((option) => <option key={option} value={option}>{option}</option>)}
                     </select>
@@ -207,7 +247,7 @@ export function RepuestoDetail({
             <h4>Estado del pedido</h4>
             <div className="summary-actions">
               {repuestoStates.filter((option) => option !== repuesto.estado && !(option === "Cancelado" && repuesto.estado === "Completado") && !(option === "Completado" && repuesto.estado === "Cancelado")).map((option) => (
-                <button key={option} className="button secondary large" onClick={() => void api<RepuestoResponse>(`/repuestos/${repuesto.id}/estado`, { method: "PATCH", body: JSON.stringify({ estado: option }) }).then((next) => { setRepuesto(next); notify(`Pedido: ${option}`); }).catch((reason) => setError(errorMessage(reason)))}>Marcar {option}</button>
+                <button key={option} className="button secondary large" disabled={pending} onClick={() => { void patch(`/repuestos/${repuesto.id}/estado`, { estado: option }).then((next) => next && notify(`Pedido: ${option}`)); }}>Marcar {option}</button>
               ))}
             </div>
           </div>
@@ -215,7 +255,7 @@ export function RepuestoDetail({
             <h4>Pago</h4>
             <div className="summary-actions">
               {pagoStates.filter((option) => option !== repuesto.estadoPago).map((option) => (
-                <button key={option} className="button primary large" onClick={() => void api<RepuestoResponse>(`/repuestos/${repuesto.id}/pago`, { method: "PATCH", body: JSON.stringify({ estadoPago: option }) }).then((next) => { setRepuesto(next); notify(`Pago: ${option}`); }).catch((reason) => setError(errorMessage(reason)))}>Pago: {option}</button>
+                <button key={option} className="button primary large" disabled={pending} onClick={() => { void patch(`/repuestos/${repuesto.id}/pago`, { estadoPago: option }).then((next) => next && notify(`Pago: ${option}`)); }}>Pago: {option}</button>
               ))}
             </div>
           </div>

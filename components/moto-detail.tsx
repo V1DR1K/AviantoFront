@@ -1,15 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Eye, Plus } from "lucide-react";
 import { api } from "../lib/api";
 import { money } from "../lib/format";
 import type {
-  ClienteResponse,
   FichaResponse,
   MotovehiculoResponse,
   NextServiceResponse,
-  OwnerResponse,
   PageResponse,
   RepuestoResponse,
   ServiceResponse,
@@ -32,21 +30,17 @@ export function MotoDetail({
   onOpenRepuesto: (repuesto: RepuestoResponse) => void;
   notify: (message: string) => void;
 }) {
-  const [tab, setTab] = useState<"general" | "owners" | "services" | "fichas" | "repuestos">("general");
+  const [tab, setTab] = useState<"general" | "services" | "fichas" | "repuestos">("general");
   const [moto, setMoto] = useState<MotovehiculoResponse | null>(null);
-  const [owners, setOwners] = useState<OwnerResponse[]>([]);
   const [services, setServices] = useState<ServiceResponse[]>([]);
   const [nextService, setNextService] = useState<NextServiceResponse | null>(null);
   const [fichas, setFichas] = useState<FichaResponse[]>([]);
   const [repuestos, setRepuestos] = useState<RepuestoResponse[]>([]);
-  const [clients, setClients] = useState<ClienteResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [ownerOpen, setOwnerOpen] = useState(false);
   const [serviceOpen, setServiceOpen] = useState(false);
-  const [ownerClientId, setOwnerClientId] = useState("");
-  const [ownerDate, setOwnerDate] = useState("");
   const [serviceKm, setServiceKm] = useState("");
   const [serviceDate, setServiceDate] = useState("");
+  const [serviceSaving, setServiceSaving] = useState(false);
 
   const load = () =>
     void api<MotovehiculoResponse>(`/motovehiculos/${id}`)
@@ -54,30 +48,16 @@ export function MotoDetail({
       .catch((reason) => setError(errorMessage(reason)));
   useEffect(load, [id]);
   useEffect(() => {
-    void api<OwnerResponse[]>(`/motovehiculos/${id}/propietarios`).then(setOwners).catch((reason) => setError(errorMessage(reason)));
     void api<ServiceResponse[]>(`/motovehiculos/${id}/services`).then(setServices).catch((reason) => setError(errorMessage(reason)));
     void api<NextServiceResponse[]>("/services/proximos").then((list) => setNextService(list.find((next) => next.motoId === id) ?? null)).catch(() => undefined);
     void api<PageResponse<FichaResponse>>("/fichas", {}, { motoId: id, size: 50 }).then((result) => setFichas(result.content)).catch(() => undefined);
     void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { motoId: id, size: 50 }).then((result) => setRepuestos(result.content)).catch(() => undefined);
-    void api<PageResponse<ClienteResponse>>("/clientes", {}, { size: 100, activo: true }).then((r) => setClients(r.content)).catch(() => undefined);
   }, [id]);
 
-  const addOwner = async () => {
-    if (!ownerClientId) return setError("Seleccioná un cliente.");
-    try {
-      const owner = await api<OwnerResponse>(`/motovehiculos/${id}/propietarios`, {
-        method: "POST",
-        body: JSON.stringify({ clienteId: ownerClientId, fechaDesde: ownerDate || null, observaciones: null }),
-      });
-      void api<OwnerResponse[]>(`/motovehiculos/${id}/propietarios`).then(setOwners);
-      setOwnerOpen(false);
-      setOwnerClientId("");
-      setOwnerDate("");
-      notify(`Propietario agregado (${owner.cliente}).`);
-    } catch (reason) { setError(errorMessage(reason)); }
-  };
   const addService = async () => {
     if (!serviceKm) return setError("Ingresá el kilometraje del service.");
+    if (serviceSaving) return;
+    setServiceSaving(true);
     try {
       await api<ServiceResponse>(`/motovehiculos/${id}/services`, {
         method: "POST",
@@ -90,7 +70,7 @@ export function MotoDetail({
       setServiceKm("");
       setServiceDate("");
       notify("Service registrado.");
-    } catch (reason) { setError(errorMessage(reason)); }
+    } catch (reason) { setError(errorMessage(reason)); } finally { setServiceSaving(false); }
   };
 
   if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><p className="login-pending">{error}</p></div>;
@@ -98,7 +78,6 @@ export function MotoDetail({
 
   const tabs: { id: typeof tab; label: string }[] = [
     { id: "general", label: "General" },
-    { id: "owners", label: "Propietarios" },
     { id: "services", label: "Service" },
     { id: "fichas", label: "Fichas" },
     { id: "repuestos", label: "Repuestos" },
@@ -152,25 +131,11 @@ export function MotoDetail({
           </dl>
         </section>
       )}
-      {tab === "owners" && (
-        <section className="panel table-panel">
-          <div className="panel-head">
-            <h2>Historial de propietarios</h2>
-            <button className="button primary" onClick={() => { setOwnerDate(new Date().toISOString().slice(0, 10)); setOwnerOpen(true); }}><Plus size={17} />Agregar propietario</button>
-          </div>
-          {owners.length ? (
-            <table>
-              <thead><tr><th>Cliente</th><th>Desde</th><th>Hasta</th><th>Actual</th></tr></thead>
-              <tbody>{owners.map((owner) => <tr key={owner.id}><td>{owner.cliente}</td><td>{date(owner.fechaDesde)}</td><td>{date(owner.fechaHasta)}</td><td>{owner.actual ? "Sí" : "—"}</td></tr>)}</tbody>
-            </table>
-          ) : <EmptyState title="Sin propietarios" body="Agregá el historial de dueños de la moto." />}
-        </section>
-      )}
       {tab === "services" && (
         <section className="panel table-panel">
           <div className="panel-head">
             <h2>Services registrados</h2>
-            <button className="button secondary" onClick={() => setServiceOpen(true)}><Plus size={17} />Registrar service</button>
+            <button className="button secondary" disabled={serviceSaving} onClick={() => setServiceOpen(true)}><Plus size={17} />Registrar service</button>
           </div>
           {services.length ? (
             <table>
@@ -186,7 +151,7 @@ export function MotoDetail({
           {fichas.length ? (
             <table>
               <thead><tr><th>Ficha</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
-              <tbody>{fichas.map((ficha) => <tr key={ficha.id}><td>{ficha.numero}</td><td><StatusBadge status={ficha.estado} /></td><td>{ficha.estadoPago}</td><td>{money(ficha.total)}</td><td><button className="row-action" onClick={() => onOpenFicha(ficha)}>Ver</button></td></tr>)}</tbody>
+              <tbody>{fichas.map((ficha) => <tr key={ficha.id}><td>{ficha.numero}</td><td><StatusBadge status={ficha.estado} /></td><td>{ficha.estadoPago}</td><td>{money(ficha.total)}</td><td className="table-actions"><button onClick={() => onOpenFicha(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
             </table>
           ) : <EmptyState title="Sin fichas" body="Esta moto todavía no tiene fichas de trabajo." />}
         </section>
@@ -197,23 +162,16 @@ export function MotoDetail({
           {repuestos.length ? (
             <table>
               <thead><tr><th>Pedido</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
-              <tbody>{repuestos.map((repuesto) => <tr key={repuesto.id}><td>{repuesto.numero}</td><td><StatusBadge status={repuesto.estado} /></td><td>{repuesto.estadoPago}</td><td>{money(repuesto.total)}</td><td><button className="row-action" onClick={() => onOpenRepuesto(repuesto)}>Ver</button></td></tr>)}</tbody>
+              <tbody>{repuestos.map((repuesto) => <tr key={repuesto.id}><td>{repuesto.numero}</td><td><StatusBadge status={repuesto.estado} /></td><td>{repuesto.estadoPago}</td><td>{money(repuesto.total)}</td><td className="table-actions"><button onClick={() => onOpenRepuesto(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
             </table>
           ) : <EmptyState title="Sin repuestos" body="Aún no hay pedidos de repuestos para esta moto." />}
         </section>
       )}
-      <Dialog open={ownerOpen} title="Agregar propietario" onClose={() => setOwnerOpen(false)}>
-        <form className="record-form" onSubmit={(event) => { event.preventDefault(); void addOwner(); }}>
-          <label>Cliente<select value={ownerClientId} onChange={(event) => setOwnerClientId(event.target.value)} required><option value="">Seleccionar</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.nombre}</option>)}</select></label>
-          <label>Fecha desde<input type="date" value={ownerDate} onChange={(event) => setOwnerDate(event.target.value)} /></label>
-          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setOwnerOpen(false)}>Cancelar</button><button className="button primary">Guardar</button></div>
-        </form>
-      </Dialog>
       <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void addService(); }}>
           <label>Kilometraje<input type="number" min="0" value={serviceKm} onChange={(event) => setServiceKm(event.target.value)} required /></label>
           <label>Fecha<input type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
-          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setServiceOpen(false)}>Cancelar</button><button className="button primary">Guardar</button></div>
+          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setServiceOpen(false)}>Cancelar</button><button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>
       </Dialog>
     </div>

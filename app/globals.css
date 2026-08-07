@@ -245,6 +245,35 @@ textarea:focus-visible {
   letter-spacing: -0.02em;
   margin: 0 0 5px;
 }
+nav.tabs {
+  display: flex;
+  gap: 4px;
+  background: #e8eef5;
+  border-radius: 11px;
+  padding: 4px;
+  margin: 4px 0 20px;
+  overflow-x: auto;
+}
+nav.tabs button {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  white-space: nowrap;
+  cursor: pointer;
+  flex: 1;
+}
+nav.tabs button:hover {
+  color: var(--navy);
+}
+nav.tabs button.active {
+  background: #fff;
+  color: var(--navy);
+  box-shadow: 0 2px 8px rgba(18, 53, 91, 0.14);
+}
 .text-button {
   border: 0;
   background: none;

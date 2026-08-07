@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { AlertTriangle, CheckCircle2, Clock3, Search, X } from "lucide-react";
 
 function statusToneValue(status: string) {
@@ -112,11 +112,20 @@ export function ConfirmModal({
   body: string;
   confirmLabel: string;
   variant?: "danger" | "success";
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<unknown>;
   onClose: () => void;
 }) {
   const [modalRef, onModalKeyDown] = useModalFocus(open, onClose);
+  const [pending, setPending] = useState(false);
   if (!open) return null;
+  const run = () => {
+    if (pending) return;
+    const result = onConfirm();
+    if (result instanceof Promise) {
+      setPending(true);
+      void result.finally(() => setPending(false));
+    }
+  };
   return (
     <div className="modal-backdrop">
       <section
@@ -128,17 +137,17 @@ export function ConfirmModal({
         aria-modal="true"
         aria-labelledby="confirm-title"
       >
-        <button className="dialog-close" onClick={onClose} aria-label="Cerrar">
+        <button className="dialog-close" onClick={onClose} aria-label="Cerrar" disabled={pending}>
           <X size={20} />
         </button>
         <h2 id="confirm-title">{title}</h2>
         <p>{body}</p>
         <div className="modal-actions">
-          <button className="button secondary" onClick={onClose}>
+          <button className="button secondary" onClick={onClose} disabled={pending}>
             Cancelar
           </button>
-          <button className={`button ${variant}`} onClick={onConfirm}>
-            {confirmLabel}
+          <button className={`button ${variant}`} onClick={run} disabled={pending}>
+            {pending ? "Esperando..." : confirmLabel}
           </button>
         </div>
       </section>

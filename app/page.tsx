@@ -22,6 +22,7 @@ export default function Home() {
   const [session, setSession] = useState<AuthSession | null | undefined>(undefined);
   const [page, setPage] = useState("dashboard");
   const [fichaId, setFichaId] = useState<string | null>(null);
+  const [fichaReadOnly, setFichaReadOnly] = useState(true);
   const [editFichaId, setEditFichaId] = useState<string | null>(null);
   const [motoId, setMotoId] = useState<string | null>(null);
   const [repuestoId, setRepuestoId] = useState<string | null>(null);
@@ -54,7 +55,7 @@ export default function Home() {
   if (session === undefined) return null;
   if (!session) return <LoginView onAuthenticated={setSession} />;
 
-  const openFicha = (ficha: FichaResponse) => { setFichaId(ficha.id); setPage("ficha"); };
+  const openFicha = (ficha: FichaResponse, readOnly = false) => { setFichaId(ficha.id); setFichaReadOnly(readOnly); setPage("fichas"); };
   const openMoto = (id: string) => { setMotoId(id); setPage("moto"); };
   const openRepuesto = (repuesto: { id: string }) => { setRepuestoId(repuesto.id); setPage("repuesto"); };
 
@@ -77,7 +78,7 @@ export default function Home() {
       <FichasView
         key={refreshKey}
         onNewOrder={() => setPage("create")}
-        onSelect={openFicha}
+        onSelect={(ficha) => openFicha(ficha, true)}
         onEdit={(ficha) => { setEditFichaId(ficha.id); setPage("edit"); }}
         onDelete={(ficha) => setConfirmation({
           label: "Borrar ficha",
@@ -89,6 +90,7 @@ else if (page === "fichas" && fichaId)
     content = (
       <FichaDetail
         fichaKey={fichaId}
+        readOnly={fichaReadOnly}
         onBack={() => setPage("orders")}
         onConfirm={(label, action) => setConfirmation({ label, action })}
       />

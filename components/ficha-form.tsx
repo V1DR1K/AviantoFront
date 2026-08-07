@@ -79,6 +79,7 @@ export function FichaForm({ onClose, onSave, fichaKey }: { onClose: () => void; 
   const [newVehicleOpen, setNewVehicleOpen] = useState(false);
   const [newCatalogOpen, setNewCatalogOpen] = useState(false);
   const prefill = useRef<{ motoId?: string } | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const photoInput = useRef<HTMLInputElement>(null);
   const photoUrls = useRef(new Set<string>());
   const existingUrls = useRef<Record<string, string>>({});
@@ -89,12 +90,23 @@ export function FichaForm({ onClose, onSave, fichaKey }: { onClose: () => void; 
   useEffect(() => {
     if (!clientId) return;
     void api<PageResponse<MotovehiculoResponse>>("/motovehiculos", {}, { clienteId: clientId, activo: true, size: 100 }).then((page) => {
-      const first = page.content[0]?.id;
-      if (prefill.current?.motoId && page.content.some((moto) => moto.id === prefill.current?.motoId)) setVehicleId(prefill.current.motoId);
-      else setVehicleId(first ?? "");
-      prefill.current = null;
+      let first = page.content[0]?.id ?? "";
+      if (prefill.current?.motoId) first = page.content.some((moto) => moto.id === prefill.current?.motoId) ? prefill.current.motoId : first;
+      setVehicles(page.content);
+      setVehicleId(first);
+      void (async () => {
+        const missing = prefill.current?.motoId && !page.content.some((moto) => moto.id === prefill.current?.motoId) ? prefill.current.motoId : null;
+        if (missing) {
+          try {
+            const moto = await api<MotovehiculoResponse>(`/motovehiculos/${missing}`);
+            setVehicles((all) => all.some((vehicle) => vehicle.id === moto.id) ? all : [moto, ...all]);
+            setVehicleId(moto.id);
+          } catch { /* la moto ya no existe */ }
+        }
+        if (prefill.current?.motoId) prefill.current = null;
+      })();
     }).catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudieron cargar las motos."));
-  }, [clientId]);
+  }, [clientId, reloadKey]);
   useEffect(() => { if (!newVehicleOpen || brands.length) return; void api<MarcaMotoResponse[]>("/configuracion/marcas-moto").then((next) => setBrands(next.filter((brand) => brand.activo))).catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudieron cargar las marcas.")); }, [newVehicleOpen, brands.length]);
   useEffect(() => { if (!newCatalogOpen || categories.length) return; void api<CategoriaCatalogoResponse[]>("/configuracion/categorias-catalogo").then((next) => setCategories(next.filter((category) => category.activo))).catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudieron cargar las categorías.")); }, [newCatalogOpen, categories.length]);
   useEffect(() => { const timer = window.setTimeout(() => { void api<PageResponse<ItemCatalogoResponse>>("/catalogo-items", {}, { q: query || undefined, activo: true, size: 10 }).then((page) => setCatalog(page.content)).catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudo consultar el catálogo.")); }, 200); return () => window.clearTimeout(timer); }, [query]);
@@ -110,6 +122,7 @@ export function FichaForm({ onClose, onSave, fichaKey }: { onClose: () => void; 
       setExisting(ficha.fotos);
       setItems(ficha.items.map((item) => ({ key: crypto.randomUUID(), itemCatalogoId: item.itemCatalogoId, descripcion: item.descripcion, tipo: item.tipo, cantidad: item.cantidad, precioUnitario: item.precioUnitario, descuento: item.descuento, estadoTrabajo: item.estadoTrabajo })));
       setClientId(ficha.clienteId);
+      setReloadKey((key) => key + 1);
     }).catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudo cargar la ficha."));
   }, [fichaKey]);
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, FileDown, Filter, Plus } from "lucide-react";
+import { Download, Edit3, Eye, FileDown, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download, objectUrl } from "../lib/api";
 import { money } from "../lib/format";
 import type {
@@ -251,14 +251,13 @@ export function FichasView({
                     <td><StatusBadge status={ficha.estadoPago} /></td>
                     <td>{money(ficha.total)}</td>
                     <td className="table-actions">
+                      <button onClick={() => onSelect(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} /></button>
                       {editable ? (
                         <>
-                          <button className="row-action" onClick={() => onEdit(ficha)}>Ver</button>
-                          <button className="row-action danger-action" onClick={() => onDelete(ficha)}>Borrar</button>
+                          <button onClick={() => onEdit(ficha)} aria-label={`Editar ficha ${ficha.numero}`}><Edit3 size={17} /></button>
+                          <button className="danger-action" onClick={() => onDelete(ficha)} aria-label={`Eliminar ficha ${ficha.numero}`}><Trash2 size={17} /></button>
                         </>
-                      ) : (
-                        <button className="row-action" onClick={() => onSelect(ficha)}>Ver</button>
-                      )}
+                      ) : null}
                     </td>
                   </tr>
                 );
@@ -303,15 +302,18 @@ function ItemRow({
 
 export function FichaDetail({
   fichaKey,
+  readOnly = false,
   onBack,
   onConfirm,
 }: {
   fichaKey: string;
+  readOnly?: boolean;
   onBack: () => void;
   onConfirm: (label: string, action: () => void | Promise<void>) => void;
 }) {
   const [ficha, setFicha] = useState<FichaResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
   const load = () =>
     void api<FichaResponse>(`/fichas/${fichaKey}`)
       .then(setFicha)
@@ -324,12 +326,16 @@ export function FichaDetail({
         {error ? <p className="login-pending">{error}</p> : <p>Cargando ficha…</p>}
       </div>
     );
-  const update = async (path: string, body: Record<string, string>) => {
+  const update = async (path: string, body: Record<string, string>, id: string) => {
+    if (pending) return;
+    setPending(id);
     try {
       const next = await api<FichaResponse>(path, { method: "PATCH", body: JSON.stringify(body) });
       setFicha(next);
     } catch (reason) {
       setError(errorMessage(reason));
+    } finally {
+      setPending(null);
     }
   };
   const current = ficha.estado;
@@ -340,7 +346,7 @@ export function FichaDetail({
     estadoActions.push({ estado: "Para entrega", label: "Lista para entrega" });
   if (current === "Para entrega") estadoActions.push({ estado: "Entregada", label: "Entregar al cliente" });
   if (current !== "Entregada" && current !== "Cancelada") estadoActions.push({ estado: "Cancelada", label: "Cancelar ficha" });
-  const locked = ficha.estado === "Cancelada" || ficha.estado === "Entregada";
+  const locked = readOnly || ficha.estado === "Cancelada" || ficha.estado === "Entregada";
   return (
     <div className="page">
       <button className="back" onClick={onBack}>← Volver a fichas</button>
@@ -373,7 +379,7 @@ export function FichaDetail({
                   key={item.id}
                   item={item}
                   locked={locked}
-                  onState={(estado) => void update(`/fichas/${ficha.id}/items/${item.id}/estado`, { estado })}
+                  onState={(estado) => void update(`/fichas/${ficha.id}/items/${item.id}/estado`, { estado }, `item-${item.id}`)}
                 />
               ))}
             </div>
@@ -386,26 +392,29 @@ export function FichaDetail({
           <div><span>Ingreso</span><strong>{ficha.fechaIngreso ? date(ficha.fechaIngreso) : "—"}</strong></div>
           <div><span>Entrega estimada</span><strong>{ficha.fechaEntregaEstimada ? date(ficha.fechaEntregaEstimada) : "—"}</strong></div>
           <div className="total"><span>Total final</span><strong>{money(ficha.total)}</strong></div>
-          <div className="summary-actions">
-            {pagoStatuses.filter((option) => option !== ficha.estadoPago).map((option) => (
-              <button key={option} className="button secondary large" onClick={() => void update(`/fichas/${ficha.id}/pago`, { estadoPago: option })}>
-                Marcar pago: {option}
-              </button>
-            ))}
-            {estadoActions.map((action) => (
-              <button
-                key={action.estado}
-                className={`button large ${action.estado === "Cancelada" ? "danger" : action.estado === "Entregada" ? "primary" : "secondary"}`}
-                onClick={() =>
-                  action.estado === "Cancelada"
-                    ? onConfirm("Cancelar ficha", () => update(`/fichas/${ficha.id}/estado`, { estado: action.estado }))
-                    : void update(`/fichas/${ficha.id}/estado`, { estado: action.estado })
-                }
-              >
-                {action.label}
-              </button>
-            ))}
-          </div>
+          {!readOnly && (
+            <div className="summary-actions">
+              {pagoStatuses.filter((option) => option !== ficha.estadoPago).map((option) => (
+                <button key={option} className="button secondary large" disabled={Boolean(pending)} onClick={() => void update(`/fichas/${ficha.id}/pago`, { estadoPago: option }, `pago-${option}`)}>
+                  Marcar pago: {option}
+                </button>
+              ))}
+              {estadoActions.map((action) => (
+                <button
+                  key={action.estado}
+                  className={`button large ${action.estado === "Cancelada" ? "danger" : action.estado === "Entregada" ? "primary" : "secondary"}`}
+                  disabled={Boolean(pending)}
+                  onClick={() =>
+                    action.estado === "Cancelada"
+                      ? onConfirm("Cancelar ficha", () => update(`/fichas/${ficha.id}/estado`, { estado: action.estado }, `estado-${action.estado}`))
+                      : void update(`/fichas/${ficha.id}/estado`, { estado: action.estado }, `estado-${action.estado}`)
+                  }
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          )}
         </aside>
       </section>
     </div>

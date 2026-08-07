@@ -34,9 +34,10 @@ export function AbmFormModal({
   fields: AbmField[];
   initialValues?: Record<string, string | number | boolean | null | undefined>;
   onClose: () => void;
-  onSubmit: (values: Record<string, string>) => void;
+  onSubmit: (values: Record<string, string>) => void | Promise<unknown>;
 }) {
   const [values, setValues] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
   const valueFor = (field: AbmField) => values[field.key] ?? (field.type === "currency" ? priceInput(initialValues[field.key]) : String(initialValues[field.key] ?? ""));
   return (
     <Dialog
@@ -49,11 +50,16 @@ export function AbmFormModal({
         className="record-form"
         onSubmit={(event) => {
           event.preventDefault();
-          onSubmit(
+          if (saving) return;
+          const result = onSubmit(
             Object.fromEntries(
               fields.map((field) => [field.key, valueFor(field)]),
             ),
           );
+          if (result instanceof Promise) {
+            setSaving(true);
+            void result.finally(() => setSaving(false));
+          }
         }}
       >
         {fields.map((field) => (
@@ -106,11 +112,11 @@ export function AbmFormModal({
           </label>
         ))}
         <div className="modal-actions">
-          <button type="button" className="button secondary" onClick={onClose}>
+          <button type="button" className="button secondary" onClick={onClose} disabled={saving}>
             Cancelar
           </button>
-          <button className="button primary" type="submit">
-            {mode === "agregar" ? "Guardar" : "Guardar cambios"}
+          <button className="button primary" type="submit" disabled={saving}>
+            {saving ? "Guardando..." : mode === "agregar" ? "Guardar" : "Guardar cambios"}
           </button>
         </div>
       </form>
