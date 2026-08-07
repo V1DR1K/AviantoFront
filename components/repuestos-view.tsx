@@ -105,6 +105,7 @@ function CreateRepuestoDialog({
     setMotoId("");
     setMotoOptions([]);
   };
+  const subtotal = rows.reduce((sum, row) => sum + Number(row.cantidad) * parsePrice(row.precio), 0);
   const save = async () => {
     const items = rows.filter((row) => row.descripcion.trim() && Number(row.cantidad) > 0);
     if (!clientId || !motoId || !items.length) return onError("Seleccioná cliente, moto y al menos un ítem.");
@@ -118,24 +119,30 @@ function CreateRepuestoDialog({
       onCreated(repuesto);
     } catch (reason) { onError(errorMessage(reason)); } finally { setSaving(false); }
   };
+  const setRow = (key: string, changes: Partial<typeof rows[number]>) => setRows((all) => all.map((row) => row.key === key ? { ...row, ...changes } : row));
   return (
     <Dialog open={open} title="Nuevo pedido de repuesto" onClose={onClose} wide>
-      <form className="record-form" onSubmit={(event) => { event.preventDefault(); void save(); }}>
-        <label>Cliente<select value={clientId} onChange={(event) => changeClient(event.target.value)} required><option value="">Seleccionar</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.nombre}</option>)}</select></label>
-        <label>Moto<select value={motoId} onChange={(event) => setMotoId(event.target.value)} required disabled={!clientId}><option value="">Seleccionar</option>{motoOptions.map((moto) => <option key={moto.id} value={moto.id}>{moto.marca} {moto.modelo} · {moto.patente}</option>)}</select></label>
-        <label>Proveedor<input value={proveedor} onChange={(event) => setProveedor(event.target.value)} /></label>
-        <div className="nested-items">
+      <form className="record-form repuesto-form" onSubmit={(event) => { event.preventDefault(); void save(); }}>
+        <div className="repuesto-pick">
+          <label>Cliente<select value={clientId} onChange={(event) => changeClient(event.target.value)} required><option value="">Seleccionar</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.nombre}</option>)}</select></label>
+          <label>Moto<select value={motoId} onChange={(event) => setMotoId(event.target.value)} required disabled={!clientId}><option value="">Seleccionar</option>{motoOptions.map((moto) => <option key={moto.id} value={moto.id}>{moto.marca} {moto.modelo} · {moto.patente}</option>)}</select></label>
+          <label>Proveedor<input value={proveedor} onChange={(event) => setProveedor(event.target.value)} /></label>
+        </div>
+        <div className="repuesto-items">
+          <div className="repuesto-items-head"><span>Descripción</span><span>Tipo</span><span>Cant.</span><span>Precio</span><span>Total</span><span /></div>
           {rows.map((row) => (
-            <div className="nested-row" key={row.key}>
-              <input placeholder="Descripción" value={row.descripcion} onChange={(event) => setRows((all) => all.map((r) => r.key === row.key ? { ...r, descripcion: event.target.value } : r))} />
-              <select value={row.tipo} onChange={(event) => setRows((all) => all.map((r) => r.key === row.key ? { ...r, tipo: event.target.value } : r))} aria-label="Tipo"><option>Repuesto</option><option>Accesorio</option></select>
-              <input type="number" min="1" value={row.cantidad} onChange={(event) => setRows((all) => all.map((r) => r.key === row.key ? { ...r, cantidad: String(event.target.value) } : r))} aria-label="Cantidad" />
-              <input inputMode="decimal" value={priceInput(row.precio)} onChange={(event) => setRows((all) => all.map((r) => r.key === row.key ? { ...r, precio: event.target.value } : r))} placeholder="Precio" aria-label="Precio" />
-              <button type="button" aria-label="Quitar ítem" onClick={() => setRows((all) => all.filter((r) => r.key !== row.key))}>×</button>
+            <div className="repuesto-item" key={row.key}>
+              <input placeholder="Ej.: cubierta 110/90" value={row.descripcion} onChange={(event) => setRow(row.key, { descripcion: event.target.value })} />
+              <select value={row.tipo} onChange={(event) => setRow(row.key, { tipo: event.target.value })} aria-label="Tipo"><option>Repuesto</option><option>Accesorio</option></select>
+              <input type="number" min="1" value={row.cantidad} onChange={(event) => setRow(row.key, { cantidad: String(event.target.value) })} aria-label="Cantidad" />
+              <input inputMode="decimal" value={priceInput(row.precio)} onChange={(event) => setRow(row.key, { precio: event.target.value })} placeholder="Precio" aria-label="Precio" />
+              <strong>{money(Number(row.cantidad) * parsePrice(row.precio))}</strong>
+              <button type="button" className="remove-item" aria-label="Quitar ítem" onClick={() => setRows((all) => all.filter((r) => r.key !== row.key))}>×</button>
             </div>
           ))}
+          <button type="button" className="text-button" onClick={() => setRows((all) => [...all, { key: crypto.randomUUID(), descripcion: "", tipo: "Repuesto", cantidad: "1", precio: "" }])}><Plus size={17} />Agregar ítem</button>
         </div>
-        <button type="button" className="text-button" onClick={() => setRows((all) => [...all, { key: crypto.randomUUID(), descripcion: "", tipo: "Repuesto", cantidad: "1", precio: "" }])}><Plus size={17} />Agregar ítem</button>
+        <div className="repuesto-total"><span>Total del pedido</span><strong>{money(subtotal)}</strong></div>
         <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Cancelar</button><button className="button primary" disabled={saving}>{saving ? "Guardando..." : "Guardar pedido"}</button></div>
       </form>
     </Dialog>
@@ -187,16 +194,30 @@ export function RepuestoDetail({
             </table>
           </section>
         </div>
-        <aside className="summary">
-          <h3>{repuesto.proveedor ? `Proveedor: ${repuesto.proveedor}` : "Resumen del pedido"}</h3>
+        <aside className="summary repuesto-summary">
+          <h3>Resumen del pedido</h3>
+          <dl className="summary-facts">
+            <div><dt>Pedido</dt><dd>{repuesto.numero}</dd></div>
+            <div><dt>Fecha</dt><dd>{date(repuesto.fecha)}</dd></div>
+            <div><dt>Cliente</dt><dd>{repuesto.cliente}</dd></div>
+            <div><dt>Proveedor</dt><dd>{repuesto.proveedor || "—"}</dd></div>
+          </dl>
           <div className="total"><span>Total</span><strong>{money(repuesto.total)}</strong></div>
-          <div className="summary-actions">
-            {repuestoStates.filter((option) => option !== repuesto.estado && !(option === "Cancelado" && repuesto.estado === "Completado") && !(option === "Completado" && repuesto.estado === "Cancelado")).map((option) => (
-              <button key={option} className="button secondary large" onClick={() => void api<RepuestoResponse>(`/repuestos/${repuesto.id}/estado`, { method: "PATCH", body: JSON.stringify({ estado: option }) }).then((next) => { setRepuesto(next); notify(`Pedido: ${option}`); }).catch((reason) => setError(errorMessage(reason)))}>Marcar {option}</button>
-            ))}
-            {pagoStates.filter((option) => option !== repuesto.estadoPago).map((option) => (
-              <button key={option} className="button primary large" onClick={() => void api<RepuestoResponse>(`/repuestos/${repuesto.id}/pago`, { method: "PATCH", body: JSON.stringify({ estadoPago: option }) }).then((next) => { setRepuesto(next); notify(`Pago: ${option}`); }).catch((reason) => setError(errorMessage(reason)))}>Pago: {option}</button>
-            ))}
+          <div className="summary-group">
+            <h4>Estado del pedido</h4>
+            <div className="summary-actions">
+              {repuestoStates.filter((option) => option !== repuesto.estado && !(option === "Cancelado" && repuesto.estado === "Completado") && !(option === "Completado" && repuesto.estado === "Cancelado")).map((option) => (
+                <button key={option} className="button secondary large" onClick={() => void api<RepuestoResponse>(`/repuestos/${repuesto.id}/estado`, { method: "PATCH", body: JSON.stringify({ estado: option }) }).then((next) => { setRepuesto(next); notify(`Pedido: ${option}`); }).catch((reason) => setError(errorMessage(reason)))}>Marcar {option}</button>
+              ))}
+            </div>
+          </div>
+          <div className="summary-group">
+            <h4>Pago</h4>
+            <div className="summary-actions">
+              {pagoStates.filter((option) => option !== repuesto.estadoPago).map((option) => (
+                <button key={option} className="button primary large" onClick={() => void api<RepuestoResponse>(`/repuestos/${repuesto.id}/pago`, { method: "PATCH", body: JSON.stringify({ estadoPago: option }) }).then((next) => { setRepuesto(next); notify(`Pago: ${option}`); }).catch((reason) => setError(errorMessage(reason)))}>Pago: {option}</button>
+              ))}
+            </div>
           </div>
         </aside>
       </section>

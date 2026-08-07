@@ -10,6 +10,7 @@ import type {
   FichaItemResponse,
   FichaResponse,
   FichaStatus,
+  NextServiceResponse,
   PageResponse,
   PagoStatus,
   PhotoResponse,
@@ -184,9 +185,13 @@ export function Dashboard({
 export function FichasView({
   onNewOrder,
   onSelect,
+  onEdit,
+  onDelete,
 }: {
   onNewOrder: () => void;
   onSelect: (ficha: FichaResponse) => void;
+  onEdit: (ficha: FichaResponse) => void;
+  onDelete: (ficha: FichaResponse) => void;
 }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"Todos" | FichaStatus>("Todos");
@@ -235,17 +240,29 @@ export function FichasView({
               <tr><th>Ficha</th><th>Cliente</th><th>Moto</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr>
             </thead>
             <tbody>
-              {result.content.map((ficha) => (
-                <tr key={ficha.id}>
-                  <td>{ficha.numero}</td>
-                  <td>{ficha.cliente}</td>
-                  <td>{ficha.moto}<small>{ficha.patente}</small></td>
-                  <td><StatusBadge status={ficha.estado} /></td>
-                  <td><StatusBadge status={ficha.estadoPago} /></td>
-                  <td>{money(ficha.total)}</td>
-                  <td><button className="row-action" onClick={() => onSelect(ficha)}>Ver</button></td>
-                </tr>
-              ))}
+              {result.content.map((ficha) => {
+                const editable = ficha.estado !== "Entregada" && ficha.estado !== "Cancelada";
+                return (
+                  <tr key={ficha.id}>
+                    <td>{ficha.numero}</td>
+                    <td>{ficha.cliente}</td>
+                    <td>{ficha.moto}<small>{ficha.patente}</small></td>
+                    <td><StatusBadge status={ficha.estado} /></td>
+                    <td><StatusBadge status={ficha.estadoPago} /></td>
+                    <td>{money(ficha.total)}</td>
+                    <td className="table-actions">
+                      {editable ? (
+                        <>
+                          <button className="row-action" onClick={() => onEdit(ficha)}>Ver</button>
+                          <button className="row-action danger-action" onClick={() => onDelete(ficha)}>Borrar</button>
+                        </>
+                      ) : (
+                        <button className="row-action" onClick={() => onSelect(ficha)}>Ver</button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         ) : (
@@ -415,6 +432,61 @@ export function ReportsView() {
         ))}
       </div>
       <section className="panel"><h2>Clientes</h2><table><tbody>{clients.map((client) => <tr key={client.id}><td>{client.nombre}</td><td>{client.pedidos} fichas</td></tr>)}</tbody></table></section>
+    </div>
+  );
+}
+
+export function ServicesView({ onOpenMoto }: { onOpenMoto: (id: string) => void }) {
+  const [rows, setRows] = useState<NextServiceResponse[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    void api<NextServiceResponse[]>("/services/proximos").then(setRows).catch((reason) => setError(errorMessage(reason)));
+  }, []);
+  const overdue = rows?.filter((row) => row.atrasadoKm || row.atrasadoFecha) ?? [];
+  const withoutRef = rows?.filter((row) => row.sinReferencia && !row.atrasadoKm && !row.atrasadoFecha) ?? [];
+  const upcoming = rows?.filter((row) => !row.sinReferencia && !row.atrasadoKm && !row.atrasadoFecha) ?? [];
+  return (
+    <div className="page">
+      <div className="page-heading">
+        <div>
+          <h1>Service</h1>
+          <p>Seguimiento del próximo service por motovehículo.</p>
+        </div>
+      </div>
+      {error && <p className="login-pending">{error}</p>}
+      {rows && (
+        <div className="metrics">
+          <Metric label="Atrasados" value={String(overdue.length)} tone="danger" />
+          <Metric label="Próximos" value={String(upcoming.length)} tone="green" />
+          <Metric label="Sin configurar" value={String(withoutRef.length)} tone="neutral" />
+        </div>
+      )}
+      <section className="panel table-panel">
+        {rows?.length ? (
+          <table>
+            <thead>
+              <tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Último service</th><th>Próximo</th><th>Estado</th><th /></tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.motoId}>
+                  <td>{row.patente}<small>{row.moto}</small></td>
+                  <td>{row.cliente}</td>
+                  <td>{row.kilometraje != null ? row.kilometraje.toLocaleString("es-AR") : "—"}</td>
+                  <td>{row.kmUltimoService != null ? `${row.kmUltimoService.toLocaleString("es-AR")} km` : "—"}</td>
+                  <td>{row.sinReferencia || row.atrasadoKm || row.atrasadoFecha
+                    ? <span>{row.proximKm ? `KM ${row.proximKm.toLocaleString("es-AR")}` : "—"}{row.proximaFecha ? ` · ${date(row.proximaFecha)}` : ""}</span>
+                    : <span>{row.proximKm ? `KM ${row.proximKm.toLocaleString("es-AR")}` : "—"}{row.kmFaltan != null ? ` (faltan ${row.kmFaltan.toLocaleString("es-AR")})` : ""}{row.proximaFecha ? ` · ${date(row.proximaFecha)}` : ""}</span>}</td>
+                  <td><StatusBadge status={row.sinReferencia ? "Sin configurar" : row.atrasadoKm || row.atrasadoFecha ? "Atrasado" : "Al día"} /></td>
+                  <td><button className="row-action" onClick={() => onOpenMoto(row.motoId)}>Ver moto</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <EmptyState title="Sin motovehículos" body="No hay motos para planificar el próximo service." />
+        )}
+      </section>
     </div>
   );
 }

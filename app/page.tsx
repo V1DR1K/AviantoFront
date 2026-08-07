@@ -7,6 +7,7 @@ import {
   FichaDetail,
   FichasView,
   ReportsView,
+  ServicesView,
 } from "../components/views";
 import { MotoDetail } from "../components/moto-detail";
 import { RepuestoDetail, RepuestosView } from "../components/repuestos-view";
@@ -21,8 +22,10 @@ export default function Home() {
   const [session, setSession] = useState<AuthSession | null | undefined>(undefined);
   const [page, setPage] = useState("dashboard");
   const [fichaId, setFichaId] = useState<string | null>(null);
+  const [editFichaId, setEditFichaId] = useState<string | null>(null);
   const [motoId, setMotoId] = useState<string | null>(null);
   const [repuestoId, setRepuestoId] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [confirmation, setConfirmation] = useState<{
     label: string;
     action: () => void;
@@ -57,7 +60,9 @@ export default function Home() {
 
   let content;
   if (page === "create")
-    content = <FichaForm onClose={() => setPage("orders")} onSave={openFicha} />;
+    content = <FichaForm onClose={() => setPage("orders")} onSave={() => { setToast("Ficha creada. Podés verla y editarla desde la lista."); setRefreshKey((key) => key + 1); setPage("orders"); }} />;
+  else if (page === "edit" && editFichaId)
+    content = <FichaForm key={editFichaId} fichaKey={editFichaId} onClose={() => setPage("orders")} onSave={() => { setToast("Ficha actualizada."); setRefreshKey((key) => key + 1); setPage("orders"); }} />;
   else if (page === "dashboard")
     content = (
       <Dashboard
@@ -68,7 +73,18 @@ export default function Home() {
       />
     );
   else if (page === "orders")
-    content = <FichasView onNewOrder={() => setPage("create")} onSelect={openFicha} />;
+    content = (
+      <FichasView
+        key={refreshKey}
+        onNewOrder={() => setPage("create")}
+        onSelect={openFicha}
+        onEdit={(ficha) => { setEditFichaId(ficha.id); setPage("edit"); }}
+        onDelete={(ficha) => setConfirmation({
+          label: "Borrar ficha",
+          action: () => api(`/fichas/${ficha.id}`, { method: "DELETE" }).then(() => { setRefreshKey((key) => key + 1); }),
+        })}
+      />
+    );
 else if (page === "fichas" && fichaId)
     content = (
       <FichaDetail
@@ -99,6 +115,7 @@ else if (page === "fichas" && fichaId)
         onOpenVehicle={openMoto}
       />
     );
+  else if (page === "services") content = <ServicesView onOpenMoto={openMoto} />;
   else if (page === "settings") content = <SettingsView notify={setToast} />;
   else content = <ReportsView />;
   return (
@@ -124,7 +141,7 @@ else if (page === "fichas" && fichaId)
         onClose={() => setConfirmation(null)}
         onConfirm={() => {
           void Promise.resolve(confirmation?.action()).then(
-            () => setToast("Acción completada."),
+            () => setToast(`${confirmation?.label} realizada.`),
             (reason) => setToast(reason instanceof Error ? reason.message : "No fue posible completar la acción."),
           );
           setConfirmation(null);
