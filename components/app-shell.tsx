@@ -3,6 +3,8 @@ import { useState, type ReactNode } from "react";
 import {
   BarChart3,
   Bike,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   FileText,
   LayoutDashboard,
@@ -42,15 +44,20 @@ export function AppShell({
   session: AuthSession;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const isAdmin = session.user.rol === "ADMINISTRACION";
   const visibleNav = nav.filter((item) => item.id !== "audit" || isAdmin);
   const go = (target: string) => {
     onPage(target);
     setMenuOpen(false);
   };
+  const back = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
+    else onPage("dashboard");
+  };
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar${collapsed ? " collapsed" : ""}`}>
         <button
           className="brand"
           onClick={() => go("dashboard")}
@@ -83,9 +90,17 @@ export function AppShell({
           <button className="settings" onClick={onLogout}>
             <LogOut size={18} /> Cerrar sesión
           </button>
+          <button
+            className="settings collapse-toggle"
+            onClick={() => setCollapsed((value) => !value)}
+            aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
+          >
+            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            <span>{collapsed ? "Expandir" : "Contraer"}</span>
+          </button>
         </div>
       </aside>
-      <main className="main">
+      <main className={`main${collapsed ? " sidebar-collapsed" : ""}`}>
         <header className="mobile-header">
           <button aria-label="Abrir menú" onClick={() => setMenuOpen(true)}>
             <Menu />
@@ -137,19 +152,21 @@ export function AppShell({
         </div>
       )}
       <nav className="mobile-nav">
-        {visibleNav.slice(0, 5).map((item) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              className={page === item.id ? "active" : ""}
-              onClick={() => go(item.id)}
-            >
-              <Icon size={20} />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
+        <button
+          className={page === "orders" ? "active" : ""}
+          onClick={() => go("orders")}
+        >
+          <ClipboardList size={20} />
+          <span>Fichas</span>
+        </button>
+        <button onClick={back}>
+          <ChevronLeft size={20} />
+          <span>Volver</span>
+        </button>
+        <button onClick={() => setMenuOpen(true)}>
+          <Plus size={20} />
+          <span>Más</span>
+        </button>
       </nav>
     </div>
   );

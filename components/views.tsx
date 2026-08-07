@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Edit3, Eye, FileDown, Filter, Plus, Trash2 } from "lucide-react";
+import { ArrowDownUp, Download, Edit3, Eye, FileDown, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download, objectUrl } from "../lib/api";
 import { money } from "../lib/format";
+import { daysAgoInAr, todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
   DashboardResponse,
@@ -12,7 +13,6 @@ import type {
   FichaStatus,
   NextServiceResponse,
   PageResponse,
-  PagoStatus,
   PhotoResponse,
   TrabajoStatus,
 } from "../lib/types";
@@ -72,7 +72,6 @@ const fichaStatuses: FichaStatus[] = [
   "Entregada",
   "Cancelada",
 ];
-const pagoStatuses: PagoStatus[] = ["Pendiente", "Parcial", "Pagado"];
 const trabajoStatuses: TrabajoStatus[] = [
   "Pendiente",
   "En proceso",
@@ -195,6 +194,10 @@ export function FichasView({
 }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"Todos" | FichaStatus>("Todos");
+  const [desde, setDesde] = useState(daysAgoInAr(30));
+  const [hasta, setHasta] = useState(todayInAr());
+  const [sortBy, setSortBy] = useState("fechaIngreso");
+  const [direction, setDirection] = useState<"ASC" | "DESC">("DESC");
   const [result, setResult] = useState<PageResponse<FichaResponse> | null>(null);
   const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -202,12 +205,29 @@ export function FichasView({
     void api<PageResponse<FichaResponse>>(
       "/fichas",
       {},
-      { q: query || undefined, estado: status === "Todos" ? undefined : status, page: page - 1, size: 20 },
+      {
+        q: query || undefined,
+        estado: status === "Todos" ? undefined : status,
+        fechaDesde: desde || undefined,
+        fechaHasta: hasta || undefined,
+        sortBy: sortBy || undefined,
+        direction,
+        page: page - 1,
+        size: 20,
+      },
     )
       .then(setResult)
       .catch((reason) => setError(errorMessage(reason)));
-  }, [query, status, page]);
-  const params = { q: query || undefined, estado: status === "Todos" ? undefined : status };
+  }, [query, status, desde, hasta, sortBy, direction, page]);
+  const params = {
+    q: query || undefined,
+    estado: status === "Todos" ? undefined : status,
+    fechaDesde: desde || undefined,
+    fechaHasta: hasta || undefined,
+    sortBy: sortBy || undefined,
+    direction,
+  };
+  const toggleDirection = () => setDirection((d) => (d === "ASC" ? "DESC" : "ASC"));
   return (
     <div className="page">
       <div className="page-heading">
@@ -230,6 +250,27 @@ export function FichasView({
               {fichaStatuses.map((option) => <option key={option}>{option}</option>)}
             </select>
           </label>
+          <label>
+            <span className="date-label">Desde</span>
+            <input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); setPage(1); }} />
+          </label>
+          <label>
+            <span className="date-label">Hasta</span>
+            <input type="date" value={hasta} onChange={(event) => { setHasta(event.target.value); setPage(1); }} />
+          </label>
+          <label>
+            <Filter size={16} />
+            <select value={sortBy} onChange={(event) => { setSortBy(event.target.value); setPage(1); }}>
+              <option value="fechaIngreso">Fecha de ingreso</option>
+              <option value="numero">Número</option>
+              <option value="total">Total</option>
+              <option value="estado">Estado</option>
+            </select>
+          </label>
+          <button className="button secondary" onClick={() => { toggleDirection(); setPage(1); }} aria-label="Cambiar orden">
+            <ArrowDownUp size={16} />
+            {direction === "DESC" ? "Más recientes" : "Más antiguos"}
+          </button>
           <button className="button secondary" onClick={() => void download("/fichas/export.xlsx", "fichas.xlsx", params).catch((reason) => setError(errorMessage(reason)))}>
             <Download size={17} />Exportar Excel
           </button>
@@ -339,14 +380,14 @@ export function FichaDetail({
     }
   };
   const current = ficha.estado;
-  const estadoActions: { estado: FichaStatus; label: string }[] = [];
-  if (current === "Ingresada") estadoActions.push({ estado: "En trabajo", label: "Iniciar trabajo" });
-  if (current === "Ingresada" || current === "En trabajo") estadoActions.push({ estado: "Para control", label: "Enviar a control" });
-  if (current === "Ingresada" || current === "En trabajo" || current === "Para control")
-    estadoActions.push({ estado: "Para entrega", label: "Lista para entrega" });
-  if (current === "Para entrega") estadoActions.push({ estado: "Entregada", label: "Entregar al cliente" });
-  if (current !== "Entregada" && current !== "Cancelada") estadoActions.push({ estado: "Cancelada", label: "Cancelar ficha" });
-  const locked = readOnly || ficha.estado === "Cancelada" || ficha.estado === "Entregada";
+  const locked = readOnly || current === "Cancelada" || current === "Entregada";
+  const bottomActions: { key: string; label: string; className: string; onClick: () => void }[] = [];
+  if (!readOnly && ficha.estadoPago !== "Pagado")
+    bottomActions.push({ key: "pago", label: ficha.estadoPago === "Parcial" ? "Completar pago" : "Marcar pagada", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/pago`, { estadoPago: "Pagado" }, "pago-pagado") });
+  if (!readOnly && (current === "Ingresada" || current === "En trabajo" || current === "Para control"))
+    bottomActions.push({ key: "entrega", label: "Lista para entrega", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Para entrega" }, "estado-para-entrega") });
+  if (!readOnly && current !== "Entregada" && current !== "Cancelada")
+    bottomActions.push({ key: "cancelar", label: "Cancelar ficha", className: "danger", onClick: () => onConfirm("Cancelar ficha", () => update(`/fichas/${ficha.id}/estado`, { estado: "Cancelada" }, "estado-cancelada")) });
   return (
     <div className="page">
       <button className="back" onClick={onBack}>← Volver a fichas</button>
@@ -392,31 +433,17 @@ export function FichaDetail({
           <div><span>Ingreso</span><strong>{ficha.fechaIngreso ? date(ficha.fechaIngreso) : "—"}</strong></div>
           <div><span>Entrega estimada</span><strong>{ficha.fechaEntregaEstimada ? date(ficha.fechaEntregaEstimada) : "—"}</strong></div>
           <div className="total"><span>Total final</span><strong>{money(ficha.total)}</strong></div>
-          {!readOnly && (
-            <div className="summary-actions">
-              {pagoStatuses.filter((option) => option !== ficha.estadoPago).map((option) => (
-                <button key={option} className="button secondary large" disabled={Boolean(pending)} onClick={() => void update(`/fichas/${ficha.id}/pago`, { estadoPago: option }, `pago-${option}`)}>
-                  Marcar pago: {option}
-                </button>
-              ))}
-              {estadoActions.map((action) => (
-                <button
-                  key={action.estado}
-                  className={`button large ${action.estado === "Cancelada" ? "danger" : action.estado === "Entregada" ? "primary" : "secondary"}`}
-                  disabled={Boolean(pending)}
-                  onClick={() =>
-                    action.estado === "Cancelada"
-                      ? onConfirm("Cancelar ficha", () => update(`/fichas/${ficha.id}/estado`, { estado: action.estado }, `estado-${action.estado}`))
-                      : void update(`/fichas/${ficha.id}/estado`, { estado: action.estado }, `estado-${action.estado}`)
-                  }
-                >
-                  {action.label}
-                </button>
-              ))}
-            </div>
-          )}
         </aside>
       </section>
+      {bottomActions.length > 0 && (
+        <div className="ficha-actions">
+          {bottomActions.map((action) => (
+            <button key={action.key} className={`button large ${action.className}`} disabled={Boolean(pending)} onClick={action.onClick}>
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

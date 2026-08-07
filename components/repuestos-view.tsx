@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Edit3, Eye, Plus, Trash2 } from "lucide-react";
+import { ArrowDownUp, Download, Edit3, Eye, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download } from "../lib/api";
 import { money, parsePrice, priceInput } from "../lib/format";
+import { daysAgoInAr, todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
   MotovehiculoResponse,
@@ -32,6 +33,10 @@ export function RepuestosView({
 }) {
   const [query, setQuery] = useState("");
   const [estado, setEstado] = useState<"Todos" | RepuestoState>("Todos");
+  const [desde, setDesde] = useState(daysAgoInAr(30));
+  const [hasta, setHasta] = useState(todayInAr());
+  const [sortBy, setSortBy] = useState("fecha");
+  const [direction, setDirection] = useState<"ASC" | "DESC">("DESC");
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<PageResponse<RepuestoResponse> | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,9 +44,11 @@ export function RepuestosView({
   const [editing, setEditing] = useState<RepuestoResponse | null>(null);
   const [deleting, setDeleting] = useState<RepuestoResponse | null>(null);
   const [clients, setClients] = useState<ClienteResponse[]>([]);
-  useEffect(() => { void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { estado: estado === "Todos" ? undefined : estado, q: query || undefined, page: page - 1, size: 20 }).then(setResult).catch((err) => setError(errorMessage(err))); }, [query, estado, page]);
+  const repuestoParams = () => ({ estado: estado === "Todos" ? undefined : estado, q: query || undefined, fechaDesde: desde || undefined, fechaHasta: hasta || undefined, sortBy, direction });
+  useEffect(() => { void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { ...repuestoParams(), page: page - 1, size: 20 }).then(setResult).catch((err) => setError(errorMessage(err))); }, [query, estado, desde, hasta, sortBy, direction, page]);
   const loadClients = () => void api<PageResponse<ClienteResponse>>("/clientes", {}, { size: 100, activo: true }).then((r) => setClients(r.content)).catch(() => undefined);
-  const refresh = () => void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { estado: estado === "Todos" ? undefined : estado, q: query || undefined, page: page - 1, size: 20 }).then(setResult).catch((err) => setError(errorMessage(err)));
+  const refresh = () => void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { ...repuestoParams(), page: page - 1, size: 20 }).then(setResult).catch((err) => setError(errorMessage(err)));
+  const toggleDirection = () => setDirection((d) => (d === "ASC" ? "DESC" : "ASC"));
   return (
     <div className="page">
       <div className="page-heading">
@@ -52,8 +59,28 @@ export function RepuestosView({
       <section className="panel table-panel">
         <div className="filter-bar">
           <SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Número, cliente o patente" />
-          <label><Download size={16} /><select value={estado} onChange={(event) => { setEstado(event.target.value as typeof estado); setPage(1); }}><option>Todos</option>{repuestoStates.map((option) => <option key={option}>{option}</option>)}</select></label>
-          <button className="button secondary" onClick={() => void download("/repuestos/export.xlsx", "/repuestos.xlsx", { estado: estado === "Todos" ? undefined : estado, q: query || undefined }).catch((reason) => setError(errorMessage(reason)))}><Download size={17} />Exportar Excel</button>
+          <label><Filter size={16} /><select value={estado} onChange={(event) => { setEstado(event.target.value as typeof estado); setPage(1); }}><option>Todos</option>{repuestoStates.map((option) => <option key={option}>{option}</option>)}</select></label>
+          <label>
+            <span className="date-label">Desde</span>
+            <input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); setPage(1); }} />
+          </label>
+          <label>
+            <span className="date-label">Hasta</span>
+            <input type="date" value={hasta} onChange={(event) => { setHasta(event.target.value); setPage(1); }} />
+          </label>
+          <label>
+            <Filter size={16} />
+            <select value={sortBy} onChange={(event) => { setSortBy(event.target.value); setPage(1); }}>
+              <option value="fecha">Fecha</option>
+              <option value="total">Total</option>
+              <option value="estado">Estado</option>
+            </select>
+          </label>
+          <button className="button secondary" onClick={() => { toggleDirection(); setPage(1); }} aria-label="Cambiar orden">
+            <ArrowDownUp size={16} />
+            {direction === "DESC" ? "Más recientes" : "Más antiguos"}
+          </button>
+          <button className="button secondary" onClick={() => void download("/repuestos/export.xlsx", "repuestos.xlsx", repuestoParams()).catch((reason) => setError(errorMessage(reason)))}><Download size={17} />Exportar Excel</button>
         </div>
         {result?.content.length ? (
           <table>

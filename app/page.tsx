@@ -15,7 +15,7 @@ import { ConfirmModal, Toast } from "../components/ui";
 import { AdminView, SettingsView } from "../components/admin-view";
 import type { FichaResponse } from "../lib/types";
 import { LoginView } from "../components/login-view";
-import { clearSession, getSession, logout, refreshSession, type AuthSession } from "../lib/auth";
+import { clearSession, decodeAccessExpiry, getSession, logout, refreshSession, type AuthSession } from "../lib/auth";
 import { api } from "../lib/api";
 
 export default function Home() {
@@ -52,28 +52,46 @@ export default function Home() {
     window.addEventListener("avianto:session-expired", expired);
     return () => window.removeEventListener("avianto:session-expired", expired);
   }, []);
+  useEffect(() => {
+    if (!session) return;
+    const sessionRef = { value: session };
+    const tick = () => {
+      const exp = decodeAccessExpiry(sessionRef.value.accessToken);
+      if (!exp) return;
+      const remaining = exp - Date.now();
+      if (remaining <= 60_000) void refreshSession().then((next) => { if (next) setSession(next); });
+    };
+    const id = window.setInterval(tick, 60_000);
+    return () => window.clearInterval(id);
+  }, [session]);
   if (session === undefined) return null;
   if (!session) return <LoginView onAuthenticated={setSession} />;
 
   const openFicha = (ficha: FichaResponse, readOnly = false) => { setFichaId(ficha.id); setFichaReadOnly(readOnly); setPage("fichas"); };
   const openMoto = (id: string) => { setMotoId(id); setPage("moto"); };
   const openRepuesto = (repuesto: { id: string }) => { setRepuestoId(repuesto.id); setPage("repuesto"); };
+  const restricted = session.user.rol !== "ADMINISTRACION";
+  const effectivePage = restricted && (page === "audit" || page === "settings") ? "dashboard" : page;
+  const setEffectivePage = (target: string) => {
+    if (restricted && (target === "audit" || target === "settings")) return setPage("dashboard");
+    setPage(target);
+  };
 
   let content;
-  if (page === "create")
+  if (effectivePage === "create")
     content = <FichaForm onClose={() => setPage("orders")} onSave={() => { setToast("Ficha creada. Podés verla y editarla desde la lista."); setRefreshKey((key) => key + 1); setPage("orders"); }} />;
-  else if (page === "edit" && editFichaId)
+  else if (effectivePage === "edit" && editFichaId)
     content = <FichaForm key={editFichaId} fichaKey={editFichaId} onClose={() => setPage("orders")} onSave={() => { setToast("Ficha actualizada."); setRefreshKey((key) => key + 1); setPage("orders"); }} />;
-  else if (page === "dashboard")
+  else if (effectivePage === "dashboard")
     content = (
       <Dashboard
-        onPage={setPage}
+        onPage={setEffectivePage}
         onNewOrder={() => setPage("create")}
         onSelect={openFicha}
         userName={session.user.nombre}
       />
     );
-  else if (page === "orders")
+  else if (effectivePage === "orders")
     content = (
       <FichasView
         key={refreshKey}
@@ -86,7 +104,7 @@ export default function Home() {
         })}
       />
     );
-else if (page === "fichas" && fichaId)
+else if (effectivePage === "fichas" && fichaId)
     content = (
       <FichaDetail
         fichaKey={fichaId}
@@ -95,7 +113,7 @@ else if (page === "fichas" && fichaId)
         onConfirm={(label, action) => setConfirmation({ label, action })}
       />
     );
-  else if (page === "moto" && motoId)
+  else if (effectivePage === "moto" && motoId)
     content = (
       <MotoDetail
         id={motoId}
@@ -105,11 +123,11 @@ else if (page === "fichas" && fichaId)
         notify={setToast}
       />
     );
-  else if (page === "repuestos")
+  else if (effectivePage === "repuestos")
     content = <RepuestosView onOpen={openRepuesto} notify={setToast} />;
-  else if (page === "repuesto" && repuestoId)
+  else if (effectivePage === "repuesto" && repuestoId)
     content = <RepuestoDetail repuestoId={repuestoId} onBack={() => setPage("repuestos")} notify={setToast} />;
-  else if (["clients", "vehicles", "catalog", "audit"].includes(page))
+  else if (["clients", "vehicles", "catalog", "audit"].includes(effectivePage))
     content = (
       <AdminView
         resource={page as "clients" | "vehicles" | "catalog" | "audit"}
@@ -117,13 +135,13 @@ else if (page === "fichas" && fichaId)
         onOpenVehicle={openMoto}
       />
     );
-  else if (page === "services") content = <ServicesView onOpenMoto={openMoto} />;
-  else if (page === "settings") content = <SettingsView notify={setToast} />;
+  else if (effectivePage === "services") content = <ServicesView onOpenMoto={openMoto} />;
+  else if (effectivePage === "settings") content = <SettingsView notify={setToast} />;
   else content = <ReportsView />;
   return (
     <AppShell
-      page={page}
-      onPage={setPage}
+      page={effectivePage}
+      onPage={setEffectivePage}
       onNewOrder={() => setPage("create")}
       session={session}
       onLogout={async () => {

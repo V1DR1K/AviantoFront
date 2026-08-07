@@ -27,6 +27,8 @@ function rowFor(resource: Exclude<Resource, "audit">, item: ClienteResponse | Mo
 function cell(row: DataRow, column: string) {
   if (column === "Nombre") return row.nombre;
   if (column === "Marca y modelo") return `${row.marca} ${row.modelo}`;
+  if (column === "Patente") return row.patente || "—";
+  if (column === "Cliente") return row.cliente || "—";
   if (column === "Documento") return row.documento || "—";
   if (column === "Teléfono") return row.telefono;
   if (column === "Motos") return row.motos;

@@ -165,6 +165,35 @@ textarea:focus-visible {
   margin-left: 245px;
   width: calc(100% - 245px);
   min-height: 100vh;
+  transition: margin-left 0.18s ease, width 0.18s ease;
+}
+.sidebar {
+  transition: width 0.18s ease;
+}
+.sidebar.collapsed {
+  width: 76px;
+  padding: 24px 10px;
+}
+.sidebar.collapsed .brand {
+  justify-content: center;
+  padding: 5px 0 28px;
+}
+.sidebar.collapsed .brand > span:last-child,
+.sidebar.collapsed .sidebar nav span,
+.sidebar.collapsed .sidebar-bottom p,
+.sidebar.collapsed .settings {
+  display: none;
+}
+.sidebar.collapsed .sidebar nav button {
+  justify-content: center;
+  padding: 13px;
+}
+.sidebar.collapsed .collapse-toggle {
+  display: flex;
+}
+.main.sidebar-collapsed {
+  margin-left: 76px;
+  width: calc(100% - 76px);
 }
 .page {
   padding: 42px max(34px, 4vw);
@@ -422,6 +451,20 @@ nav.tabs button.active {
   outline: 0;
   background: transparent;
   color: var(--ink);
+}
+.filter-bar input[type="date"] {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+.filter-bar .date-label {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 table {
   border-collapse: collapse;
@@ -854,6 +897,22 @@ a.existing-photo {
 .summary h3 {
   margin: 0 0 10px;
 }
+.ficha-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 28px rgba(18, 53, 91, 0.12);
+}
+.ficha-actions .button {
+  flex: 1;
+}
 .repuesto-summary .total {
   margin-top: 12px;
 }
@@ -1184,15 +1243,23 @@ a.existing-photo {
   border-top: 1px solid var(--line);
   font-size: 13px;
 }
+td.table-actions {
+  display: table-cell;
+  vertical-align: middle;
+}
 .table-actions {
   display: flex;
   gap: 3px;
+  align-items: center;
 }
 .table-actions button {
   border: 0;
   background: transparent;
   color: var(--navy);
   padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .table-actions .danger-action {
   color: var(--red);
@@ -1437,7 +1504,7 @@ a.existing-photo {
   .mobile-nav {
     position: fixed;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     bottom: 0;
     left: 0;
     right: 0;
@@ -1546,6 +1613,10 @@ a.existing-photo {
   }
   .order-form .two-col {
     grid-template-columns: 1fr;
+  }
+  .ficha-actions {
+    flex-direction: column;
+    margin: 16px -7px 0;
   }
   .add-vehicle {
     width: 100%;
