@@ -1,5 +1,5 @@
 export const money = (value: number) => new Intl.NumberFormat("es-AR", { style:"currency", currency:"ARS", maximumFractionDigits:0 }).format(value);
-export const priceInput = (value: number | string | undefined) => {
+export const priceInput = (value: number | string | boolean | null | undefined) => {
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(parsed) : "";
 };

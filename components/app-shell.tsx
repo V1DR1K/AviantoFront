@@ -6,22 +6,25 @@ import {
   ClipboardList,
   FileText,
   LayoutDashboard,
+  LogOut,
   Menu,
   Package,
   Plus,
-  LogOut,
   Settings,
   Users,
+  Wrench,
 } from "lucide-react";
 import type { AuthSession } from "../lib/auth";
 const nav = [
   { id: "dashboard", label: "Inicio", icon: LayoutDashboard },
-  { id: "orders", label: "Pedidos", icon: ClipboardList },
+  { id: "orders", label: "Fichas", icon: ClipboardList },
+  { id: "repuestos", label: "Repuestos", icon: Package },
   { id: "clients", label: "Clientes", icon: Users },
   { id: "vehicles", label: "Motos", icon: Bike },
   { id: "catalog", label: "Catálogo", icon: Package },
   { id: "reports", label: "Reportes", icon: BarChart3 },
   { id: "audit", label: "Auditoría", icon: FileText },
+  { id: "services", label: "Service", icon: Wrench },
 ];
 export function AppShell({
   children,
@@ -93,9 +96,9 @@ export function AppShell({
           <button
             className="button mobile-new"
             onClick={onNewOrder}
-            aria-label="Nuevo pedido"
+            aria-label="Nueva ficha"
           >
-            <Plus size={17} /> <span>Nuevo pedido</span>
+            <Plus size={17} /> <span>Nueva ficha</span>
           </button>
         </header>
         {children}
@@ -126,7 +129,7 @@ export function AppShell({
               setMenuOpen(false);
             }}
           >
-            + Nuevo pedido
+            + Nueva ficha
           </button>
           <button className="settings mobile-logout" onClick={onLogout}>
             <LogOut size={18} /> Cerrar sesión

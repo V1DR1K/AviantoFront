@@ -1,16 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
 import { AppShell } from "../components/app-shell";
-import { OrderForm } from "../components/order-form";
+import { FichaForm } from "../components/ficha-form";
 import {
   Dashboard,
-  OrderDetail,
-  OrdersView,
+  FichaDetail,
+  FichasView,
   ReportsView,
 } from "../components/views";
+import { MotoDetail } from "../components/moto-detail";
+import { RepuestoDetail, RepuestosView } from "../components/repuestos-view";
 import { ConfirmModal, Toast } from "../components/ui";
 import { AdminView, SettingsView } from "../components/admin-view";
-import type { PedidoResponse } from "../lib/types";
+import type { FichaResponse } from "../lib/types";
 import { LoginView } from "../components/login-view";
 import { clearSession, getSession, logout, refreshSession, type AuthSession } from "../lib/auth";
 import { api } from "../lib/api";
@@ -18,7 +20,9 @@ import { api } from "../lib/api";
 export default function Home() {
   const [session, setSession] = useState<AuthSession | null | undefined>(undefined);
   const [page, setPage] = useState("dashboard");
-  const [selected, setSelected] = useState<PedidoResponse | null>(null);
+  const [fichaId, setFichaId] = useState<string | null>(null);
+  const [motoId, setMotoId] = useState<string | null>(null);
+  const [repuestoId, setRepuestoId] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<{
     label: string;
     action: () => void;
@@ -46,46 +50,53 @@ export default function Home() {
   }, []);
   if (session === undefined) return null;
   if (!session) return <LoginView onAuthenticated={setSession} />;
-  const select = (order: PedidoResponse) => {
-    setSelected(order);
-    setPage("detail");
-  };
-  const saveOrder = (order: PedidoResponse) => {
-    setSelected(order);
-    setPage("detail");
-  };
+
+  const openFicha = (ficha: FichaResponse) => { setFichaId(ficha.id); setPage("ficha"); };
+  const openMoto = (id: string) => { setMotoId(id); setPage("moto"); };
+  const openRepuesto = (repuesto: { id: string }) => { setRepuestoId(repuesto.id); setPage("repuesto"); };
+
   let content;
   if (page === "create")
-    content = (
-      <OrderForm onClose={() => setPage("dashboard")} onSave={saveOrder} />
-    );
+    content = <FichaForm onClose={() => setPage("orders")} onSave={openFicha} />;
   else if (page === "dashboard")
     content = (
       <Dashboard
         onPage={setPage}
         onNewOrder={() => setPage("create")}
-        onSelect={select}
+        onSelect={openFicha}
         userName={session.user.nombre}
       />
     );
   else if (page === "orders")
+    content = <FichasView onNewOrder={() => setPage("create")} onSelect={openFicha} />;
+else if (page === "fichas" && fichaId)
     content = (
-      <OrdersView onNewOrder={() => setPage("create")} onSelect={select} />
-    );
-  else if (page === "detail")
-    content = (
-      <OrderDetail
-        order={selected!}
+      <FichaDetail
+        fichaKey={fichaId}
         onBack={() => setPage("orders")}
         onConfirm={(label, action) => setConfirmation({ label, action })}
-        onUpdated={setSelected}
       />
     );
+  else if (page === "moto" && motoId)
+    content = (
+      <MotoDetail
+        id={motoId}
+        onBack={() => setPage("vehicles")}
+        onOpenFicha={openFicha}
+        onOpenRepuesto={openRepuesto}
+        notify={setToast}
+      />
+    );
+  else if (page === "repuestos")
+    content = <RepuestosView onOpen={openRepuesto} notify={setToast} />;
+  else if (page === "repuesto" && repuestoId)
+    content = <RepuestoDetail repuestoId={repuestoId} onBack={() => setPage("repuestos")} notify={setToast} />;
   else if (["clients", "vehicles", "catalog", "audit"].includes(page))
     content = (
       <AdminView
         resource={page as "clients" | "vehicles" | "catalog" | "audit"}
         notify={setToast}
+        onOpenVehicle={openMoto}
       />
     );
   else if (page === "settings") content = <SettingsView notify={setToast} />;
@@ -105,10 +116,10 @@ export default function Home() {
       <ConfirmModal
         open={Boolean(confirmation)}
         title={confirmation?.label ?? ""}
-        body={`Vas a ejecutar la acción: ${confirmation?.label?.toLowerCase()}. El historial del pedido conservará el registro para auditoría.`}
+        body={`Vas a ejecutar la acción: ${confirmation?.label?.toLowerCase()}. El historial conservará el registro para auditoría.`}
         confirmLabel={confirmation?.label ?? "Confirmar"}
         variant={
-          confirmation?.label === "Confirmar pago" ? "success" : "danger"
+          confirmation?.label?.toLowerCase().includes("pago") ? "success" : "danger"
         }
         onClose={() => setConfirmation(null)}
         onConfirm={() => {

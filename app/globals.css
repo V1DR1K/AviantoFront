@@ -294,6 +294,22 @@ textarea:focus-visible {
   color: var(--navy);
   white-space: nowrap;
 }
+.status-success {
+  background: #e3f5eb;
+  color: #0c643d;
+}
+.status-danger {
+  background: #fcebea;
+  color: var(--red);
+}
+.status-warning {
+  background: #fdf3dc;
+  color: #8a5a00;
+}
+.status-neutral {
+  background: #eaf1f6;
+  color: var(--navy);
+}
 .status-aprobado,
 .status-pagado {
   background: #e3f5eb;

@@ -1,7 +1,22 @@
 "use client";
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { AlertTriangle, CheckCircle2, Clock3, Search, X } from "lucide-react";
-import type { OrderStatus } from "../lib/types";
+
+function statusToneValue(status: string) {
+  const s = status.toLowerCase();
+  if (s.includes("cancel") || s.includes("no pag") || s.includes("correc")) return "danger";
+  if (s.includes("aprob") || s.includes("pag") || s.includes("entreg") || s.includes("realiz") || s.includes("recibido")) return "success";
+  if (s.includes("parcial") || s.includes("para ") || s.includes("pedido") || s.includes("curso") || s.includes("taller") || s.includes("trabaj") || s.includes("proc")) return "warning";
+  return "neutral";
+}
+const statusTone = (status: string) => `status-${statusToneValue(status)}`;
+
+function StatusIcon({ status }: { status: string }) {
+  const tone = statusToneValue(status);
+  if (tone === "danger") return <AlertTriangle size={14} />;
+  if (tone === "success") return <CheckCircle2 size={14} />;
+  return <Clock3 size={14} />;
+}
 
 function useModalFocus(open: boolean, onClose: () => void) {
   const ref = useRef<HTMLElement>(null);
@@ -46,17 +61,10 @@ function useModalFocus(open: boolean, onClose: () => void) {
   };
   return [ref, onKeyDown] as const;
 }
-export function StatusBadge({ status }: { status: OrderStatus }) {
-  const icons = {
-    "En proceso": Clock3,
-    Aprobado: CheckCircle2,
-    Pagado: CheckCircle2,
-    Cancelado: AlertTriangle,
-  };
-  const Icon = icons[status];
+export function StatusBadge({ status }: { status: string }) {
   return (
-    <span className={`status status-${status.toLowerCase().replace(" ", "-")}`}>
-      <Icon size={14} />
+    <span className={`status ${statusTone(status)}`} data-status={status.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}>
+      <StatusIcon status={status} />
       {status}
     </span>
   );

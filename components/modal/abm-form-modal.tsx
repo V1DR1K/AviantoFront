@@ -32,7 +32,7 @@ export function AbmFormModal({
   resource: string;
   mode: "agregar" | "modificar";
   fields: AbmField[];
-  initialValues?: Record<string, string | number | boolean | undefined>;
+  initialValues?: Record<string, string | number | boolean | null | undefined>;
   onClose: () => void;
   onSubmit: (values: Record<string, string>) => void;
 }) {
@@ -133,7 +133,7 @@ export function VehicleAbmModal({
   mode: "agregar" | "modificar";
   clientId?: string;
   clientName?: string;
-  initialValues?: Record<string, string | number | boolean | undefined>;
+  initialValues?: Record<string, string | number | boolean | null | undefined>;
   brands: MarcaMotoResponse[];
   clients?: ClienteResponse[];
   onClose: () => void;
