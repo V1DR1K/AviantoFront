@@ -810,7 +810,7 @@ a.existing-photo {
 .repuesto-items-head,
 .repuesto-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 118px 72px 110px 90px 30px;
+  grid-template-columns: minmax(0, 1fr) 118px minmax(130px, 1fr) 72px 110px 90px 30px;
   gap: 10px;
   align-items: center;
   padding: 11px 12px;
@@ -1256,6 +1256,10 @@ a.existing-photo {
   padding-top: 15px;
   border-top: 1px solid var(--line);
   font-size: 13px;
+}
+.text-danger {
+  color: var(--danger, #d93025);
+  font-weight: 600;
 }
 td.table-actions {
   display: table-cell;

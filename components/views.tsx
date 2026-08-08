@@ -273,7 +273,7 @@ export function FichasView({
             </thead>
             <tbody>
               {result.content.map((ficha) => {
-                const editable = ficha.estado !== "Entregada" && ficha.estado !== "Cancelada";
+                const editable = ficha.estado === "Carga" || ficha.estado === "En proceso";
                 return (
                   <tr key={ficha.id}>
                     <td data-label="Ficha">{ficha.numero}</td>

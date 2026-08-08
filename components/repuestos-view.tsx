@@ -7,6 +7,7 @@ import { money, parsePrice, priceInput } from "../lib/format";
 import { daysAgoInAr, todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
+  FichaResponse,
   MotovehiculoResponse,
   PageResponse,
   PagoStatus,
@@ -146,8 +147,10 @@ function CreateRepuestoDialog({
   const [motoId, setMotoId] = useState(initial?.motoId ?? "");
   const [proveedor, setProveedor] = useState(initial?.proveedor ?? "");
   const [motoOptions, setMotoOptions] = useState<MotovehiculoResponse[]>([]);
-  const [rows, setRows] = useState<{ key: string; descripcion: string; tipo: string; cantidad: string; precio: string; estado?: string }[]>(initial?.items.length
-    ? initial.items.map((item) => ({ key: crypto.randomUUID(), descripcion: item.descripcion, tipo: item.tipo === "ACCESORIO" ? "Accesorio" : "Repuesto", cantidad: String(item.cantidad), precio: String(item.precio), estado: item.estado }))
+  const [fichas, setFichas] = useState<FichaResponse[]>([]);
+  const [fichaId, setFichaId] = useState(initial?.fichaId ?? "");
+  const [rows, setRows] = useState<{ key: string; descripcion: string; tipo: string; cantidad: string; precio: string; estado?: string; fichaTrabajoId?: string }[]>(initial?.items.length
+    ? initial.items.map((item) => ({ key: crypto.randomUUID(), descripcion: item.descripcion, tipo: item.tipo === "ACCESORIO" ? "Accesorio" : "Repuesto", cantidad: String(item.cantidad), precio: String(item.precio), estado: item.estado, fichaTrabajoId: item.fichaTrabajoId ?? undefined }))
     : [{ key: crypto.randomUUID(), descripcion: "", tipo: "Repuesto", cantidad: "1", precio: "" }]);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
@@ -163,7 +166,29 @@ function CreateRepuestoDialog({
     setClientId(value);
     setMotoId("");
     setMotoOptions([]);
+    setFichas([]);
+    setFichaId("");
   };
+  useEffect(() => {
+    if (!motoId) { setFichas([]); setFichaId(""); return; }
+    void api<PageResponse<FichaResponse>>("/fichas", {}, { motoId, size: 50 }).then((page) => {
+      const open = page.content.filter((ficha) => ficha.estado !== "Entregada" && ficha.estado !== "Cancelada");
+      setFichas(open);
+      const keep = initial?.fichaId && page.content.some((ficha) => ficha.id === initial.fichaId) ? initial.fichaId : "";
+      setFichaId(keep || open[0]?.id || "");
+      if (initial?.fichaId && !page.content.some((ficha) => ficha.id === initial.fichaId)) {
+        void api<FichaResponse>(`/fichas/${initial.fichaId}`).then((ficha) => { setFichas((all) => all.some((item) => item.id === ficha.id) ? all : [ficha, ...all]); setFichaId(ficha.id); }).catch(() => undefined);
+      }
+    }).catch((reason) => onError(errorMessage(reason)));
+  }, [motoId]);
+  const changeFicha = (value: string) => {
+    setFichaId(value);
+    setRows((all) => all.map((row) => {
+      const valid = value ? (fichas.find((ficha) => ficha.id === value)?.trabajos ?? []).some((trabajo) => trabajo.id === row.fichaTrabajoId) : false;
+      return { ...row, fichaTrabajoId: valid ? row.fichaTrabajoId : undefined };
+    }));
+  };
+  const fichaTrabajos = fichas.find((ficha) => ficha.id === fichaId)?.trabajos ?? [];
   const subtotal = rows.reduce((sum, row) => sum + Number(row.cantidad) * parsePrice(row.precio), 0);
   const save = async () => {
     const items = rows.filter((row) => row.descripcion.trim() && Number(row.cantidad) > 0);
@@ -173,11 +198,11 @@ function CreateRepuestoDialog({
       const repuesto = initial
         ? await api<RepuestoResponse>(`/repuestos/${initial.id}`, {
             method: "PUT",
-            body: JSON.stringify({ motoVehiculoId: motoId, clienteId: clientId, fecha: initial.fecha.slice(0, 10), proveedor: proveedor || null, observaciones: null, items: items.map((item) => ({ descripcion: item.descripcion, tipo: item.tipo === "Accesorio" ? "ACCESORIO" : "REPUESTO", cantidad: item.cantidad, precio: parsePrice(item.precio), estado: item.estado ?? "Pendiente de pedir" })) }),
+            body: JSON.stringify({ motoVehiculoId: motoId, clienteId: clientId, fichaId: fichaId || null, fecha: initial.fecha.slice(0, 10), proveedor: proveedor || null, observaciones: null, items: items.map((item) => ({ descripcion: item.descripcion, tipo: item.tipo === "Accesorio" ? "ACCESORIO" : "REPUESTO", cantidad: item.cantidad, precio: parsePrice(item.precio), fichaTrabajoId: item.fichaTrabajoId || null, estado: item.estado ?? "Pendiente de pedir" })) }),
           })
         : await api<RepuestoResponse>("/repuestos", {
             method: "POST",
-            body: JSON.stringify({ motoVehiculoId: motoId, clienteId: clientId, fecha: new Date().toISOString().slice(0, 10), proveedor: proveedor || null, observaciones: null, items: items.map((item) => ({ descripcion: item.descripcion, tipo: item.tipo === "Accesorio" ? "ACCESORIO" : "REPUESTO", cantidad: item.cantidad, precio: parsePrice(item.precio), estado: "Pendiente de pedir" })) }),
+            body: JSON.stringify({ motoVehiculoId: motoId, clienteId: clientId, fichaId: fichaId || null, fecha: new Date().toISOString().slice(0, 10), proveedor: proveedor || null, observaciones: null, items: items.map((item) => ({ descripcion: item.descripcion, tipo: item.tipo === "Accesorio" ? "ACCESORIO" : "REPUESTO", cantidad: item.cantidad, precio: parsePrice(item.precio), fichaTrabajoId: item.fichaTrabajoId || null, estado: "Pendiente de pedir" })) }),
           });
       notify(`Pedido ${repuesto.numero} ${initial ? "actualizado" : "creado"}.`);
       onSaved(repuesto);
@@ -190,14 +215,16 @@ function CreateRepuestoDialog({
         <div className="repuesto-pick">
           <label>Cliente<select value={clientId} onChange={(event) => changeClient(event.target.value)} required><option value="">Seleccionar</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.nombre}</option>)}</select></label>
           <label>Moto<select value={motoId} onChange={(event) => setMotoId(event.target.value)} required disabled={!clientId}><option value="">Seleccionar</option>{motoOptions.map((moto) => <option key={moto.id} value={moto.id}>{moto.marca} {moto.modelo} · {moto.patente}</option>)}</select></label>
+          <label>Ficha (opcional)<select value={fichaId} onChange={(event) => changeFicha(event.target.value)} disabled={!motoId}><option value="">Sin ficha</option>{fichas.map((ficha) => <option key={ficha.id} value={ficha.id}>{ficha.numero} · {ficha.estado}</option>)}</select></label>
           <label>Proveedor<input value={proveedor} onChange={(event) => setProveedor(event.target.value)} /></label>
         </div>
         <div className="repuesto-items">
-          <div className="repuesto-items-head"><span>Descripción</span><span>Tipo</span><span>Cant.</span><span>Precio</span><span>Total</span><span /></div>
+          <div className="repuesto-items-head"><span>Descripción</span><span>Tipo</span><span>Trabajo</span><span>Cant.</span><span>Precio</span><span>Total</span><span /></div>
           {rows.map((row) => (
             <div className="repuesto-item" key={row.key}>
               <input placeholder="Ej.: cubierta 110/90" value={row.descripcion} onChange={(event) => setRow(row.key, { descripcion: event.target.value })} />
               <select value={row.tipo} onChange={(event) => setRow(row.key, { tipo: event.target.value })} aria-label="Tipo"><option>Repuesto</option><option>Accesorio</option></select>
+              <select value={row.fichaTrabajoId ?? ""} onChange={(event) => setRow(row.key, { fichaTrabajoId: event.target.value || undefined })} aria-label="Trabajo" disabled={!fichaId}><option value="">Sin trabajo</option>{fichaTrabajos.map((trabajo) => <option key={trabajo.id} value={trabajo.id}>{trabajo.descripcion}</option>)}</select>
               <input type="number" min="1" value={row.cantidad} onChange={(event) => setRow(row.key, { cantidad: String(event.target.value) })} aria-label="Cantidad" />
               <input inputMode="decimal" value={priceInput(row.precio)} onChange={(event) => setRow(row.key, { precio: event.target.value })} placeholder="Precio" aria-label="Precio" />
               <strong>{money(Number(row.cantidad) * parsePrice(row.precio))}</strong>
