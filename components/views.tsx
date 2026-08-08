@@ -334,12 +334,10 @@ function ItemRow({
 
 export function FichaDetail({
   fichaKey,
-  readOnly = false,
   onBack,
   onConfirm,
 }: {
   fichaKey: string;
-  readOnly?: boolean;
   onBack: () => void;
   onConfirm: (label: string, action: () => void | Promise<void>) => void;
 }) {
@@ -425,19 +423,21 @@ export function FichaDetail({
       setServiceSaving(false);
     }
   };
-  const locked = readOnly || current === "Cancelada" || current === "Entregada";
+  const locked = current === "Cancelada" || current === "Entregada";
+  const flowSteps: FichaStatus[] = ["Carga", "En proceso", "Revisión", "Entregada"];
+  const currentStep = flowSteps.indexOf(current);
   const bottomActions: { key: string; label: string; className: string; onClick: () => void }[] = [];
-  if (!readOnly && ficha.estadoPago !== "Pagado")
-    bottomActions.push({ key: "pago", label: ficha.estadoPago === "Parcial" ? "Completar pago" : "Marcar pagada", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/pago`, { estadoPago: "Pagado" }, "pago-pagado") });
-  if (!readOnly && current === "Carga")
-    bottomActions.push({ key: "iniciar", label: "Comenzar trabajo", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "En proceso" }, "estado-en-proceso") });
-  if (!readOnly && current === "En proceso")
-    bottomActions.push({ key: "revision", label: "Enviar a revisión", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Revisión" }, "estado-revision") });
-  if (!readOnly && current === "Revisión")
+  if (current === "Carga")
+    bottomActions.push({ key: "iniciar", label: "Comenzar trabajo", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "En proceso" }, "estado-en-proceso") });
+  else if (current === "En proceso")
+    bottomActions.push({ key: "revision", label: "Enviar a revisión", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Revisión" }, "estado-revision") });
+  else if (current === "Revisión")
     bottomActions.push({ key: "aprobar", label: "Aprobar revisión y entregar", className: "primary", onClick: () => void aprobarRevision() });
-  if (!readOnly && current === "Entregada")
-    bottomActions.push({ key: "service", label: "Registrar service", className: "secondary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setServiceOpen(true); } });
-  if (!readOnly && current !== "Entregada" && current !== "Cancelada")
+  else if (current === "Entregada")
+    bottomActions.push({ key: "service", label: "Registrar service", className: "primary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setServiceOpen(true); } });
+  if (ficha.estadoPago !== "Pagado")
+    bottomActions.push({ key: "pago", label: ficha.estadoPago === "Parcial" ? "Completar pago" : "Marcar como pagada", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/pago`, { estadoPago: "Pagado" }, "pago-pagado") });
+  if (current !== "Entregada" && current !== "Cancelada")
     bottomActions.push({ key: "cancelar", label: "Cancelar ficha", className: "danger", onClick: () => onConfirm("Cancelar ficha", () => update(`/fichas/${ficha.id}/estado`, { estado: "Cancelada" }, "estado-cancelada")) });
   return (
     <div className="page">
@@ -455,6 +455,34 @@ export function FichaDetail({
           <strong>{money(ficha.total)}</strong>
         </div>
       </div>
+      <ol className={`flow-steps${current === "Cancelada" ? " canceled" : ""}`}>
+        {flowSteps.map((step) => {
+          const index = flowSteps.indexOf(step);
+          const done = current !== "Cancelada" && currentStep >= 0 && index < currentStep;
+          const isCurrent = current !== "Cancelada" && index === currentStep;
+          return (
+            <li key={step} className={`flow-step${isCurrent ? " current" : ""}${done ? " done" : ""}`}>
+              <span>{done ? "✓" : index + 1}</span>
+              <strong>{step}</strong>
+            </li>
+          );
+        })}
+        {current === "Cancelada" && (
+          <li className="flow-step flow-step-end current">
+            <span>✕</span>
+            <strong>Cancelada</strong>
+          </li>
+        )}
+      </ol>
+      {bottomActions.length > 0 && (
+        <div className="ficha-actions">
+          {bottomActions.map((action) => (
+            <button key={action.key} className={`button large ${action.className}`} disabled={Boolean(pending)} onClick={action.onClick}>
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
       <section className="detail-grid">
         <div className="form-stack">
           <section className="panel">
@@ -524,15 +552,6 @@ export function FichaDetail({
           <div className="total"><span>Total final</span><strong>{money(ficha.total)}</strong></div>
         </aside>
       </section>
-      {bottomActions.length > 0 && (
-        <div className="ficha-actions">
-          {bottomActions.map((action) => (
-            <button key={action.key} className={`button large ${action.className}`} disabled={Boolean(pending)} onClick={action.onClick}>
-              {action.label}
-            </button>
-          ))}
-        </div>
-      )}
       <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveService(); }}>
           <label>Kilometraje<input type="number" min="0" value={serviceKm} onChange={(event) => setServiceKm(event.target.value)} required /></label>

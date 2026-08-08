@@ -560,6 +560,80 @@ td small {
 .detail-title > div:last-child > strong {
   font-size: 25px;
 }
+.flow-steps {
+  display: flex;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+.flow-step {
+  flex: 1;
+  min-width: 134px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 15px;
+  color: var(--muted);
+  border-left: 1px solid var(--line);
+  background: #f6f8fa;
+}
+.flow-step:first-child {
+  border-left: 0;
+}
+.flow-step > span {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #dfe8f1;
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 750;
+}
+.flow-step strong {
+  font-size: 14px;
+  white-space: nowrap;
+}
+.flow-step.done {
+  background: #eff7f1;
+}
+.flow-step.done > span {
+  background: var(--green);
+  color: #fff;
+}
+.flow-step.current {
+  background: var(--navy);
+}
+.flow-step.current > span {
+  background: #fff;
+  color: var(--navy);
+}
+.flow-step.current strong {
+  color: #fff;
+}
+.flow-step-end {
+  flex: 0 0 auto;
+}
+.flow-step-end.current > span {
+  background: #fff;
+  color: var(--red);
+}
+.flow-steps.canceled .flow-step {
+  background: #f6f7f8;
+}
+.flow-steps.canceled .flow-step.current > span {
+  background: #fff;
+  color: var(--red);
+}
+.flow-steps.canceled .flow-step.current strong {
+  color: var(--ink);
+}
 .detail-grid,
 .form-layout {
   display: grid;
