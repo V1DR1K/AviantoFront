@@ -415,6 +415,8 @@ export function FichaDetail({
     bottomActions.push({ key: "pago", label: ficha.estadoPago === "Parcial" ? "Completar pago" : "Marcar pagada", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/pago`, { estadoPago: "Pagado" }, "pago-pagado") });
   if (!readOnly && (current === "Ingresada" || current === "En trabajo" || current === "Para control"))
     bottomActions.push({ key: "entrega", label: "Lista para entrega", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Para entrega" }, "estado-para-entrega") });
+  if (!readOnly && current === "Para entrega")
+    bottomActions.push({ key: "entregar", label: "Entregar al cliente", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Entregada" }, "estado-entregada") });
   if (!readOnly && (current === "Para entrega" || current === "Entregada"))
     bottomActions.push({ key: "service", label: "Registrar service", className: "secondary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setServiceOpen(true); } });
   if (!readOnly && current !== "Entregada" && current !== "Cancelada")
