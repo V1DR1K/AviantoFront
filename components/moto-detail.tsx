@@ -124,7 +124,7 @@ export function MotoDetail({
         <div>
           <p>{moto.patente}</p>
           <h1>{moto.marca} {moto.modelo}</h1>
-          <span>{moto.cliente} · KM {moto.kilometraje ?? "—"}</span>
+          <span>{moto.propietario ?? "Sin propietario"} · KM {moto.kilometraje ?? "—"}</span>
         </div>
         <div className="detail-stack">
           <StatusBadge status={moto.estado} />
@@ -155,7 +155,7 @@ export function MotoDetail({
             <button className="button secondary" onClick={openConfig}><Settings2 size={17} />Configurar service</button>
           </div>
           <dl className="record-detail">
-            <div><dt>Cliente</dt><dd>{moto.cliente}</dd></div>
+            <div><dt>Cliente</dt><dd>{moto.propietario ?? "—"}</dd></div>
             <div><dt>Marca / modelo</dt><dd>{moto.marca} {moto.modelo}</dd></div>
             <div><dt>Patente</dt><dd>{moto.patente}</dd></div>
             <div><dt>Año</dt><dd>{moto.anio ?? "—"}</dd></div>

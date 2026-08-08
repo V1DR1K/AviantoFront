@@ -1,15 +1,10 @@
-export type FichaStatus = "Ingresada" | "En trabajo" | "Para control" | "Para entrega" | "Entregada" | "Cancelada";
-export type PagoStatus = "Pendiente" | "Parcial" | "Pagado";
-export type TrabajoStatus = "Pendiente" | "En proceso" | "Realizado" | "Cancelado";
-export type DocumentType = "Presupuesto" | "Factura";
-export type ItemType = "Pieza" | "Trabajo";
-export type EstadoMotoType = "Activa" | "En taller" | "Para entrega";
-export type RepuestoItemType = "Repuesto" | "Accesorio";
-export type RepuestoItemState = "Pendiente de pedir" | "Pedido" | "Recibido" | "Entregado" | "Cancelado";
+export type FichaStatus = "Carga" | "En proceso" | "Revisión" | "Entregada" | "Cancelada";
+export type PagoStatus = "No pagado" | "Parcial" | "Pagado";
+export type TrabajoStatus = "Pendiente" | "Realizado" | "Cancelado";
+export type RepuestoItemType = "REPUESTO" | "ACCESORIO";export type RepuestoItemState = "Pendiente de pedir" | "Pedido" | "Recibido" | "Entregado" | "Cancelado";
 export type RepuestoState = "En curso" | "Completado" | "Cancelado";
-export type RepuestoPagoState = "No pagado" | "Pago parcial" | "Pagado";
 export type RevisionState = "ABIERTA" | "APROBADA";
-export type RevisionControlState = "Pendiente" | "Aprobado" | "Requiere corrección" | "No aplica";
+export type RevisionControlState = "Pendiente" | "Revisado" | "No aplica";
 
 export interface PageRequest {
   page: number;
@@ -40,10 +35,12 @@ export interface ClienteResponse extends ClienteRequest {
   id: string;
   activo: boolean;
   motos: number;
-  pedidos: number;
+  fichas: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 export interface MarcaMotoResponse { id: string; nombre: string; activo: boolean; createdAt?: string; updatedAt?: string; }
-export interface CategoriaCatalogoResponse { id: string; nombre: string; activo: boolean; createdAt?: string; updatedAt?: string; }
+export interface CategoriaResponse { id: string; nombre: string; activo: boolean; createdAt?: string; updatedAt?: string; }
 export interface UsuarioResponse {
   id: string;
   nombre: string;
@@ -54,7 +51,7 @@ export interface UsuarioResponse {
   updatedAt?: string;
 }
 export interface MotovehiculoRequest {
-  clienteId: string;
+  clienteId?: string;
   marcaId: string;
   modelo: string;
   patente: string;
@@ -62,16 +59,23 @@ export interface MotovehiculoRequest {
   kilometraje?: number;
   observaciones?: string;
 }
-export interface MotovehiculoResponse extends MotovehiculoRequest {
+export interface MotovehiculoResponse {
   id: string;
-  cliente: string;
+  propietarioId?: string | null;
+  propietario?: string | null;
+  marcaId: string;
   marca: string;
-  estado: EstadoMotoType;
+  modelo: string;
+  patente: string;
+  anio?: number | null;
+  kilometraje?: number | null;
+  estado: "En taller" | "Disponible";
   kmUltimoService?: number | null;
   fechaUltimoService?: string | null;
   kmServicePeriodo: number | null;
   mesesServicePeriodo: number | null;
   serviceObservaciones?: string | null;
+  observaciones?: string | null;
   activo: boolean;
   createdAt: string;
   updatedAt: string;
@@ -81,37 +85,17 @@ export interface MotoConfigServiceRequest {
   mesesServicePeriodo?: number;
   serviceObservaciones?: string;
 }
-export interface ItemCatalogoRequest {
-  descripcion: string;
-  tipo: ItemType;
-  precioBase: number;
-  categoriaId: string;
-  observaciones?: string;
-}
-export interface ItemCatalogoResponse extends ItemCatalogoRequest {
-  id: string;
-  categoria: string;
-  activo: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
 
-export interface FichaItemRequest {
-  itemCatalogoId?: string;
+export interface FichaTrabajoRequest {
   descripcion: string;
-  tipo: ItemType;
-  cantidad: number;
   precioUnitario: number;
   descuento: number;
   estadoTrabajo?: TrabajoStatus;
   observacionTrabajo?: string;
 }
-export interface FichaItemResponse {
+export interface FichaTrabajoResponse {
   id: string;
-  itemCatalogoId?: string;
   descripcion: string;
-  tipo: ItemType;
-  cantidad: number;
   precioUnitario: number;
   descuento: number;
   subtotal: number;
@@ -133,12 +117,11 @@ export interface FichaRequest {
   fechaIngreso?: string;
   fechaEntregaEstimada?: string;
   kilometrajeIngreso?: number;
-  documento: DocumentType;
   vencimiento?: string;
   observaciones?: string;
   descuentoGlobal: number;
   iva: boolean;
-  items: FichaItemRequest[];
+  trabajos: FichaTrabajoRequest[];
 }
 export interface FichaResponse {
   id: string;
@@ -148,10 +131,9 @@ export interface FichaResponse {
   motoId: string;
   moto: string;
   patente: string;
-  documento: DocumentType;
-  vencimiento: string | null;
+  vencimiento?: string | null;
   fechaIngreso: string;
-  fechaEntregaEstimada: string | null;
+  fechaEntregaEstimada?: string | null;
   fechaEntregaReal?: string | null;
   kilometrajeIngreso?: number | null;
   observaciones?: string | null;
@@ -161,7 +143,7 @@ export interface FichaResponse {
   estadoPago: PagoStatus;
   total: number;
   creadoEn: string;
-  items: FichaItemResponse[];
+  trabajos: FichaTrabajoResponse[];
   fotos: PhotoResponse[];
 }
 export interface OwnerRequest { clienteId: string; fechaDesde?: string; observaciones?: string; }
@@ -170,7 +152,7 @@ export interface OwnerResponse {
   clienteId: string;
   cliente: string;
   fechaDesde: string;
-  fechaHasta: string;
+  fechaHasta: string | null;
   actual: boolean;
   observaciones?: string;
 }
@@ -194,7 +176,7 @@ export interface ServiceResponse {
 export interface NextServiceResponse {
   motoId: string;
   patente: string;
-  cliente: string;
+  cliente: string | null;
   moto: string;
   kilometraje: number | null;
   kmUltimoService: number | null;
@@ -212,6 +194,7 @@ export interface NextServiceResponse {
 export interface RepuestoItemRequest {
   descripcion: string;
   tipo: RepuestoItemType;
+  fichaTrabajoId?: string;
   cantidad: number;
   precio: number;
   estado?: string;
@@ -219,6 +202,7 @@ export interface RepuestoItemRequest {
 }
 export interface RepuestoItemResponse {
   id: string;
+  fichaTrabajoId?: string | null;
   descripcion: string;
   tipo: RepuestoItemType;
   cantidad: number;
@@ -246,12 +230,20 @@ export interface RepuestoResponse {
   fichaId?: string | null;
   fecha: string;
   estado: RepuestoState;
-  estadoPago: RepuestoPagoState;
+  estadoPago: PagoStatus;
   total: number;
   proveedor?: string | null;
   observaciones?: string | null;
   items: RepuestoItemResponse[];
   creadoEn: string;
+}
+export interface ControlRequest {
+  nombre: string;
+  descripcion?: string;
+  obligatorio?: boolean;
+  orden?: number;
+  activo?: boolean;
+  categoriaIds?: string[];
 }
 export interface ControlResponse {
   id: string;
@@ -260,20 +252,15 @@ export interface ControlResponse {
   obligatorio: boolean;
   orden: number;
   activo: boolean;
+  categorias: CategoriaResponse[];
   createdAt: string;
   updatedAt: string;
-}
-export interface ControlRequest {
-  nombre: string;
-  descripcion?: string;
-  obligatorio?: boolean;
-  orden?: number;
-  activo?: boolean;
 }
 export interface RevisionControlResponse {
   id: string;
   controlId: string;
   control: string;
+  categorias: string;
   obligatorio: boolean;
   orden: number;
   estado: RevisionControlState;
@@ -307,11 +294,11 @@ export interface DashboardOrderResponse { id: string; numero: string; cliente: s
 export interface DashboardResponse {
   fechaDesde: string;
   fechaHasta: string;
-  pedidos: number;
+  fichas: number;
   enProceso: number;
-  aprobados: number;
-  pagados: number;
-  cancelados: number;
+  enRevision: number;
+  pagadas: number;
+  canceladas: number;
   presupuestado: number;
   facturado: number;
   evolucion: DashboardDayResponse[];

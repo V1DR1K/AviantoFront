@@ -9,9 +9,8 @@ import type {
   ClienteResponse,
   MotovehiculoResponse,
   PageResponse,
-
+  PagoStatus,
   RepuestoItemState,
-  RepuestoPagoState,
   RepuestoResponse,
   RepuestoState,
 } from "../lib/types";
@@ -21,7 +20,7 @@ const date = (value: string) => new Intl.DateTimeFormat("es-AR").format(new Date
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
 
 const repuestoStates: RepuestoState[] = ["En curso", "Completado", "Cancelado"];
-const pagoStates: RepuestoPagoState[] = ["No pagado", "Pago parcial", "Pagado"];
+const pagoStates: PagoStatus[] = ["No pagado", "Parcial", "Pagado"];
 const itemStates: RepuestoItemState[] = ["Pendiente de pedir", "Pedido", "Recibido", "Entregado", "Cancelado"];
 
 export function RepuestosView({
@@ -148,7 +147,7 @@ function CreateRepuestoDialog({
   const [proveedor, setProveedor] = useState(initial?.proveedor ?? "");
   const [motoOptions, setMotoOptions] = useState<MotovehiculoResponse[]>([]);
   const [rows, setRows] = useState<{ key: string; descripcion: string; tipo: string; cantidad: string; precio: string; estado?: string }[]>(initial?.items.length
-    ? initial.items.map((item) => ({ key: crypto.randomUUID(), descripcion: item.descripcion, tipo: item.tipo, cantidad: String(item.cantidad), precio: String(item.precio), estado: item.estado }))
+    ? initial.items.map((item) => ({ key: crypto.randomUUID(), descripcion: item.descripcion, tipo: item.tipo === "ACCESORIO" ? "Accesorio" : "Repuesto", cantidad: String(item.cantidad), precio: String(item.precio), estado: item.estado }))
     : [{ key: crypto.randomUUID(), descripcion: "", tipo: "Repuesto", cantidad: "1", precio: "" }]);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
@@ -174,11 +173,11 @@ function CreateRepuestoDialog({
       const repuesto = initial
         ? await api<RepuestoResponse>(`/repuestos/${initial.id}`, {
             method: "PUT",
-            body: JSON.stringify({ motoVehiculoId: motoId, clienteId: clientId, fecha: initial.fecha.slice(0, 10), proveedor: proveedor || null, observaciones: null, items: items.map((item) => ({ descripcion: item.descripcion, tipo: item.tipo, cantidad: item.cantidad, precio: parsePrice(item.precio), estado: item.estado ?? "Pendiente de pedir" })) }),
+            body: JSON.stringify({ motoVehiculoId: motoId, clienteId: clientId, fecha: initial.fecha.slice(0, 10), proveedor: proveedor || null, observaciones: null, items: items.map((item) => ({ descripcion: item.descripcion, tipo: item.tipo === "Accesorio" ? "ACCESORIO" : "REPUESTO", cantidad: item.cantidad, precio: parsePrice(item.precio), estado: item.estado ?? "Pendiente de pedir" })) }),
           })
         : await api<RepuestoResponse>("/repuestos", {
             method: "POST",
-            body: JSON.stringify({ motoVehiculoId: motoId, clienteId: clientId, fecha: new Date().toISOString().slice(0, 10), proveedor: proveedor || null, observaciones: null, items: items.map((item) => ({ descripcion: item.descripcion, tipo: item.tipo, cantidad: item.cantidad, precio: parsePrice(item.precio), estado: "Pendiente de pedir" })) }),
+            body: JSON.stringify({ motoVehiculoId: motoId, clienteId: clientId, fecha: new Date().toISOString().slice(0, 10), proveedor: proveedor || null, observaciones: null, items: items.map((item) => ({ descripcion: item.descripcion, tipo: item.tipo === "Accesorio" ? "ACCESORIO" : "REPUESTO", cantidad: item.cantidad, precio: parsePrice(item.precio), estado: "Pendiente de pedir" })) }),
           });
       notify(`Pedido ${repuesto.numero} ${initial ? "actualizado" : "creado"}.`);
       onSaved(repuesto);

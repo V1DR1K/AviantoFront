@@ -8,12 +8,14 @@ import { daysAgoInAr, todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
   DashboardResponse,
-  FichaItemResponse,
   FichaResponse,
   FichaStatus,
+  FichaTrabajoResponse,
   NextServiceResponse,
   PageResponse,
   PhotoResponse,
+  RevisionControlState,
+  RevisionResponse,
   TrabajoStatus,
 } from "../lib/types";
 import { Dialog, EmptyState, Pagination, SearchBox, StatusBadge } from "./ui";
@@ -64,20 +66,8 @@ function OrderPhotos({ photos, onChange }: { photos: PhotoResponse[]; onChange: 
   );
 }
 
-const fichaStatuses: FichaStatus[] = [
-  "Ingresada",
-  "En trabajo",
-  "Para control",
-  "Para entrega",
-  "Entregada",
-  "Cancelada",
-];
-const trabajoStatuses: TrabajoStatus[] = [
-  "Pendiente",
-  "En proceso",
-  "Realizado",
-  "Cancelado",
-];
+const fichaStatuses: FichaStatus[] = ["Carga", "En proceso", "Revisión", "Entregada", "Cancelada"];
+const trabajoStatuses: TrabajoStatus[] = ["Pendiente", "Realizado", "Cancelado"];
 
 export function Dashboard({
   onPage,
@@ -122,8 +112,9 @@ export function Dashboard({
       {data && (
         <>
           <div className="metrics">
-            <Metric label="Fichas" value={String(data.pedidos)} tone="blue" />
+            <Metric label="Fichas" value={String(data.fichas)} tone="blue" />
             <Metric label="En proceso" value={String(data.enProceso)} tone="blue" />
+            <Metric label="En revisión" value={String(data.enRevision)} tone="neutral" />
             <Metric label="Presupuestado" value={money(data.presupuestado)} tone="ink" />
             <Metric label="Facturado" value={money(data.facturado)} tone="green" />
           </div>
@@ -319,7 +310,7 @@ function ItemRow({
   onState,
   locked,
 }: {
-  item: FichaItemResponse;
+  item: FichaTrabajoResponse;
   onState: (estado: TrabajoStatus) => void;
   locked: boolean;
 }) {
@@ -328,7 +319,7 @@ function ItemRow({
     <div className={`line-item ${item.estadoTrabajo === "Cancelado" ? "muted" : ""}`}>
       <div>
         <strong>{item.descripcion}</strong>
-        <span>{item.tipo} · {item.cantidad} × {money(Number(item.precioUnitario))}{item.estadoTrabajo !== "Pendiente" && ` · ${item.estadoTrabajo}`}</span>
+        <span>{money(Number(item.precioUnitario))}{item.descuento > 0 && ` · descuento ${money(Number(item.descuento))}`}{item.estadoTrabajo !== "Pendiente" && ` · ${item.estadoTrabajo}`}</span>
       </div>
       <strong>{money(Number(item.subtotal))}</strong>
       {!locked && (
@@ -360,11 +351,36 @@ export function FichaDetail({
   const [serviceDate, setServiceDate] = useState("");
   const [serviceNotes, setServiceNotes] = useState("");
   const [serviceSaving, setServiceSaving] = useState(false);
+  const [revision, setRevision] = useState<RevisionResponse | null>(null);
   const load = () =>
     void api<FichaResponse>(`/fichas/${fichaKey}`)
       .then(setFicha)
       .catch((reason) => setError(errorMessage(reason)));
   useEffect(load, [fichaKey]);
+  useEffect(() => {
+    if (ficha?.estado !== "Revisión") { setRevision(null); return; }
+    void api<RevisionResponse>(`/fichas/${fichaKey}/revision`)
+      .then(setRevision)
+      .catch(() => undefined);
+  }, [ficha?.estado, fichaKey]);
+  const aprobarRevision = () => {
+    if (pending) return;
+    setPending("aprobar-revision");
+    void api(`/fichas/${fichaKey}/revision/aprobar`, {
+      method: "POST",
+      body: JSON.stringify({ forzada: false }),
+    })
+      .then(() => { setRevision(null); load(); })
+      .catch((reason) => setError(errorMessage(reason)))
+      .finally(() => setPending(null));
+  };
+  const updateControl = (controlId: string, body: Record<string, string>) =>
+    void api<RevisionResponse>(`/fichas/${fichaKey}/revision/controles/${controlId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    })
+      .then(setRevision)
+      .catch((reason) => setError(errorMessage(reason)));
   if (!ficha)
     return (
       <div className="page">
@@ -413,11 +429,13 @@ export function FichaDetail({
   const bottomActions: { key: string; label: string; className: string; onClick: () => void }[] = [];
   if (!readOnly && ficha.estadoPago !== "Pagado")
     bottomActions.push({ key: "pago", label: ficha.estadoPago === "Parcial" ? "Completar pago" : "Marcar pagada", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/pago`, { estadoPago: "Pagado" }, "pago-pagado") });
-  if (!readOnly && (current === "Ingresada" || current === "En trabajo" || current === "Para control"))
-    bottomActions.push({ key: "entrega", label: "Lista para entrega", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Para entrega" }, "estado-para-entrega") });
-  if (!readOnly && current === "Para entrega")
-    bottomActions.push({ key: "entregar", label: "Entregar al cliente", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Entregada" }, "estado-entregada") });
-  if (!readOnly && (current === "Para entrega" || current === "Entregada"))
+  if (!readOnly && current === "Carga")
+    bottomActions.push({ key: "iniciar", label: "Comenzar trabajo", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "En proceso" }, "estado-en-proceso") });
+  if (!readOnly && current === "En proceso")
+    bottomActions.push({ key: "revision", label: "Enviar a revisión", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Revisión" }, "estado-revision") });
+  if (!readOnly && current === "Revisión")
+    bottomActions.push({ key: "aprobar", label: "Aprobar revisión y entregar", className: "primary", onClick: () => void aprobarRevision() });
+  if (!readOnly && current === "Entregada")
     bottomActions.push({ key: "service", label: "Registrar service", className: "secondary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setServiceOpen(true); } });
   if (!readOnly && current !== "Entregada" && current !== "Cancelada")
     bottomActions.push({ key: "cancelar", label: "Cancelar ficha", className: "danger", onClick: () => onConfirm("Cancelar ficha", () => update(`/fichas/${ficha.id}/estado`, { estado: "Cancelada" }, "estado-cancelada")) });
@@ -448,23 +466,61 @@ export function FichaDetail({
             </div>
             <p className="observation">{ficha.observaciones || "Sin observaciones."}</p>
             <div className="line-items-list">
-              {ficha.items.map((item) => (
+              {ficha.trabajos.map((item) => (
                 <ItemRow
                   key={item.id}
                   item={item}
                   locked={locked}
-                  onState={(estado) => void update(`/fichas/${ficha.id}/items/${item.id}/estado`, { estado }, `item-${item.id}`)}
+                  onState={(estado) => void update(`/fichas/${ficha.id}/trabajos/${item.id}/estado`, { estado }, `item-${item.id}`)}
                 />
               ))}
             </div>
             <OrderPhotos photos={ficha.fotos} onChange={() => void load()} />
+            {revision && (
+              <section className="revision-panel">
+                <div className="panel-head">
+                  <h3>Revisión</h3>
+                  <span className="muted">{revision.estado === "APROBADA" ? `Aprobada${revision.forzada ? " (forzada)" : ""}${revision.aprobadoAt ? ` · ${date(revision.aprobadoAt)}` : ""}` : "Controles pendientes"}</span>
+                </div>
+                {revision.estado !== "APROBADA" && (
+                  <div className="line-items-list">
+                    {revision.controles.map((control) => (
+                      <div key={control.id} className="line-item revision-control">
+                        <div>
+                          <strong>{control.control}</strong>
+                          <span>{control.categorias}{control.obligatorio ? " · Obligatorio" : ""}</span>
+                        </div>
+                        <select
+                          value={control.estado}
+                          onChange={(event) => void updateControl(control.id, { estado: event.target.value as RevisionControlState })}
+                        >
+                          <option value="Pendiente">Pendiente</option>
+                          <option value="Revisado">Revisado</option>
+                          <option value="No aplica">No aplica</option>
+                        </select>
+                        {control.estado !== "Pendiente" && (
+                          <input
+                            type="text"
+                            placeholder="Observación"
+                            defaultValue={control.observacion ?? ""}
+                            onBlur={(event) => void updateControl(control.id, { estado: control.estado, observacion: event.target.value })}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
           </section>
         </div>
         <aside className="summary">
           <h3>Resumen monetario</h3>
-          <div><span>Documento</span><strong>{ficha.documento}{ficha.iva ? " (IVA)" : ""}</strong></div>
+          <div><span>Descuento global</span><strong>{ficha.descuentoGlobal > 0 ? money(ficha.descuentoGlobal) : "—"}</strong></div>
+          <div><span>IVA</span><strong>{ficha.iva ? "Incluido" : "No aplica"}</strong></div>
           <div><span>Ingreso</span><strong>{ficha.fechaIngreso ? date(ficha.fechaIngreso) : "—"}</strong></div>
           <div><span>Entrega estimada</span><strong>{ficha.fechaEntregaEstimada ? date(ficha.fechaEntregaEstimada) : "—"}</strong></div>
+          <div><span>Entrega real</span><strong>{ficha.fechaEntregaReal ? date(ficha.fechaEntregaReal) : "—"}</strong></div>
           <div className="total"><span>Total final</span><strong>{money(ficha.total)}</strong></div>
         </aside>
       </section>
@@ -508,7 +564,7 @@ export function ReportsView() {
           <Metric key={item.etiqueta} label={item.etiqueta} value={money(item.valor)} tone="blue" />
         ))}
       </div>
-      <section className="panel"><h2>Clientes</h2><table><tbody>{clients.map((client) => <tr key={client.id}><td data-label="Cliente">{client.nombre}</td><td data-label="Fichas">{client.pedidos} fichas</td></tr>)}</tbody></table></section>
+      <section className="panel"><h2>Clientes</h2><table><tbody>{clients.map((client) => <tr key={client.id}><td data-label="Cliente">{client.nombre}</td><td data-label="Fichas">{client.fichas} fichas</td></tr>)}</tbody></table></section>
     </div>
   );
 }

@@ -23,7 +23,7 @@ const nav = [
   { id: "repuestos", label: "Repuestos", icon: Package },
   { id: "clients", label: "Clientes", icon: Users },
   { id: "vehicles", label: "Motos", icon: Bike },
-  { id: "catalog", label: "Catálogo", icon: Package },
+  { id: "catalog", label: "Controles", icon: Package },
   { id: "reports", label: "Reportes", icon: BarChart3 },
   { id: "audit", label: "Auditoría", icon: FileText },
   { id: "services", label: "Service", icon: Wrench },
