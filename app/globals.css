@@ -801,6 +801,39 @@ td small {
   min-height: 115px;
   resize: vertical;
 }
+.plate-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+.plate-search input,
+.plate-search .button {
+  min-height: 44px;
+}
+.plate-search .button {
+  padding-inline: 18px;
+  white-space: nowrap;
+}
+.client-picker {
+  display: grid;
+  gap: 7px;
+  font-weight: 700;
+  color: #43556b;
+}
+.autocomplete-field {
+  position: relative;
+}
+.autocomplete-field .suggestions {
+  top: calc(100% + 5px);
+}
+.autocomplete-field .suggestions p {
+  margin: 0;
+  padding: 11px;
+  color: var(--muted);
+  font-size: 13px;
+}
 .catalog-search {
   position: relative;
   margin-bottom: 13px;
@@ -855,6 +888,20 @@ td small {
 }
 .line-item input {
   padding: 7px;
+}
+.line-item .line-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #43556b;
+  white-space: nowrap;
+}
+.line-item .line-check input {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  accent-color: var(--blue);
 }
 .line-item button {
   border: 0;
@@ -1820,6 +1867,19 @@ td.table-actions {
   }
   .order-form .two-col {
     grid-template-columns: 1fr;
+  }
+  .plate-search {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .plate-search .button {
+    width: 100%;
+  }
+  .line-item {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+  .line-item .line-descr {
+    grid-column: 1 / -1;
   }
   .ficha-actions {
     flex-direction: column;

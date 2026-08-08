@@ -4,14 +4,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Plus, Save, Search, X } from "lucide-react";
 import { api, objectUrl } from "../lib/api";
 import { money, parsePrice, priceInput } from "../lib/format";
-import type { ClienteResponse, FichaRequest, FichaResponse, FichaTrabajoRequest, MarcaMotoResponse, MotovehiculoResponse, PageResponse, PhotoResponse } from "../lib/types";
+import type { ClienteResponse, FichaRequest, FichaResponse, MarcaMotoResponse, MotovehiculoResponse, PageResponse, PhotoResponse } from "../lib/types";
 import { ConfirmModal } from "./ui";
 import { VehicleAbmModal } from "./modal/abm-form-modal";
 
-type Line = { key: string; descripcion: string; precioUnitario: number; descuento: number };
+type Line = { key: string; descripcion: string; precioUnitario: number; descuento: number; realizado: boolean };
 type PhotoDraft = { file: File; url: string };
 
 const today = () => new Date().toISOString().slice(0, 10);
+const clientLabel = (client: ClienteResponse) => `${client.nombre}${client.telefono ? ` · ${client.telefono}` : ""}`;
 const readAsBase64 = (file: File) =>
   new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -56,6 +57,8 @@ export function FichaForm({ onClose, onSave, fichaKey }: { onClose: () => void; 
   const [patenteQuery, setPatenteQuery] = useState("");
   const [patenteBusy, setPatenteBusy] = useState(false);
   const [clientId, setClientId] = useState("");
+  const [clientQuery, setClientQuery] = useState("");
+  const [clientOpen, setClientOpen] = useState(false);
   const [vehicleId, setVehicleId] = useState("");
   const [fechaIngreso, setFechaIngreso] = useState(today());
   const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState("");
@@ -72,13 +75,28 @@ export function FichaForm({ onClose, onSave, fichaKey }: { onClose: () => void; 
   const prefill = useRef<{ motoId?: string } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const photoInput = useRef<HTMLInputElement>(null);
+  const clientPicker = useRef<HTMLDivElement>(null);
   const photoUrls = useRef(new Set<string>());
   const existingUrls = useRef<Record<string, string>>({});
 
   useEffect(() => () => { photoUrls.current.forEach((url) => URL.revokeObjectURL(url)); Object.values(existingUrls.current).forEach((url) => URL.revokeObjectURL(url)); }, []);
-  useEffect(() => { void api<PageResponse<ClienteResponse>>("/clientes", {}, { activo: true, size: 100 }).then((page) => { setClients(page.content); if (!clientId) setClientId(page.content[0]?.id ?? ""); }).catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudieron cargar los datos.")); // eslint-disable-line react-hooks/exhaustive-deps
+  const chooseClient = (id: string) => {
+    const client = clients.find((item) => item.id === id);
+    setClientId(id);
+    setClientQuery(client ? clientLabel(client) : "");
+    setClientOpen(false);
+  };
+  const clientMatches = useMemo(() => {
+    const query = clientQuery.trim().toLowerCase();
+    return clients.filter((client) => !query || [client.nombre, client.telefono, client.documento, client.email].some((value) => value?.toLowerCase().includes(query))).slice(0, 10);
+  }, [clientQuery, clients]);
+  useEffect(() => { void api<PageResponse<ClienteResponse>>("/clientes", {}, { activo: true, size: 100 }).then((page) => setClients(page.content)).catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudieron cargar los datos."));
   }, []);
-
+  useEffect(() => {
+    const close = (event: MouseEvent) => { if (!clientPicker.current?.contains(event.target as Node)) setClientOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
   const searchByPlate = async () => {
     const plate = patenteQuery.trim().toUpperCase();
     if (!plate) return;
@@ -88,7 +106,7 @@ export function FichaForm({ onClose, onSave, fichaKey }: { onClose: () => void; 
       if (!page.content.length) { setError(`No se encontró la moto "${plate}". Verificá la patente o creala con el botón "Agregar moto".`); setVehicles([]); setVehicleId(""); return; }
       setVehicles(page.content);
       const owner = page.content.find((moto) => moto.propietarioId)?.propietarioId;
-      if (owner) setClientId(owner);
+      if (owner) chooseClient(owner);
       setVehicleId(page.content[0]?.id ?? "");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "No se pudo buscar la moto."); } finally { setPatenteBusy(false); }
   };
@@ -124,18 +142,19 @@ export function FichaForm({ onClose, onSave, fichaKey }: { onClose: () => void; 
       setNotes(ficha.observaciones ?? "");
       setIva(ficha.iva);
       setExisting(ficha.fotos);
-      setTrabajos(ficha.trabajos.map((trabajo) => ({ key: crypto.randomUUID(), descripcion: trabajo.descripcion, precioUnitario: trabajo.precioUnitario, descuento: trabajo.descuento })));
+      setTrabajos(ficha.trabajos.map((trabajo) => ({ key: crypto.randomUUID(), descripcion: trabajo.descripcion, precioUnitario: trabajo.precioUnitario, descuento: trabajo.descuento, realizado: trabajo.estadoTrabajo === "Realizado" })));
       setClientId(ficha.clienteId);
       setReloadKey((key) => key + 1);
     }).catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudo cargar la ficha."));
   }, [fichaKey]);
 
   const currentVehicle = vehicles.find((vehicle) => vehicle.id === vehicleId);
+  const selectedClient = clients.find((client) => client.id === clientId);
   const subtotal = useMemo(() => trabajos.reduce((sum, trabajo) => sum + Number(trabajo.precioUnitario) - Number(trabajo.descuento), 0), [trabajos]);
   const ivaVal = iva ? subtotal * 0.21 : 0;
   const total = subtotal + ivaVal;
   const hasDraftContent = trabajos.length > 0 || Boolean(notes) || photos.length > 0 || Boolean(fechaEntregaEstimada) || Boolean(kilometrajeIngreso);
-  const addTrabajo = (r?: Partial<Line>) => setTrabajos((previous) => [...previous, { key: crypto.randomUUID(), descripcion: "", precioUnitario: 0, descuento: 0, ...r }]);
+  const addTrabajo = (r?: Partial<Line>) => setTrabajos((previous) => [...previous, { key: crypto.randomUUID(), descripcion: "", precioUnitario: 0, descuento: 0, realizado: false, ...r }]);
   const updateLine = (key: string, changes: Partial<Line>) => setTrabajos((all) => all.map((line) => line.key === key ? { ...line, ...changes } : line));
   const attachPhotos = async (files: File[]) => { try { const converted = await Promise.all(files.map(asWebp)); setPhotos((current) => [...current, ...converted.map((file) => { const url = URL.createObjectURL(file); photoUrls.current.add(url); return { file, url }; })]); } catch (reason) { setError(reason instanceof Error ? reason.message : "No se pudieron preparar las fotos."); } };
   const removePhoto = (url: string) => { URL.revokeObjectURL(url); photoUrls.current.delete(url); setPhotos((all) => all.filter((photo) => photo.url !== url)); };
@@ -156,7 +175,7 @@ export function FichaForm({ onClose, onSave, fichaKey }: { onClose: () => void; 
         observaciones: notes || undefined,
         descuentoGlobal: 0,
         iva,
-        trabajos: validWork.map((trabajo) => ({ descripcion: trabajo.descripcion.trim(), precioUnitario: trabajo.precioUnitario, descuento: trabajo.descuento })),
+        trabajos: validWork.map((trabajo) => ({ descripcion: trabajo.descripcion.trim(), precioUnitario: trabajo.precioUnitario, descuento: trabajo.descuento, estadoTrabajo: trabajo.realizado ? "Realizado" : "Pendiente" })),
       };
       let ficha = fichaKey
         ? await api<FichaResponse>(`/fichas/${fichaKey}`, { method: "PUT", body: JSON.stringify(request) })
@@ -171,10 +190,10 @@ export function FichaForm({ onClose, onSave, fichaKey }: { onClose: () => void; 
   return <section className="order-form">
     <div className="page-heading"><div><h1>{editing ? "Editar ficha de trabajo" : "Nueva ficha de trabajo"}</h1><p>{editing ? "Actualizá los trabajos y las condiciones." : "Buscá la moto por patente y cargá los trabajos a realizar."}</p></div><button className="button secondary form-close" onClick={() => hasDraftContent && !editing ? setCloseConfirmation(true) : onClose()}><X size={18} />Cerrar</button></div>
     {error && <p className="login-pending" role="alert">{error}</p>}
-    {editing && !editable && <p className="login-pending" role="alert">Esta ficha ya está en "{loadedEstado}". Solo se pueden editar fichas en "Carga" o "En proceso".</p>}
+    {editing && !editable && <p className="login-pending" role="alert">Esta ficha ya está en &quot;{loadedEstado}&quot;. Solo se pueden editar fichas en &quot;Carga&quot; o &quot;En proceso&quot;.</p>}
     <div className="form-layout"><div className="form-stack">
-      <section className="form-section"><h2>1. Moto por patente</h2><div className="plate-search"><input value={patenteQuery} onChange={(event) => setPatenteQuery(event.target.value)} placeholder="Ej.: AB 123 CD" onKeyDown={(event) => { if (event.key === "Enter") void searchByPlate(); }} /><button className="button secondary" type="button" disabled={patenteBusy} onClick={() => void searchByPlate()}><Search size={17} />Buscar</button></div><div className="two-col"><label>Cliente (propietario)<select value={clientId} onChange={(event) => setClientId(event.target.value)}><option value="">Seleccionar</option>{clients.map((client) => <option value={client.id} key={client.id}>{client.nombre} · {client.telefono}</option>)}</select></label><label>Moto<select value={vehicleId} onChange={(event) => setVehicleId(event.target.value)} disabled={!clientId}><option value="">Seleccionar</option>{vehicles.map((vehicle) => <option value={vehicle.id} key={vehicle.id}>{vehicle.marca} {vehicle.modelo} · {vehicle.patente}</option>)}</select></label><label>Fecha ingreso<input type="date" value={fechaIngreso} onChange={(event) => setFechaIngreso(event.target.value)} /></label><label>Entrega estimada<input type="date" value={fechaEntregaEstimada} onChange={(event) => setFechaEntregaEstimada(event.target.value)} /></label><label>Kilometraje ingreso<input type="number" min="0" value={kilometrajeIngreso} onChange={(event) => setKilometrajeIngreso(event.target.value)} placeholder="KM actual" /></label><button className="button secondary add-vehicle" type="button" onClick={() => setNewVehicleOpen(true)}><Plus size={17} /><span>Agregar moto</span></button></div></section>
-      <section className="form-section"><h2>2. Trabajos a realizar</h2><div className="line-items">{trabajos.map((trabajo) => <div className="line-item" key={trabajo.key}><label className="line-descr">Descripción<input type="text" value={trabajo.descripcion} onChange={(event) => updateLine(trabajo.key, { descripcion: event.target.value })} placeholder="Ej.: Cambio de aceite" /></label><label>Precio<input type="text" inputMode="decimal" value={priceInput(trabajo.precioUnitario)} onChange={(event) => updateLine(trabajo.key, { precioUnitario: parsePrice(event.target.value) })} /></label>{trabajo.precioUnitario > 0 && <strong>{money(Number(trabajo.precioUnitario) - Number(trabajo.descuento))}</strong>}<button type="button" aria-label="Eliminar trabajo" onClick={() => setTrabajos((all) => all.filter((line) => line.key !== trabajo.key))}><X size={18} /></button></div>)}</div><button className="text-button" type="button" onClick={() => addTrabajo()}><Plus size={17} />Agregar trabajo</button></section>
+      <section className="form-section"><h2>1. Moto por patente</h2><div className="plate-search"><input value={patenteQuery} onChange={(event) => setPatenteQuery(event.target.value)} placeholder="Ej.: AB 123 CD" onKeyDown={(event) => { if (event.key === "Enter") void searchByPlate(); }} /><button className="button secondary" type="button" disabled={patenteBusy} onClick={() => void searchByPlate()}><Search size={17} />{patenteBusy ? "Buscando..." : "Buscar"}</button></div><div className="two-col"><div className="client-picker"><span>Cliente (propietario)</span><div className="autocomplete-field" ref={clientPicker}><input value={selectedClient ? clientLabel(selectedClient) : clientQuery} onFocus={() => setClientOpen(true)} onChange={(event) => { setClientQuery(event.target.value); setClientOpen(true); if (clientId) { setClientId(""); setVehicleId(""); setVehicles([]); } }} placeholder="Buscar cliente por nombre, teléfono o documento" autoComplete="off" />{clientOpen && <div className="suggestions">{clientMatches.length ? clientMatches.map((client) => <button type="button" key={client.id} onClick={() => chooseClient(client.id)}><span>{client.nombre}</span><small>{client.telefono || client.documento || "Sin contacto"}</small></button>) : <p>Sin clientes coincidentes.</p>}</div>}</div></div><label>Moto<select value={vehicleId} onChange={(event) => setVehicleId(event.target.value)} disabled={!clientId}><option value="">Seleccionar</option>{vehicles.map((vehicle) => <option value={vehicle.id} key={vehicle.id}>{vehicle.marca} {vehicle.modelo} · {vehicle.patente}</option>)}</select></label><label>Fecha ingreso<input type="date" value={fechaIngreso} onChange={(event) => setFechaIngreso(event.target.value)} /></label><label>Entrega estimada<input type="date" value={fechaEntregaEstimada} onChange={(event) => setFechaEntregaEstimada(event.target.value)} /></label><label>Kilometraje ingreso<input type="number" min="0" value={kilometrajeIngreso} onChange={(event) => setKilometrajeIngreso(event.target.value)} placeholder="KM actual" /></label><button className="button secondary add-vehicle" type="button" onClick={() => setNewVehicleOpen(true)}><Plus size={17} /><span>Agregar moto</span></button></div></section>
+      <section className="form-section"><h2>2. Trabajos a realizar</h2><div className="line-items">{trabajos.map((trabajo) => <div className="line-item" key={trabajo.key}><label className="line-descr">Descripción<input type="text" value={trabajo.descripcion} onChange={(event) => updateLine(trabajo.key, { descripcion: event.target.value })} placeholder="Ej.: Cambio de aceite" /></label><label>Precio<input type="text" inputMode="decimal" value={priceInput(trabajo.precioUnitario)} onChange={(event) => updateLine(trabajo.key, { precioUnitario: parsePrice(event.target.value) })} /></label>{trabajo.precioUnitario > 0 && <strong>{money(Number(trabajo.precioUnitario) - Number(trabajo.descuento))}</strong>}<label className="line-check"><input type="checkbox" checked={trabajo.realizado} onChange={(event) => updateLine(trabajo.key, { realizado: event.target.checked })} />Realizado</label><button type="button" aria-label="Eliminar trabajo" onClick={() => setTrabajos((all) => all.filter((line) => line.key !== trabajo.key))}><X size={18} /></button></div>)}</div><button className="text-button" type="button" onClick={() => addTrabajo()}><Plus size={17} />Agregar trabajo</button></section>
       <section className="form-section"><h2>3. Fotos y observaciones</h2><label>Observaciones<textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Describí la falla o los detalles detectados." /></label><input ref={photoInput} hidden type="file" accept="image/*" multiple onChange={(event) => void attachPhotos(Array.from(event.target.files ?? []))} /><button className="photo-button" type="button" onClick={() => photoInput.current?.click()}><Camera size={19} />{editing ? "Agregar más fotos" : "Adjuntar fotos"}<small>Se convierten a WebP antes de guardar.</small></button>{existing.length > 0 && <div className="photo-previews existing">{existing.map((photo) => <ExistingPhoto key={photo.id} photo={photo} />)}</div>}{photos.length > 0 && <div className="photo-previews">{photos.map((photo) => <figure key={photo.url}><img src={photo.url} alt="Vista previa de la foto adjunta" /><button type="button" onClick={() => removePhoto(photo.url)} aria-label="Quitar foto"><X size={16} /></button></figure>)}</div>}</section>
     </div><aside className="summary"><h2>Resumen de la ficha</h2><div><span>Moto</span><strong>{currentVehicle ? `${currentVehicle.marca} ${currentVehicle.modelo}` : "Sin seleccionar"}</strong></div><div><span>Patente</span><strong>{currentVehicle?.patente ?? "—"}</strong></div><hr /><div><span>Subtotal trabajos</span><strong>{money(subtotal)}</strong></div><label className="iva-toggle"><input type="checkbox" checked={iva} onChange={(event) => setIva(event.target.checked)} />Aplicar IVA 21%</label>{iva && <div><span>IVA</span><strong>{money(ivaVal)}</strong></div>}<div className="total"><span>Total final</span><strong>{money(total)}</strong></div><button className="button primary large" disabled={saving || !editable} onClick={() => void save()}><Save size={19} />{saving ? "Guardando..." : editing ? "Guardar cambios" : "Guardar ficha"}</button></aside></div>
     <VehicleAbmModal open={newVehicleOpen} mode="agregar" clientId={clientId} clientName={clients.find((client) => client.id === clientId)?.nombre} brands={brands} clients={clients} onClose={() => setNewVehicleOpen(false)} onSubmit={async (values) => { try { const vehicle = await api<MotovehiculoResponse>("/motovehiculos", { method: "POST", body: JSON.stringify({ ...values, anio: values.anio ? Number(values.anio) : null, kilometraje: values.kilometraje ? Number(values.kilometraje) : null }) }); setVehicles((all) => [...all, vehicle]); setVehicleId(vehicle.id); setNewVehicleOpen(false); } catch (reason) { setError(reason instanceof Error ? reason.message : "No se pudo guardar la moto."); } }} />
