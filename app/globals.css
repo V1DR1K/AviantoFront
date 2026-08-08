@@ -317,6 +317,49 @@ nav.tabs button.active {
   color: var(--navy);
   box-shadow: 0 2px 8px rgba(18, 53, 91, 0.14);
 }
+.taller-tabs {
+  margin: 0;
+  border-radius: 0;
+  background: #f2f6fa;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.taller-tabs button {
+  flex: 0 0 auto;
+  color: #56708a;
+}
+.taller-tabs button .tab-count {
+  margin-left: 7px;
+  background: #dfe8f1;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 12px;
+  font-weight: 750;
+}
+.taller-tabs button.active .tab-count {
+  background: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+.taller-tabs .tab-carga { --tab: var(--blue); }
+.taller-tabs .tab-en-proceso { --tab: #a16207; }
+.taller-tabs .tab-revision { --tab: #6d3bb5; }
+.taller-tabs .tab-entregada { --tab: var(--green); }
+.taller-tabs .tab-cancelada { --tab: var(--red); }
+.taller-tabs button.active {
+  background: var(--tab, var(--blue));
+  border-color: var(--tab, var(--blue));
+  color: #fff;
+}
+.taller-panel .panel-head {
+  padding: 16px 16px 0;
+  margin-bottom: 0;
+}
+.panel-empty {
+  padding: 18px;
+  color: var(--muted);
+  text-align: center;
+}
 .text-button {
   border: 0;
   background: none;
@@ -381,6 +424,14 @@ nav.tabs button.active {
 .status-neutral {
   background: #eaf1f6;
   color: var(--navy);
+}
+.status-info {
+  background: #e3ecf5;
+  color: var(--blue);
+}
+.status-violet {
+  background: #f0e9fb;
+  color: #6d3bb5;
 }
 .status-aprobado,
 .status-pagado {

@@ -69,7 +69,7 @@ export interface MotovehiculoResponse {
   patente: string;
   anio?: number | null;
   kilometraje?: number | null;
-  estado: "En taller" | "Disponible";
+  estado: "Carga" | "En proceso" | "Revisión" | "Entregada" | "Cancelada" | "Disponible";
   kmUltimoService?: number | null;
   fechaUltimoService?: string | null;
   kmServicePeriodo: number | null;
@@ -289,19 +289,24 @@ export interface AuditoriaResponse {
   descripcion: string;
 }
 export interface ReporteResponse { etiqueta: string; valor: number; }
-export interface DashboardDayResponse { fecha: string; total: number; }
 export interface DashboardOrderResponse { id: string; numero: string; cliente: string; moto: string; estado: FichaStatus; total: number; createdAt: string; }
 export interface DashboardResponse {
   fechaDesde: string;
   fechaHasta: string;
   fichas: number;
-  enProceso: number;
-  enRevision: number;
-  pagadas: number;
-  canceladas: number;
-  presupuestado: number;
-  facturado: number;
-  evolucion: DashboardDayResponse[];
   recientes: DashboardOrderResponse[];
 }
+export interface TallerMotoResponse {
+  motoId: string;
+  patente: string;
+  moto: string;
+  cliente: string | null;
+  kilometraje: number | null;
+  fichaId: string;
+  fichaNumero: string;
+  estado: FichaStatus;
+  fechaIngreso: string | null;
+}
+export interface TallerEstadoResponse { estado: FichaStatus; motos: TallerMotoResponse[]; }
+export interface TallerResponse { estados: TallerEstadoResponse[]; }
 export interface AutocompleteResponse { id: string; label: string; secondary?: string; }
