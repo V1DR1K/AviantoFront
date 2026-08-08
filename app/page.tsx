@@ -84,7 +84,6 @@ export default function Home() {
   else if (effectivePage === "dashboard")
     content = (
       <Dashboard
-        onPage={setEffectivePage}
         onNewOrder={() => setPage("create")}
         onSelect={openFicha}
         onOpenMoto={openMoto}

@@ -8,7 +8,6 @@ import { daysAgoInAr, todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
   DashboardFichasResponse,
-  DashboardResponse,
   FichaResponse,
   FichaStatus,
   FichaTrabajoResponse,
@@ -30,6 +29,9 @@ const tabKey = (estado: string) =>
   ({ "Carga": "carga", "En proceso": "en-proceso", "Revisión": "revision", "Entregada": "entregada", "Cancelada": "cancelada" } as Record<string, string>)[estado] ?? "carga";
 function Metric({ label, value, tone }: { label: string; value: string; tone: string }) {
   return <section className={`metric ${tone}`}><span>{label}</span><strong>{value}</strong><small>Período seleccionado</small></section>;
+}
+function DashboardMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return <section className="metric"><span>{label}</span><strong>{value}</strong><small>{detail}</small></section>;
 }
 
 function OrderPhotos({ photos, onChange }: { photos: PhotoResponse[]; onChange: () => void }) {
@@ -74,24 +76,16 @@ const fichaStatuses: FichaStatus[] = ["Carga", "En proceso", "Revisión", "Entre
 const trabajoStatuses: TrabajoStatus[] = ["Pendiente", "Realizado", "Cancelado"];
 
 export function Dashboard({
-  onPage,
   onNewOrder,
   onSelect,
   onOpenMoto,
   userName,
 }: {
-  onPage: (page: string) => void;
   onNewOrder: () => void;
   onSelect: (ficha: FichaResponse) => void;
   onOpenMoto: (id: string) => void;
   userName?: string;
 }) {
-  const now = new Date();
-  const defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-  const defaultTo = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
-  const [from, setFrom] = useState(defaultFrom);
-  const [to, setTo] = useState(defaultTo);
-  const [data, setData] = useState<DashboardResponse | null>(null);
   const [taller, setTaller] = useState<TallerResponse | null>(null);
   const [fichasAgrupadas, setFichasAgrupadas] = useState<DashboardFichasResponse | null>(null);
   const [groupBy, setGroupBy] = useState<"moto" | "ficha">("moto");
@@ -99,45 +93,43 @@ export function Dashboard({
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     void Promise.all([
-      api<DashboardResponse>("/dashboard", {}, { fechaDesde: from, fechaHasta: to }),
       api<TallerResponse>("/dashboard/taller"),
       api<DashboardFichasResponse>("/dashboard/fichas"),
     ])
-      .then(([nextData, nextTaller, nextFichas]) => { setData(nextData); setTaller(nextTaller); setFichasAgrupadas(nextFichas); })
+      .then(([nextTaller, nextFichas]) => { setTaller(nextTaller); setFichasAgrupadas(nextFichas); })
       .catch((reason) => setError(errorMessage(reason)));
-  }, [from, to]);
+  }, []);
   const talleres = taller?.estados ?? [];
   const motos = talleres.find((item) => item.estado === tab)?.motos ?? [];
   const fichas = fichasAgrupadas?.estados.find((item) => item.estado === tab)?.fichas ?? [];
   const estados = groupBy === "moto" ? talleres : fichasAgrupadas?.estados ?? [];
+  const count = (estado: FichaStatus) => {
+    const item = estados.find((entry) => entry.estado === estado);
+    return item ? "motos" in item ? item.motos.length : item.fichas.length : 0;
+  };
+  const visible = groupBy === "moto" ? motos.length : fichas.length;
+  const label = groupBy === "moto" ? "motos" : "fichas";
   return (
     <div className="page">
       <div className="page-heading">
         <div>
           <h1>Buenos días, {userName}</h1>
-          <p>Motos en el taller y actividad del período seleccionado.</p>
+          <p>Estado actual del taller.</p>
         </div>
         <button className="button primary" onClick={onNewOrder}>
           <Plus size={19} />Nueva ficha
         </button>
       </div>
-      <section className="panel dashboard-filters">
-        <label>Desde<input type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></label>
-        <label>Hasta<input type="date" value={to} min={from} onChange={(event) => setTo(event.target.value)} /></label>
-      </section>
       {error && <p className="login-pending">{error}</p>}
-      {data && (
+      {taller && fichasAgrupadas && (
         <>
-          <div className="metrics">
-            <Metric label="Fichas" value={String(data.fichas)} tone="blue" />
+          <div className="metrics dashboard-metrics">
+            <DashboardMetric label="En pantalla" value={`${visible} ${label}`} detail={`${tab} · agrupadas por ${groupBy}`} />
+            <DashboardMetric label="En curso" value={String(count("Carga") + count("En proceso") + count("Revisión"))} detail={`${label} en carga, proceso o revisión`} />
+            <DashboardMetric label="Entregadas" value={String(count("Entregada"))} detail={`${label} finalizadas`} />
+            <DashboardMetric label="Canceladas" value={String(count("Cancelada"))} detail={`${label} sin continuar`} />
           </div>
-          <section className="panel table-panel taller-panel">
-            <div className="panel-head">
-              <div>
-                <h2>Taller</h2>
-                <p>{groupBy === "moto" ? "Motos" : "Fichas"} agrupadas por estado, las más recientes primero.</p>
-              </div>
-            </div>
+          <section className="table-panel taller-panel">
             <nav className="tabs dashboard-group-tabs" aria-label="Agrupar tablero">
               <button className={groupBy === "moto" ? "active" : ""} onClick={() => setGroupBy("moto")}>Agrupar por moto</button>
               <button className={groupBy === "ficha" ? "active" : ""} onClick={() => setGroupBy("ficha")}>Agrupar por ficha</button>
@@ -198,33 +190,6 @@ export function Dashboard({
             ) : (
               <EmptyState title={`Sin fichas en ${tab}`} body="No hay fichas en este estado por el momento." />
             ))}
-          </section>
-          <section className="panel">
-            <div className="panel-head">
-              <div>
-                <h2>Fichas recientes</h2>
-                <p>Últimos movimientos del período.</p>
-              </div>
-              <button className="text-button" onClick={() => onPage("orders")}>Ver todas</button>
-            </div>
-            <div className="compact-orders">
-              {data.recientes.map((ficha) => (
-                <button
-                  key={ficha.id}
-                  onClick={() =>
-                    void api<FichaResponse>(`/fichas/${ficha.id}`).then(onSelect).catch((reason) => setError(errorMessage(reason)))
-                  }
-                >
-                  <div>
-                    <strong>{ficha.numero}</strong>
-                    <span>{ficha.cliente} · {ficha.moto}</span>
-                  </div>
-                  <StatusBadge status={ficha.estado} />
-                  <strong>{money(ficha.total)}</strong>
-                </button>
-              ))}
-            </div>
-            {!data.recientes.length && <p className="panel-empty">Sin fichas en este período.</p>}
           </section>
         </>
       )}
