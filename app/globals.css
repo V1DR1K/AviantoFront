@@ -276,6 +276,11 @@ textarea:focus-visible {
   gap: 14px;
   margin-bottom: 18px;
 }
+.panel-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .panel h2,
 .form-section h2,
 .summary h2 {

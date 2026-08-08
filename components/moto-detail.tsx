@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Eye, Plus } from "lucide-react";
+import { Eye, Plus, Settings2 } from "lucide-react";
 import { api } from "../lib/api";
 import { money } from "../lib/format";
 import type {
@@ -40,16 +40,24 @@ export function MotoDetail({
   const [serviceOpen, setServiceOpen] = useState(false);
   const [serviceKm, setServiceKm] = useState("");
   const [serviceDate, setServiceDate] = useState("");
+  const [serviceNotes, setServiceNotes] = useState("");
   const [serviceSaving, setServiceSaving] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [configKm, setConfigKm] = useState("");
+  const [configMonths, setConfigMonths] = useState("");
+  const [configNotes, setConfigNotes] = useState("");
+  const [configSaving, setConfigSaving] = useState(false);
 
   const load = () =>
     void api<MotovehiculoResponse>(`/motovehiculos/${id}`)
       .then((next) => { setMoto(next); })
       .catch((reason) => setError(errorMessage(reason)));
+  const loadServices = () => void api<ServiceResponse[]>(`/motovehiculos/${id}/services`).then(setServices).catch(() => undefined);
+  const loadNext = () => void api<NextServiceResponse[]>("/services/proximos").then((list) => setNextService(list.find((next) => next.motoId === id) ?? null)).catch(() => undefined);
   useEffect(load, [id]);
   useEffect(() => {
-    void api<ServiceResponse[]>(`/motovehiculos/${id}/services`).then(setServices).catch((reason) => setError(errorMessage(reason)));
-    void api<NextServiceResponse[]>("/services/proximos").then((list) => setNextService(list.find((next) => next.motoId === id) ?? null)).catch(() => undefined);
+    loadServices();
+    loadNext();
     void api<PageResponse<FichaResponse>>("/fichas", {}, { motoId: id, size: 50 }).then((result) => setFichas(result.content)).catch(() => undefined);
     void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { motoId: id, size: 50 }).then((result) => setRepuestos(result.content)).catch(() => undefined);
   }, [id]);
@@ -61,16 +69,43 @@ export function MotoDetail({
     try {
       await api<ServiceResponse>(`/motovehiculos/${id}/services`, {
         method: "POST",
-        body: JSON.stringify({ kilometraje: Number(serviceKm), fecha: serviceDate || null, observaciones: null }),
+        body: JSON.stringify({ kilometraje: Number(serviceKm), fecha: serviceDate || null, observaciones: serviceNotes || null }),
       });
-      void api<ServiceResponse[]>(`/motovehiculos/${id}/services`).then(setServices);
+      loadServices();
       void api<MotovehiculoResponse>(`/motovehiculos/${id}`).then(setMoto);
-      void api<NextServiceResponse[]>("/services/proximos").then((list) => setNextService(list.find((next) => next.motoId === id) ?? null));
+      loadNext();
       setServiceOpen(false);
       setServiceKm("");
       setServiceDate("");
+      setServiceNotes("");
       notify("Service registrado.");
     } catch (reason) { setError(errorMessage(reason)); } finally { setServiceSaving(false); }
+  };
+
+  const saveConfig = async () => {
+    if (configSaving) return;
+    setConfigSaving(true);
+    try {
+      const next = await api<MotovehiculoResponse>(`/motovehiculos/${id}/config-service`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          kmServicePeriodo: configKm ? Number(configKm) : null,
+          mesesServicePeriodo: configMonths ? Number(configMonths) : null,
+          serviceObservaciones: configNotes || null,
+        }),
+      });
+      setMoto(next);
+      loadNext();
+      setConfigOpen(false);
+      notify("Configuración de service guardada.");
+    } catch (reason) { setError(errorMessage(reason)); } finally { setConfigSaving(false); }
+  };
+
+  const openConfig = () => {
+    setConfigKm(moto?.kmServicePeriodo != null ? String(moto.kmServicePeriodo) : "");
+    setConfigMonths(moto?.mesesServicePeriodo != null ? String(moto.mesesServicePeriodo) : "");
+    setConfigNotes(moto?.serviceObservaciones ?? "");
+    setConfigOpen(true);
   };
 
   if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><p className="login-pending">{error}</p></div>;
@@ -101,9 +136,9 @@ export function MotoDetail({
           <h3>Próximo service</h3>
           <p>
             {nextService.sinReferencia
-              ? "Sin configuración de service (periodos)."
+              ? "Todavía no se registró ningún service."
               : nextService.atrasadoKm || nextService.atrasadoFecha
-                ? <span className="text-danger">Atrasado — definí o ejecutá un service.</span>
+                ? <span className="text-danger">Atrasado — registrá un service.</span>
                 : `KM sugerido ${nextService.proximKm ?? "—"} · Fecha ${nextService.proximaFecha ? date(nextService.proximaFecha) : "—"}`}
           </p>
         </section>
@@ -115,7 +150,10 @@ export function MotoDetail({
       </nav>
       {tab === "general" && (
         <section className="panel form-stack">
-          <div className="panel-head"><h2>Datos del vehículo</h2></div>
+          <div className="panel-head">
+            <h2>Datos del vehículo</h2>
+            <button className="button secondary" onClick={openConfig}><Settings2 size={17} />Configurar service</button>
+          </div>
           <dl className="record-detail">
             <div><dt>Cliente</dt><dd>{moto.cliente}</dd></div>
             <div><dt>Marca / modelo</dt><dd>{moto.marca} {moto.modelo}</dd></div>
@@ -135,12 +173,15 @@ export function MotoDetail({
         <section className="panel table-panel">
           <div className="panel-head">
             <h2>Services registrados</h2>
-            <button className="button secondary" disabled={serviceSaving} onClick={() => setServiceOpen(true)}><Plus size={17} />Registrar service</button>
+            <div className="panel-actions">
+              <button className="button secondary" onClick={openConfig}><Settings2 size={17} />Configurar periodos</button>
+              <button className="button secondary" disabled={serviceSaving} onClick={() => { setServiceKm(moto.kilometraje != null ? String(moto.kilometraje) : ""); setServiceOpen(true); }}><Plus size={17} />Registrar service</button>
+            </div>
           </div>
           {services.length ? (
             <table>
-              <thead><tr><th>Fecha</th><th>Kilometraje</th><th>Observaciones</th></tr></thead>
-              <tbody>{services.map((service) => <tr key={service.id}><td data-label="Fecha">{date(service.fecha)}</td><td data-label="Kilometraje">{service.kilometraje}</td><td data-label="Observaciones">{service.observaciones || "—"}</td></tr>)}</tbody>
+              <thead><tr><th>Fecha</th><th>Kilometraje</th><th>Ficha</th><th>Realizado por</th><th>Observaciones</th></tr></thead>
+              <tbody>{services.map((service) => <tr key={service.id}><td data-label="Fecha">{date(service.fecha)}</td><td data-label="Kilometraje">{service.kilometraje}</td><td data-label="Ficha">{service.fichaNumero ?? "—"}</td><td data-label="Realizado por">{service.realizadoPor ?? "—"}</td><td data-label="Observaciones">{service.observaciones || "—"}</td></tr>)}</tbody>
             </table>
           ) : <EmptyState title="Sin services" body="Registrá el primer service de la moto." />}
         </section>
@@ -171,7 +212,16 @@ export function MotoDetail({
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void addService(); }}>
           <label>Kilometraje<input type="number" min="0" value={serviceKm} onChange={(event) => setServiceKm(event.target.value)} required /></label>
           <label>Fecha<input type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
+          <label>Observación<input type="text" value={serviceNotes} onChange={(event) => setServiceNotes(event.target.value)} placeholder="Ej: cambio de aceite y filtros" /></label>
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setServiceOpen(false)}>Cancelar</button><button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : "Guardar"}</button></div>
+        </form>
+      </Dialog>
+      <Dialog open={configOpen} title="Configurar service" onClose={() => setConfigOpen(false)}>
+        <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveConfig(); }}>
+          <label>Periodo en km<input type="number" min="0" value={configKm} onChange={(event) => setConfigKm(event.target.value)} placeholder="Ej: 5000" /></label>
+          <label>Periodo en meses<input type="number" min="0" value={configMonths} onChange={(event) => setConfigMonths(event.target.value)} placeholder="Ej: 6" /></label>
+          <label>Observaciones<input type="text" value={configNotes} onChange={(event) => setConfigNotes(event.target.value)} /></label>
+          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setConfigOpen(false)}>Cancelar</button><button className="button primary" disabled={configSaving}>{configSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>
       </Dialog>
     </div>

@@ -16,7 +16,7 @@ import type {
   PhotoResponse,
   TrabajoStatus,
 } from "../lib/types";
-import { EmptyState, Pagination, SearchBox, StatusBadge } from "./ui";
+import { Dialog, EmptyState, Pagination, SearchBox, StatusBadge } from "./ui";
 
 const date = (value: string) =>
   new Intl.DateTimeFormat("es-AR").format(new Date(value));
@@ -355,6 +355,11 @@ export function FichaDetail({
   const [ficha, setFicha] = useState<FichaResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  const [serviceOpen, setServiceOpen] = useState(false);
+  const [serviceKm, setServiceKm] = useState("");
+  const [serviceDate, setServiceDate] = useState("");
+  const [serviceNotes, setServiceNotes] = useState("");
+  const [serviceSaving, setServiceSaving] = useState(false);
   const load = () =>
     void api<FichaResponse>(`/fichas/${fichaKey}`)
       .then(setFicha)
@@ -380,12 +385,38 @@ export function FichaDetail({
     }
   };
   const current = ficha.estado;
+  const saveService = async () => {
+    if (!serviceKm) return setError("Ingresá el kilometraje del service.");
+    if (serviceSaving) return;
+    setServiceSaving(true);
+    try {
+      await api(`/motovehiculos/${ficha.motoId}/services`, {
+        method: "POST",
+        body: JSON.stringify({
+          fichaId: ficha.id,
+          kilometraje: Number(serviceKm),
+          fecha: serviceDate || null,
+          observaciones: serviceNotes || null,
+        }),
+      });
+      setServiceOpen(false);
+      setServiceKm("");
+      setServiceDate("");
+      setServiceNotes("");
+    } catch (reason) {
+      setError(errorMessage(reason));
+    } finally {
+      setServiceSaving(false);
+    }
+  };
   const locked = readOnly || current === "Cancelada" || current === "Entregada";
   const bottomActions: { key: string; label: string; className: string; onClick: () => void }[] = [];
   if (!readOnly && ficha.estadoPago !== "Pagado")
     bottomActions.push({ key: "pago", label: ficha.estadoPago === "Parcial" ? "Completar pago" : "Marcar pagada", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/pago`, { estadoPago: "Pagado" }, "pago-pagado") });
   if (!readOnly && (current === "Ingresada" || current === "En trabajo" || current === "Para control"))
     bottomActions.push({ key: "entrega", label: "Lista para entrega", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Para entrega" }, "estado-para-entrega") });
+  if (!readOnly && (current === "Para entrega" || current === "Entregada"))
+    bottomActions.push({ key: "service", label: "Registrar service", className: "secondary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setServiceOpen(true); } });
   if (!readOnly && current !== "Entregada" && current !== "Cancelada")
     bottomActions.push({ key: "cancelar", label: "Cancelar ficha", className: "danger", onClick: () => onConfirm("Cancelar ficha", () => update(`/fichas/${ficha.id}/estado`, { estado: "Cancelada" }, "estado-cancelada")) });
   return (
@@ -444,6 +475,14 @@ export function FichaDetail({
           ))}
         </div>
       )}
+      <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)}>
+        <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveService(); }}>
+          <label>Kilometraje<input type="number" min="0" value={serviceKm} onChange={(event) => setServiceKm(event.target.value)} required /></label>
+          <label>Fecha<input type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
+          <label>Observación<input type="text" value={serviceNotes} onChange={(event) => setServiceNotes(event.target.value)} placeholder="Ej: cambio de aceite y filtros" /></label>
+          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setServiceOpen(false)}>Cancelar</button><button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : "Guardar"}</button></div>
+        </form>
+      </Dialog>
     </div>
   );
 }
@@ -494,7 +533,7 @@ export function ServicesView({ onOpenMoto }: { onOpenMoto: (id: string) => void 
         <div className="metrics">
           <Metric label="Atrasados" value={String(overdue.length)} tone="danger" />
           <Metric label="Próximos" value={String(upcoming.length)} tone="green" />
-          <Metric label="Sin configurar" value={String(withoutRef.length)} tone="neutral" />
+          <Metric label="Sin services" value={String(withoutRef.length)} tone="neutral" />
         </div>
       )}
       <section className="panel table-panel">
@@ -513,7 +552,7 @@ export function ServicesView({ onOpenMoto }: { onOpenMoto: (id: string) => void 
                   <td data-label="Próximo">{row.sinReferencia || row.atrasadoKm || row.atrasadoFecha
                     ? <span>{row.proximKm ? `KM ${row.proximKm.toLocaleString("es-AR")}` : "—"}{row.proximaFecha ? ` · ${date(row.proximaFecha)}` : ""}</span>
                     : <span>{row.proximKm ? `KM ${row.proximKm.toLocaleString("es-AR")}` : "—"}{row.kmFaltan != null ? ` (faltan ${row.kmFaltan.toLocaleString("es-AR")})` : ""}{row.proximaFecha ? ` · ${date(row.proximaFecha)}` : ""}</span>}</td>
-                  <td data-label="Estado"><StatusBadge status={row.sinReferencia ? "Sin configurar" : row.atrasadoKm || row.atrasadoFecha ? "Atrasado" : "Al día"} /></td>
+                  <td data-label="Estado"><StatusBadge status={row.sinReferencia ? "Sin services" : row.atrasadoKm || row.atrasadoFecha ? "Atrasado" : "Al día"} /></td>
                   <td data-label="Acción"><button className="row-action" onClick={() => onOpenMoto(row.motoId)}>Ver moto</button></td>
                 </tr>
               ))}

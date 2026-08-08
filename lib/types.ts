@@ -184,6 +184,7 @@ export interface ServiceResponse {
   id: string;
   motoId: string;
   fichaId?: string | null;
+  fichaNumero?: string | null;
   kilometraje: number;
   fecha: string;
   observaciones?: string | null;
