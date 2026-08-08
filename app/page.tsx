@@ -23,8 +23,10 @@ export default function Home() {
   const [page, setPage] = useState("dashboard");
   const [fichaId, setFichaId] = useState<string | null>(null);
   const [editFichaId, setEditFichaId] = useState<string | null>(null);
+  const [fichaPrefill, setFichaPrefill] = useState<{ motoId: string; clienteId?: string | null } | null>(null);
   const [motoId, setMotoId] = useState<string | null>(null);
   const [repuestoId, setRepuestoId] = useState<string | null>(null);
+  const [repuestoPrefill, setRepuestoPrefill] = useState<{ motoId: string; clienteId?: string | null } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [confirmation, setConfirmation] = useState<{
     label: string;
@@ -69,6 +71,8 @@ export default function Home() {
   const openFicha = (ficha: FichaResponse) => { setFichaId(ficha.id); setPage("fichas"); };
   const openMoto = (id: string) => { setMotoId(id); setPage("moto"); };
   const openRepuesto = (repuesto: { id: string }) => { setRepuestoId(repuesto.id); setPage("repuesto"); };
+  const createFichaForMoto = (prefill: { motoId: string; clienteId?: string | null }) => { setFichaPrefill(prefill); setPage("create"); };
+  const createRepuestoForMoto = (prefill: { motoId: string; clienteId?: string | null }) => { setRepuestoPrefill(prefill); setPage("repuestos"); };
   const restricted = session.user.rol !== "ADMINISTRACION";
   const effectivePage = restricted && (page === "audit" || page === "settings") ? "dashboard" : page;
   const setEffectivePage = (target: string) => {
@@ -78,13 +82,13 @@ export default function Home() {
 
   let content;
   if (effectivePage === "create")
-    content = <FichaForm onClose={() => setPage("orders")} onSave={() => { setToast("Ficha creada. Podés verla y editarla desde la lista."); setRefreshKey((key) => key + 1); setPage("orders"); }} />;
+    content = <FichaForm initialClientId={fichaPrefill?.clienteId} initialMotoId={fichaPrefill?.motoId} onClose={() => { const backToMoto = Boolean(fichaPrefill); setFichaPrefill(null); setPage(backToMoto ? "moto" : "orders"); }} onSave={(ficha) => { setFichaPrefill(null); setToast("Ficha creada."); setRefreshKey((key) => key + 1); openFicha(ficha); }} />;
   else if (effectivePage === "edit" && editFichaId)
     content = <FichaForm key={editFichaId} fichaKey={editFichaId} onClose={() => setPage("orders")} onSave={() => { setToast("Ficha actualizada."); setRefreshKey((key) => key + 1); setPage("orders"); }} />;
   else if (effectivePage === "dashboard")
     content = (
       <Dashboard
-        onNewOrder={() => setPage("create")}
+        onNewOrder={() => { setFichaPrefill(null); setPage("create"); }}
         onSelect={openFicha}
         onOpenMoto={openMoto}
         userName={session.user.nombre}
@@ -94,7 +98,7 @@ export default function Home() {
     content = (
       <FichasView
         key={refreshKey}
-        onNewOrder={() => setPage("create")}
+        onNewOrder={() => { setFichaPrefill(null); setPage("create"); }}
         onSelect={(ficha) => openFicha(ficha)}
         onEdit={(ficha) => { setEditFichaId(ficha.id); setPage("edit"); }}
         onDelete={(ficha) => setConfirmation({
@@ -109,6 +113,7 @@ else if (effectivePage === "fichas" && fichaId)
         fichaKey={fichaId}
         onBack={() => setPage("orders")}
         onConfirm={(label, action) => setConfirmation({ label, action })}
+        onOpenMoto={openMoto}
       />
     );
   else if (effectivePage === "moto" && motoId)
@@ -118,11 +123,13 @@ else if (effectivePage === "fichas" && fichaId)
         onBack={() => setPage("vehicles")}
         onOpenFicha={openFicha}
         onOpenRepuesto={openRepuesto}
+        onNewFicha={createFichaForMoto}
+        onNewRepuesto={createRepuestoForMoto}
         notify={setToast}
       />
     );
   else if (effectivePage === "repuestos")
-    content = <RepuestosView onOpen={openRepuesto} notify={setToast} />;
+    content = <RepuestosView onOpen={openRepuesto} notify={setToast} createPrefill={repuestoPrefill} onPrefillHandled={() => setRepuestoPrefill(null)} />;
   else if (effectivePage === "repuesto" && repuestoId)
     content = <RepuestoDetail repuestoId={repuestoId} onBack={() => setPage("repuestos")} notify={setToast} />;
   else if (["clients", "vehicles", "catalog", "audit"].includes(effectivePage))
@@ -140,7 +147,7 @@ else if (effectivePage === "fichas" && fichaId)
     <AppShell
       page={effectivePage}
       onPage={setEffectivePage}
-      onNewOrder={() => setPage("create")}
+      onNewOrder={() => { setFichaPrefill(null); setPage("create"); }}
       session={session}
       onLogout={async () => {
         await logout();

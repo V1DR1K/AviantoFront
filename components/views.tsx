@@ -14,7 +14,6 @@ import type {
   NextServiceResponse,
   PageResponse,
   PhotoResponse,
-  RevisionControlState,
   RevisionResponse,
   TallerResponse,
   TrabajoStatus,
@@ -73,7 +72,6 @@ function OrderPhotos({ photos, onChange }: { photos: PhotoResponse[]; onChange: 
 }
 
 const fichaStatuses: FichaStatus[] = ["Carga", "En proceso", "Revisión", "Entregada", "Cancelada"];
-const trabajoStatuses: TrabajoStatus[] = ["Pendiente", "Realizado", "Cancelado"];
 
 export function Dashboard({
   onNewOrder,
@@ -339,7 +337,7 @@ function ItemRow({
   onState: (estado: TrabajoStatus) => void;
   locked: boolean;
 }) {
-  const options = trabajoStatuses.filter((option) => option !== item.estadoTrabajo);
+  const finalizado = item.estadoTrabajo === "Realizado" || item.estadoTrabajo === "Cancelado";
   return (
     <div className={`line-item ${item.estadoTrabajo === "Cancelado" ? "muted" : ""}`}>
       <div>
@@ -348,10 +346,10 @@ function ItemRow({
       </div>
       <strong>{money(Number(item.subtotal))}</strong>
       {!locked && (
-        <select value="" onChange={(event) => event.target.value && onState(event.target.value as TrabajoStatus)}>
-          <option value="">Estado trabajo…</option>
-          {options.map((option) => <option key={option} value={option}>{option}</option>)}
-        </select>
+        <label className="line-check detail-line-check">
+          <input type="checkbox" checked={item.estadoTrabajo === "Realizado"} disabled={finalizado} onChange={(event) => onState(event.target.checked ? "Realizado" : "Pendiente")} />
+          Realizado
+        </label>
       )}
     </div>
   );
@@ -361,10 +359,12 @@ export function FichaDetail({
   fichaKey,
   onBack,
   onConfirm,
+  onOpenMoto,
 }: {
   fichaKey: string;
   onBack: () => void;
   onConfirm: (label: string, action: () => void | Promise<void>) => void;
+  onOpenMoto: (motoId: string) => void;
 }) {
   const [ficha, setFicha] = useState<FichaResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -374,6 +374,8 @@ export function FichaDetail({
   const [serviceDate, setServiceDate] = useState("");
   const [serviceNotes, setServiceNotes] = useState("");
   const [serviceSaving, setServiceSaving] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
+  const [returnToMotoAfterService, setReturnToMotoAfterService] = useState(false);
   const [revision, setRevision] = useState<RevisionResponse | null>(null);
   const load = () =>
     void api<FichaResponse>(`/fichas/${fichaKey}`)
@@ -381,19 +383,26 @@ export function FichaDetail({
       .catch((reason) => setError(errorMessage(reason)));
   useEffect(load, [fichaKey]);
   useEffect(() => {
-    if (ficha?.estado !== "Revisión") { setRevision(null); return; }
-    void api<RevisionResponse>(`/fichas/${fichaKey}/revision`)
-      .then(setRevision)
-      .catch(() => undefined);
+    if (ficha?.estado === "Revisión")
+      void api<RevisionResponse>(`/fichas/${fichaKey}/revision`)
+        .then(setRevision)
+        .catch(() => undefined);
   }, [ficha?.estado, fichaKey]);
-  const aprobarRevision = () => {
-    if (pending) return;
+  const aprobarRevision = (registrarService: boolean) => {
+    if (pending || !ficha) return;
     setPending("aprobar-revision");
     void api(`/fichas/${fichaKey}/revision/aprobar`, {
       method: "POST",
       body: JSON.stringify({ forzada: false }),
     })
-      .then(() => { setRevision(null); load(); })
+      .then(() => {
+        setRevision(null);
+        if (registrarService) {
+          setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : "");
+          setReturnToMotoAfterService(true);
+          setServiceOpen(true);
+        } else onOpenMoto(ficha.motoId);
+      })
       .catch((reason) => setError(errorMessage(reason)))
       .finally(() => setPending(null));
   };
@@ -442,6 +451,7 @@ export function FichaDetail({
       setServiceKm("");
       setServiceDate("");
       setServiceNotes("");
+      if (returnToMotoAfterService) onOpenMoto(ficha.motoId);
     } catch (reason) {
       setError(errorMessage(reason));
     } finally {
@@ -457,9 +467,9 @@ export function FichaDetail({
   else if (current === "En proceso")
     bottomActions.push({ key: "revision", label: "Enviar a revisión", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Revisión" }, "estado-revision") });
   else if (current === "Revisión")
-    bottomActions.push({ key: "aprobar", label: "Aprobar revisión y entregar", className: "primary", onClick: () => void aprobarRevision() });
+    bottomActions.push({ key: "aprobar", label: "Aprobar revisión y entregar", className: "primary", onClick: () => setCloseOpen(true) });
   else if (current === "Entregada")
-    bottomActions.push({ key: "service", label: "Registrar service", className: "primary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setServiceOpen(true); } });
+    bottomActions.push({ key: "service", label: "Registrar service", className: "primary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setReturnToMotoAfterService(false); setServiceOpen(true); } });
   if (ficha.estadoPago !== "Pagado")
     bottomActions.push({ key: "pago", label: ficha.estadoPago === "Parcial" ? "Completar pago" : "Marcar como pagada", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/pago`, { estadoPago: "Pagado" }, "pago-pagado") });
   if (current !== "Entregada" && current !== "Cancelada")
@@ -529,7 +539,7 @@ export function FichaDetail({
               ))}
             </div>
             <OrderPhotos photos={ficha.fotos} onChange={() => void load()} />
-            {revision && (
+            {ficha.estado === "Revisión" && revision && (
               <section className="revision-panel">
                 <div className="panel-head">
                   <h3>Revisión</h3>
@@ -543,15 +553,11 @@ export function FichaDetail({
                           <strong>{control.control}</strong>
                           <span>{control.categorias}{control.obligatorio ? " · Obligatorio" : ""}</span>
                         </div>
-                        <select
-                          value={control.estado}
-                          onChange={(event) => void updateControl(control.id, { estado: event.target.value as RevisionControlState })}
-                        >
-                          <option value="Pendiente">Pendiente</option>
-                          <option value="Revisado">Revisado</option>
-                          <option value="No aplica">No aplica</option>
-                        </select>
-                        {control.estado !== "Pendiente" && (
+                        <label className="line-check detail-line-check">
+                          <input type="checkbox" checked={control.estado === "Revisado"} onChange={(event) => void updateControl(control.id, { estado: event.target.checked ? "Revisado" : "Pendiente" })} />
+                          Revisado
+                        </label>
+                        {control.estado === "Revisado" && (
                           <input
                             type="text"
                             placeholder="Observación"
@@ -584,6 +590,14 @@ export function FichaDetail({
           <label>Observación<input type="text" value={serviceNotes} onChange={(event) => setServiceNotes(event.target.value)} placeholder="Ej: cambio de aceite y filtros" /></label>
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setServiceOpen(false)}>Cancelar</button><button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>
+      </Dialog>
+      <Dialog open={closeOpen} title="Cerrar ficha" onClose={() => setCloseOpen(false)}>
+        <p>¿Está seguro que desea cerrar esta ficha?</p>
+        <div className="modal-actions">
+          <button type="button" className="button secondary" onClick={() => setCloseOpen(false)}>Cancelar</button>
+          <button type="button" className="button secondary" disabled={Boolean(pending)} onClick={() => { setCloseOpen(false); void aprobarRevision(true); }}>Aceptar y Registrar Service</button>
+          <button type="button" className="button primary" disabled={Boolean(pending)} onClick={() => { setCloseOpen(false); void aprobarRevision(false); }}>Aceptar</button>
+        </div>
       </Dialog>
     </div>
   );

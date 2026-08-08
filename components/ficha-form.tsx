@@ -47,7 +47,7 @@ function ExistingPhoto({ photo }: { photo: PhotoResponse }) {
   );
 }
 
-export function FichaForm({ onClose, onSave, fichaKey }: { onClose: () => void; onSave: (ficha: FichaResponse) => void; fichaKey?: string | null }) {
+export function FichaForm({ onClose, onSave, fichaKey, initialClientId, initialMotoId }: { onClose: () => void; onSave: (ficha: FichaResponse) => void; fichaKey?: string | null; initialClientId?: string | null; initialMotoId?: string | null }) {
   const editing = Boolean(fichaKey);
   const [loadedEstado, setLoadedEstado] = useState<string | null>(null);
   const editable = !editing || loadedEstado === "Carga" || loadedEstado === "En proceso";
@@ -56,7 +56,7 @@ export function FichaForm({ onClose, onSave, fichaKey }: { onClose: () => void; 
   const [brands, setBrands] = useState<MarcaMotoResponse[]>([]);
   const [patenteQuery, setPatenteQuery] = useState("");
   const [patenteBusy, setPatenteBusy] = useState(false);
-  const [clientId, setClientId] = useState("");
+  const [clientId, setClientId] = useState(initialClientId ?? "");
   const [clientQuery, setClientQuery] = useState("");
   const [clientOpen, setClientOpen] = useState(false);
   const [vehicleId, setVehicleId] = useState("");
@@ -72,7 +72,7 @@ export function FichaForm({ onClose, onSave, fichaKey }: { onClose: () => void; 
   const [saving, setSaving] = useState(false);
   const [closeConfirmation, setCloseConfirmation] = useState(false);
   const [newVehicleOpen, setNewVehicleOpen] = useState(false);
-  const prefill = useRef<{ motoId?: string } | null>(null);
+  const prefill = useRef<{ motoId?: string } | null>(initialMotoId ? { motoId: initialMotoId } : null);
   const [reloadKey, setReloadKey] = useState(0);
   const photoInput = useRef<HTMLInputElement>(null);
   const clientPicker = useRef<HTMLDivElement>(null);

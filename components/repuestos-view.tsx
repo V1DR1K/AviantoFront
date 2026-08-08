@@ -27,9 +27,13 @@ const itemStates: RepuestoItemState[] = ["Pendiente de pedir", "Pedido", "Recibi
 export function RepuestosView({
   onOpen,
   notify,
+  createPrefill,
+  onPrefillHandled,
 }: {
   onOpen: (repuesto: RepuestoResponse) => void;
   notify: (message: string) => void;
+  createPrefill?: { motoId: string; clienteId?: string | null } | null;
+  onPrefillHandled?: () => void;
 }) {
   const [query, setQuery] = useState("");
   const [estado, setEstado] = useState<"Todos" | RepuestoState>("Todos");
@@ -49,6 +53,7 @@ export function RepuestosView({
   const loadClients = () => void api<PageResponse<ClienteResponse>>("/clientes", {}, { size: 100, activo: true }).then((r) => setClients(r.content)).catch(() => undefined);
   const refresh = () => void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { ...repuestoParams(), page: page - 1, size: 20 }).then(setResult).catch((err) => setError(errorMessage(err)));
   const toggleDirection = () => setDirection((d) => (d === "ASC" ? "DESC" : "ASC"));
+  useEffect(() => { if (createPrefill) loadClients(); }, [createPrefill]);
   return (
     <div className="page">
       <div className="page-heading">
@@ -102,14 +107,15 @@ export function RepuestosView({
         <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
       </section>
       <CreateRepuestoDialog
-        key={createOpen ? "create" : editing ? `edit-${editing.id}` : "closed"}
-        open={createOpen || Boolean(editing)}
+        key={createPrefill ? `create-${createPrefill.motoId}` : createOpen ? "create" : editing ? `edit-${editing.id}` : "closed"}
+        open={createOpen || Boolean(editing) || Boolean(createPrefill)}
         initial={editing}
+        prefill={createPrefill}
         clients={clients}
         notify={notify}
         onLoadVehicles={async (clienteId) => { const r = await api<PageResponse<MotovehiculoResponse>>("/motovehiculos", {}, { clienteId, size: 100, activo: true }); return r.content; }}
-        onClose={() => { setCreateOpen(false); setEditing(null); }}
-        onSaved={(repuesto) => { setCreateOpen(false); setEditing(null); refresh(); onOpen(repuesto); }}
+        onClose={() => { setCreateOpen(false); setEditing(null); onPrefillHandled?.(); }}
+        onSaved={(repuesto) => { setCreateOpen(false); setEditing(null); onPrefillHandled?.(); refresh(); onOpen(repuesto); }}
         onError={setError}
       />
       <ConfirmModal
@@ -127,6 +133,7 @@ export function RepuestosView({
 function CreateRepuestoDialog({
   open,
   initial,
+  prefill,
   clients,
   onLoadVehicles,
   onClose,
@@ -136,6 +143,7 @@ function CreateRepuestoDialog({
 }: {
   open: boolean;
   initial: RepuestoResponse | null;
+  prefill?: { motoId: string; clienteId?: string | null } | null;
   clients: ClienteResponse[];
   onLoadVehicles: (clienteId: string) => Promise<MotovehiculoResponse[]>;
   onClose: () => void;
@@ -143,8 +151,8 @@ function CreateRepuestoDialog({
   onError: (message: string) => void;
   notify: (message: string) => void;
 }) {
-  const [clientId, setClientId] = useState(initial?.clienteId ?? "");
-  const [motoId, setMotoId] = useState(initial?.motoId ?? "");
+  const [clientId, setClientId] = useState(initial?.clienteId ?? prefill?.clienteId ?? "");
+  const [motoId, setMotoId] = useState(initial?.motoId ?? prefill?.motoId ?? "");
   const [proveedor, setProveedor] = useState(initial?.proveedor ?? "");
   const [motoOptions, setMotoOptions] = useState<MotovehiculoResponse[]>([]);
   const [fichas, setFichas] = useState<FichaResponse[]>([]);
@@ -157,8 +165,9 @@ function CreateRepuestoDialog({
     if (!clientId) return;
     void onLoadVehicles(clientId).then((loaded) => {
       setMotoOptions(loaded);
-      if (initial?.motoId && !loaded.some((moto) => moto.id === initial.motoId)) {
-        void api<MotovehiculoResponse>(`/motovehiculos/${initial.motoId}`).then((moto) => setMotoOptions((all) => all.some((vehicle) => vehicle.id === moto.id) ? all : [moto, ...all])).catch(() => undefined);
+      const selectedMotoId = initial?.motoId ?? prefill?.motoId;
+      if (selectedMotoId && !loaded.some((moto) => moto.id === selectedMotoId)) {
+        void api<MotovehiculoResponse>(`/motovehiculos/${selectedMotoId}`).then((moto) => setMotoOptions((all) => all.some((vehicle) => vehicle.id === moto.id) ? all : [moto, ...all])).catch(() => undefined);
       }
     }).catch((reason) => onError(errorMessage(reason)));
   }, [clientId]);
@@ -169,8 +178,12 @@ function CreateRepuestoDialog({
     setFichas([]);
     setFichaId("");
   };
+  const changeMoto = (value: string) => {
+    setMotoId(value);
+    if (!value) { setFichas([]); setFichaId(""); }
+  };
   useEffect(() => {
-    if (!motoId) { setFichas([]); setFichaId(""); return; }
+    if (!motoId) return;
     void api<PageResponse<FichaResponse>>("/fichas", {}, { motoId, size: 50 }).then((page) => {
       const open = page.content.filter((ficha) => ficha.estado !== "Entregada" && ficha.estado !== "Cancelada");
       setFichas(open);
@@ -214,7 +227,7 @@ function CreateRepuestoDialog({
       <form className="record-form repuesto-form" onSubmit={(event) => { event.preventDefault(); void save(); }}>
         <div className="repuesto-pick">
           <label>Cliente<select value={clientId} onChange={(event) => changeClient(event.target.value)} required><option value="">Seleccionar</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.nombre}</option>)}</select></label>
-          <label>Moto<select value={motoId} onChange={(event) => setMotoId(event.target.value)} required disabled={!clientId}><option value="">Seleccionar</option>{motoOptions.map((moto) => <option key={moto.id} value={moto.id}>{moto.marca} {moto.modelo} · {moto.patente}</option>)}</select></label>
+           <label>Moto<select value={motoId} onChange={(event) => changeMoto(event.target.value)} required disabled={!clientId}><option value="">Seleccionar</option>{motoOptions.map((moto) => <option key={moto.id} value={moto.id}>{moto.marca} {moto.modelo} · {moto.patente}</option>)}</select></label>
           <label>Ficha (opcional)<select value={fichaId} onChange={(event) => changeFicha(event.target.value)} disabled={!motoId}><option value="">Sin ficha</option>{fichas.map((ficha) => <option key={ficha.id} value={ficha.id}>{ficha.numero} · {ficha.estado}</option>)}</select></label>
           <label>Proveedor<input value={proveedor} onChange={(event) => setProveedor(event.target.value)} /></label>
         </div>

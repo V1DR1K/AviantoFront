@@ -22,12 +22,16 @@ export function MotoDetail({
   onBack,
   onOpenFicha,
   onOpenRepuesto,
+  onNewFicha,
+  onNewRepuesto,
   notify,
 }: {
   id: string;
   onBack: () => void;
   onOpenFicha: (ficha: FichaResponse) => void;
   onOpenRepuesto: (repuesto: RepuestoResponse) => void;
+  onNewFicha: (prefill: { motoId: string; clienteId?: string | null }) => void;
+  onNewRepuesto: (prefill: { motoId: string; clienteId?: string | null }) => void;
   notify: (message: string) => void;
 }) {
   const [tab, setTab] = useState<"general" | "services" | "fichas" | "repuestos">("general");
@@ -188,7 +192,7 @@ export function MotoDetail({
       )}
       {tab === "fichas" && (
         <section className="panel table-panel">
-          <div className="panel-head"><h2>Fichas de trabajo</h2></div>
+          <div className="panel-head"><h2>Fichas de trabajo</h2><button className="button secondary" onClick={() => onNewFicha({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nueva ficha</button></div>
           {fichas.length ? (
             <table>
               <thead><tr><th>Ficha</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
@@ -199,7 +203,7 @@ export function MotoDetail({
       )}
       {tab === "repuestos" && (
         <section className="panel table-panel">
-          <div className="panel-head"><h2>Pedidos de repuestos</h2></div>
+          <div className="panel-head"><h2>Pedidos de repuestos</h2><button className="button secondary" onClick={() => onNewRepuesto({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nuevo pedido</button></div>
           {repuestos.length ? (
             <table>
               <thead><tr><th>Pedido</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
