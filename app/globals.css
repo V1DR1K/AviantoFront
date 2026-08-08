@@ -100,6 +100,41 @@ textarea:focus-visible {
   background: #214c78;
   color: #fff;
 }
+.nav-group {
+  display: grid;
+  gap: 3px;
+}
+.nav-group-toggle {
+  color: #b8cedd !important;
+  font-size: 11px;
+  font-weight: 750 !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  justify-content: space-between;
+}
+.nav-group-toggle:hover {
+  background: transparent !important;
+  color: #fff !important;
+}
+.nav-group-toggle svg {
+  transition: transform 0.18s ease;
+}
+.nav-group.expanded .nav-group-toggle svg {
+  transform: rotate(180deg);
+}
+.nav-group-items {
+  display: none;
+  gap: 5px;
+  padding-left: 8px;
+}
+.nav-group.expanded .nav-group-items {
+  display: grid;
+}
+.sidebar-separated {
+  border-top: 1px solid rgba(216, 231, 241, 0.24);
+  margin-top: 12px;
+  padding-top: 12px;
+}
 .sidebar-bottom {
   margin-top: auto;
 }
@@ -188,6 +223,12 @@ textarea:focus-visible {
 .sidebar.collapsed .settings span,
 .sidebar.collapsed .sidebar-bottom .app-version {
   display: none;
+}
+.sidebar.collapsed .nav-group-toggle svg {
+  display: none;
+}
+.sidebar.collapsed .nav-group-items {
+  padding-left: 0;
 }
 .sidebar.collapsed nav button,
 .sidebar.collapsed .sidebar-bottom .settings {
@@ -1643,6 +1684,13 @@ td.table-actions {
     justify-content: center;
     padding: 13px;
   }
+  .nav-group-toggle {
+    display: none !important;
+  }
+  .nav-group-items {
+    display: grid;
+    padding-left: 0;
+  }
   .sidebar-new span {
     display: none;
   }
@@ -2011,5 +2059,17 @@ td.table-actions {
   }
   .mobile-drawer .button {
     margin-top: 12px;
+  }
+  .mobile-nav-group {
+    display: grid;
+    gap: 4px;
+  }
+  .mobile-nav-group p {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: 0.05em;
+    margin: 12px 5px 2px;
+    text-transform: uppercase;
   }
 }

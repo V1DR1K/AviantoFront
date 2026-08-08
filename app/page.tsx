@@ -138,6 +138,7 @@ else if (effectivePage === "fichas" && fichaId)
         resource={page as "clients" | "vehicles" | "catalog" | "audit"}
         notify={setToast}
         onOpenVehicle={openMoto}
+        onOpenServices={() => setPage("services")}
       />
     );
   else if (effectivePage === "services") content = <ServicesView onOpenMoto={openMoto} />;
