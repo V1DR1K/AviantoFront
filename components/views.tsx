@@ -7,6 +7,7 @@ import { money } from "../lib/format";
 import { daysAgoInAr, todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
+  DashboardFichasResponse,
   DashboardResponse,
   FichaResponse,
   FichaStatus,
@@ -92,18 +93,23 @@ export function Dashboard({
   const [to, setTo] = useState(defaultTo);
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [taller, setTaller] = useState<TallerResponse | null>(null);
+  const [fichasAgrupadas, setFichasAgrupadas] = useState<DashboardFichasResponse | null>(null);
+  const [groupBy, setGroupBy] = useState<"moto" | "ficha">("moto");
   const [tab, setTab] = useState<FichaStatus>("Carga");
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     void Promise.all([
       api<DashboardResponse>("/dashboard", {}, { fechaDesde: from, fechaHasta: to }),
       api<TallerResponse>("/dashboard/taller"),
+      api<DashboardFichasResponse>("/dashboard/fichas"),
     ])
-      .then(([nextData, nextTaller]) => { setData(nextData); setTaller(nextTaller); })
+      .then(([nextData, nextTaller, nextFichas]) => { setData(nextData); setTaller(nextTaller); setFichasAgrupadas(nextFichas); })
       .catch((reason) => setError(errorMessage(reason)));
   }, [from, to]);
   const talleres = taller?.estados ?? [];
   const motos = talleres.find((item) => item.estado === tab)?.motos ?? [];
+  const fichas = fichasAgrupadas?.estados.find((item) => item.estado === tab)?.fichas ?? [];
+  const estados = groupBy === "moto" ? talleres : fichasAgrupadas?.estados ?? [];
   return (
     <div className="page">
       <div className="page-heading">
@@ -129,22 +135,26 @@ export function Dashboard({
             <div className="panel-head">
               <div>
                 <h2>Taller</h2>
-                <p>Motos agrupadas por estado, las más recientes primero.</p>
+                <p>{groupBy === "moto" ? "Motos" : "Fichas"} agrupadas por estado, las más recientes primero.</p>
               </div>
             </div>
-            <nav className="tabs taller-tabs" aria-label="Estado de las motos">
-              {talleres.map((item) => (
+            <nav className="tabs dashboard-group-tabs" aria-label="Agrupar tablero">
+              <button className={groupBy === "moto" ? "active" : ""} onClick={() => setGroupBy("moto")}>Agrupar por moto</button>
+              <button className={groupBy === "ficha" ? "active" : ""} onClick={() => setGroupBy("ficha")}>Agrupar por ficha</button>
+            </nav>
+            <nav className="tabs taller-tabs" aria-label={`Estado de las ${groupBy === "moto" ? "motos" : "fichas"}`}>
+              {estados.map((item) => (
                 <button
                   key={item.estado}
                   className={`${tab === item.estado ? "active" : ""} tab-${tabKey(item.estado)}`}
                   onClick={() => setTab(item.estado)}
                 >
                   {item.estado}
-                  <span className="tab-count">{item.motos.length}</span>
+                  <span className="tab-count">{"motos" in item ? item.motos.length : item.fichas.length}</span>
                 </button>
               ))}
             </nav>
-            {motos.length ? (
+            {groupBy === "moto" && (motos.length ? (
               <table>
                 <thead>
                   <tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Ingreso</th><th>Ficha</th><th>Estado</th><th /></tr>
@@ -165,7 +175,29 @@ export function Dashboard({
               </table>
             ) : (
               <EmptyState title={`Sin motos en ${tab}`} body="No hay motos en este estado por el momento." />
-            )}
+            ))}
+            {groupBy === "ficha" && (fichas.length ? (
+              <table>
+                <thead>
+                  <tr><th>Ficha</th><th>Cliente</th><th>Moto</th><th>Ingreso</th><th>Total</th><th>Estado</th><th /></tr>
+                </thead>
+                <tbody>
+                  {fichas.map((ficha) => (
+                    <tr key={ficha.id}>
+                      <td data-label="Ficha">{ficha.numero}</td>
+                      <td data-label="Cliente">{ficha.cliente}</td>
+                      <td data-label="Moto">{ficha.moto}<small>{ficha.patente}</small></td>
+                      <td data-label="Ingreso">{ficha.fechaIngreso ? date(ficha.fechaIngreso) : "—"}</td>
+                      <td data-label="Total">{money(ficha.total)}</td>
+                      <td data-label="Estado"><StatusBadge status={ficha.estado} /></td>
+                      <td data-label="Acción"><button className="row-action" onClick={() => void api<FichaResponse>(`/fichas/${ficha.id}`).then(onSelect).catch((reason) => setError(errorMessage(reason)))}>Ver ficha</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <EmptyState title={`Sin fichas en ${tab}`} body="No hay fichas en este estado por el momento." />
+            ))}
           </section>
           <section className="panel">
             <div className="panel-head">

@@ -309,4 +309,16 @@ export interface TallerMotoResponse {
 }
 export interface TallerEstadoResponse { estado: FichaStatus; motos: TallerMotoResponse[]; }
 export interface TallerResponse { estados: TallerEstadoResponse[]; }
+export interface DashboardFichaResponse {
+  id: string;
+  numero: string;
+  cliente: string;
+  moto: string;
+  patente: string;
+  estado: FichaStatus;
+  total: number;
+  fechaIngreso: string | null;
+}
+export interface DashboardFichaEstadoResponse { estado: FichaStatus; fichas: DashboardFichaResponse[]; }
+export interface DashboardFichasResponse { estados: DashboardFichaEstadoResponse[]; }
 export interface AutocompleteResponse { id: string; label: string; secondary?: string; }
