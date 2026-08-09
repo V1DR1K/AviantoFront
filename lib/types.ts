@@ -87,8 +87,9 @@ export interface PerfilRequest {
   anio?: number;
   kilometraje?: number;
   observaciones?: string;
-  clienteNombre: string;
-  clienteTelefono: string;
+  clienteId?: string;
+  clienteNombre?: string;
+  clienteTelefono?: string;
 }
 export type PerfilResponse = MotovehiculoResponse;
 export interface MotoConfigServiceRequest {

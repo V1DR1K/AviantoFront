@@ -9,6 +9,7 @@ import type {
   FichaResponse,
   MotovehiculoResponse,
   NextServiceResponse,
+  OwnerResponse,
   PageResponse,
   RepuestoResponse,
   ServiceResponse,
@@ -38,6 +39,7 @@ export function MotoDetail({
   const [tab, setTab] = useState<"general" | "client" | "services" | "fichas" | "repuestos">("general");
   const [moto, setMoto] = useState<MotovehiculoResponse | null>(null);
   const [client, setClient] = useState<ClienteResponse | null>(null);
+  const [owners, setOwners] = useState<OwnerResponse[]>([]);
   const [services, setServices] = useState<ServiceResponse[]>([]);
   const [nextService, setNextService] = useState<NextServiceResponse | null>(null);
   const [fichas, setFichas] = useState<FichaResponse[]>([]);
@@ -64,6 +66,7 @@ export function MotoDetail({
   useEffect(() => {
     loadServices();
     loadNext();
+    void api<OwnerResponse[]>(`/motovehiculos/${id}/propietarios`).then(setOwners).catch(() => undefined);
     void api<PageResponse<FichaResponse>>("/fichas", {}, { motoId: id, size: 50 }).then((result) => setFichas(result.content)).catch(() => undefined);
     void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { motoId: id, size: 50 }).then((result) => setRepuestos(result.content)).catch(() => undefined);
   }, [id]);
@@ -138,18 +141,6 @@ export function MotoDetail({
           <strong>{moto.anio ?? "—"}</strong>
         </div>
       </div>
-      {nextService && (
-        <section className="panel next-service">
-          <h3>Próximo service</h3>
-          <p>
-            {nextService.sinReferencia
-              ? "Todavía no se registró ningún service."
-              : nextService.atrasadoKm || nextService.atrasadoFecha
-                ? <span className="text-danger">Atrasado — registrá un service.</span>
-                : `KM sugerido ${nextService.proximKm ?? "—"} · Fecha ${nextService.proximaFecha ? date(nextService.proximaFecha) : "—"}`}
-          </p>
-        </section>
-      )}
       <nav className="tabs">
         {tabs.map((item) => (
           <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)}>{item.label}</button>
@@ -159,7 +150,6 @@ export function MotoDetail({
         <section className="panel form-stack">
           <div className="panel-head">
             <h2>Datos del vehículo</h2>
-            <button className="button secondary" onClick={openConfig}><Settings2 size={17} />Configurar service</button>
           </div>
           <dl className="record-detail">
             <div><dt>Marca / modelo</dt><dd>{moto.marca} {moto.modelo}</dd></div>
@@ -167,10 +157,6 @@ export function MotoDetail({
             <div><dt>Año</dt><dd>{moto.anio ?? "—"}</dd></div>
             <div><dt>Kilometraje</dt><dd>{moto.kilometraje ?? "—"}</dd></div>
             <div><dt>Estado</dt><dd>{moto.estado}</dd></div>
-            <div><dt>Último service KM</dt><dd>{moto.kmUltimoService ?? "—"}</dd></div>
-            <div><dt>Último service fecha</dt><dd>{date(moto.fechaUltimoService)}</dd></div>
-            <div><dt>Periodo KM</dt><dd>{moto.kmServicePeriodo ?? "—"} km</dd></div>
-            <div><dt>Periodo meses</dt><dd>{moto.mesesServicePeriodo ?? "—"} meses</dd></div>
             <div><dt>Observaciones</dt><dd>{moto.observaciones || "—"}</dd></div>
           </dl>
         </section>
@@ -182,7 +168,7 @@ export function MotoDetail({
             <div><dt>Nombre y apellido</dt><dd>{moto.propietario ?? "—"}</dd></div>
             <div><dt>Teléfono</dt><dd>{client?.telefono ?? "—"}</dd></div>
           </dl>
-          <p>Los datos de contacto y el historial de propietarios se administran desde Clientes.</p>
+          <section className="table-panel"><h3>Propietarios anteriores</h3>{owners.filter((owner) => !owner.actual).length ? <table><thead><tr><th>Cliente</th><th>Desde</th><th>Hasta</th><th>Observaciones</th></tr></thead><tbody>{owners.filter((owner) => !owner.actual).sort((a, b) => a.fechaDesde.localeCompare(b.fechaDesde)).map((owner) => <tr key={owner.id}><td data-label="Cliente">{owner.cliente}</td><td data-label="Desde">{date(owner.fechaDesde)}</td><td data-label="Hasta">{date(owner.fechaHasta)}</td><td data-label="Observaciones">{owner.observaciones || "—"}</td></tr>)}</tbody></table> : <p>Esta moto no tiene propietarios anteriores.</p>}</section>
         </section>
       )}
       {tab === "services" && (
@@ -194,10 +180,11 @@ export function MotoDetail({
               <button className="button secondary" disabled={serviceSaving} onClick={() => { setServiceKm(moto.kilometraje != null ? String(moto.kilometraje) : ""); setServiceOpen(true); }}><Plus size={17} />Registrar service</button>
             </div>
           </div>
+          <div className="metrics service-kpis"><section className="metric"><span>Último service</span><strong>{moto.kmUltimoService != null ? `${moto.kmUltimoService.toLocaleString("es-AR")} km` : "—"}</strong><small>{date(moto.fechaUltimoService)}</small></section><section className="metric"><span>Período</span><strong>{moto.kmServicePeriodo ?? "—"} km</strong><small>{moto.mesesServicePeriodo ?? "—"} meses</small></section><section className="metric"><span>Próximo service</span><strong>{nextService?.proximKm != null ? `${nextService.proximKm.toLocaleString("es-AR")} km` : "—"}</strong><small>{nextService?.proximaFecha ? date(nextService.proximaFecha) : nextService?.sinReferencia ? "Sin referencia" : "—"}</small></section></div>
           {services.length ? (
             <table>
-              <thead><tr><th>Fecha</th><th>Kilometraje</th><th>Ficha</th><th>Realizado por</th><th>Observaciones</th></tr></thead>
-              <tbody>{services.map((service) => <tr key={service.id}><td data-label="Fecha">{date(service.fecha)}</td><td data-label="Kilometraje">{service.kilometraje}</td><td data-label="Ficha">{service.fichaNumero ?? "—"}</td><td data-label="Realizado por">{service.realizadoPor ?? "—"}</td><td data-label="Observaciones">{service.observaciones || "—"}</td></tr>)}</tbody>
+              <thead><tr><th>Fecha</th><th>Kilometraje</th><th>Ficha</th><th>Observaciones</th></tr></thead>
+              <tbody>{services.map((service) => <tr key={service.id}><td data-label="Fecha">{date(service.fecha)}</td><td data-label="Kilometraje">{service.kilometraje}</td><td data-label="Ficha">{service.fichaNumero ?? "—"}</td><td data-label="Observaciones">{service.observaciones || "—"}</td></tr>)}</tbody>
             </table>
           ) : <EmptyState title="Sin services" body="Registrá el primer service de la moto." />}
         </section>

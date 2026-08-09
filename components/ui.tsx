@@ -163,12 +163,14 @@ export function Dialog({
   children,
   onClose,
   wide = false,
+  className = "",
 }: {
   open: boolean;
   title: string;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
+  className?: string;
 }) {
   const [modalRef, onModalKeyDown] = useModalFocus(open, onClose);
   if (!open) return null;
@@ -177,7 +179,7 @@ export function Dialog({
       <section
         ref={modalRef}
         onKeyDownCapture={onModalKeyDown}
-        className={`modal form-modal${wide ? " wide" : ""}`}
+        className={`modal form-modal${wide ? " wide" : ""} ${className}`}
         role="dialog"
         tabIndex={-1}
         aria-modal="true"

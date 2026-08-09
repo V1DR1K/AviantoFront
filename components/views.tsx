@@ -15,6 +15,7 @@ import type {
   PageResponse,
   PhotoResponse,
   RevisionResponse,
+  ServiceResponse,
   TallerResponse,
   TrabajoStatus,
 } from "../lib/types";
@@ -331,13 +332,16 @@ export function FichasView({
 function ItemRow({
   item,
   onState,
+  onDelete,
   locked,
+  canDelete,
 }: {
   item: FichaTrabajoResponse;
   onState: (estado: TrabajoStatus) => void;
+  onDelete: () => void;
   locked: boolean;
+  canDelete: boolean;
 }) {
-  const finalizado = item.estadoTrabajo === "Realizado" || item.estadoTrabajo === "Cancelado";
   return (
     <div className={`line-item ${item.estadoTrabajo === "Cancelado" ? "muted" : ""}`}>
       <div>
@@ -347,10 +351,11 @@ function ItemRow({
       <strong>{money(Number(item.subtotal))}</strong>
       {!locked && (
         <label className="line-check detail-line-check">
-          <input type="checkbox" checked={item.estadoTrabajo === "Realizado"} disabled={finalizado} onChange={(event) => onState(event.target.checked ? "Realizado" : "Pendiente")} />
+          <input type="checkbox" checked={item.estadoTrabajo === "Realizado"} disabled={item.estadoTrabajo === "Cancelado"} onChange={(event) => onState(event.target.checked ? "Realizado" : "Pendiente")} />
           Realizado
         </label>
       )}
+      {canDelete && <button type="button" className="danger-action" onClick={onDelete} aria-label={`Eliminar trabajo ${item.descripcion}`}><Trash2 size={17} /></button>}
     </div>
   );
 }
@@ -375,6 +380,8 @@ export function FichaDetail({
   const [serviceNotes, setServiceNotes] = useState("");
   const [serviceSaving, setServiceSaving] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
+  const [priorServices, setPriorServices] = useState<ServiceResponse[]>([]);
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [returnToMotoAfterService, setReturnToMotoAfterService] = useState(false);
   const [revision, setRevision] = useState<RevisionResponse | null>(null);
   const load = () =>
@@ -388,20 +395,24 @@ export function FichaDetail({
         .then(setRevision)
         .catch(() => undefined);
   }, [ficha?.estado, fichaKey]);
-  const aprobarRevision = (registrarService: boolean) => {
+  const openDelivery = () => {
+    if (!ficha) return;
+    void api<ServiceResponse[]>(`/motovehiculos/${ficha.motoId}/services`).then((services) => {
+      setPriorServices(services.filter((service) => !service.fichaId));
+      setSelectedServiceIds([]);
+      setCloseOpen(true);
+    }).catch((reason) => setError(errorMessage(reason)));
+  };
+  const aprobarRevision = () => {
     if (pending || !ficha) return;
     setPending("aprobar-revision");
     void api(`/fichas/${fichaKey}/revision/aprobar`, {
       method: "POST",
-      body: JSON.stringify({ forzada: false }),
+      body: JSON.stringify({ forzada: false, serviceIds: selectedServiceIds }),
     })
       .then(() => {
         setRevision(null);
-        if (registrarService) {
-          setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : "");
-          setReturnToMotoAfterService(true);
-          setServiceOpen(true);
-        } else onOpenMoto(ficha.motoId);
+        onOpenMoto(ficha.motoId);
       })
       .catch((reason) => setError(errorMessage(reason)))
       .finally(() => setPending(null));
@@ -459,6 +470,7 @@ export function FichaDetail({
     }
   };
   const locked = current === "Cancelada" || current === "Entregada";
+  const pendingControls = revision?.controles.filter((control) => control.estado === "Pendiente") ?? [];
   const flowSteps: FichaStatus[] = ["Carga", "En proceso", "Revisión", "Entregada"];
   const currentStep = flowSteps.indexOf(current);
   const bottomActions: { key: string; label: string; className: string; onClick: () => void }[] = [];
@@ -467,7 +479,7 @@ export function FichaDetail({
   else if (current === "En proceso")
     bottomActions.push({ key: "revision", label: "Enviar a revisión", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Revisión" }, "estado-revision") });
   else if (current === "Revisión")
-    bottomActions.push({ key: "aprobar", label: "Aprobar revisión y entregar", className: "primary", onClick: () => setCloseOpen(true) });
+    bottomActions.push({ key: "aprobar", label: "Aprobar revisión y entregar", className: "primary", onClick: openDelivery });
   else if (current === "Entregada")
     bottomActions.push({ key: "service", label: "Registrar service", className: "primary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setReturnToMotoAfterService(false); setServiceOpen(true); } });
   if (ficha.estadoPago !== "Pagado")
@@ -481,8 +493,8 @@ export function FichaDetail({
       <div className="detail-title">
         <div>
           <p>{ficha.numero}</p>
-          <h1>{ficha.cliente}</h1>
-          <span>{ficha.moto} · {ficha.patente}</span>
+          <h1>{ficha.moto} · {ficha.patente}</h1>
+          <span>{ficha.cliente}</span>
         </div>
         <div className="detail-stack">
           <StatusBadge status={ficha.estado} />
@@ -529,11 +541,13 @@ export function FichaDetail({
             </div>
             <p className="observation">{ficha.observaciones || "Sin observaciones."}</p>
             <div className="line-items-list">
-              {ficha.trabajos.map((item) => (
+              {ficha.trabajos.filter((item) => ficha.estado !== "Revisión" || item.estadoTrabajo !== "Realizado").map((item) => (
                 <ItemRow
                   key={item.id}
                   item={item}
                   locked={locked}
+                  canDelete={current === "En proceso"}
+                  onDelete={() => onConfirm("Eliminar trabajo", () => api(`/fichas/${ficha.id}/trabajos/${item.id}`, { method: "DELETE" }).then(load))}
                   onState={(estado) => void update(`/fichas/${ficha.id}/trabajos/${item.id}/estado`, { estado }, `item-${item.id}`)}
                 />
               ))}
@@ -547,7 +561,7 @@ export function FichaDetail({
                 </div>
                 {revision.estado !== "APROBADA" && (
                   <div className="line-items-list">
-                    {revision.controles.map((control) => (
+                    {pendingControls.map((control) => (
                       <div key={control.id} className="line-item revision-control">
                         <div>
                           <strong>{control.control}</strong>
@@ -569,6 +583,7 @@ export function FichaDetail({
                     ))}
                   </div>
                 )}
+                {revision.estado !== "APROBADA" && !pendingControls.length && <p>Todos los controles fueron revisados.</p>}
               </section>
             )}
           </section>
@@ -580,6 +595,7 @@ export function FichaDetail({
           <div><span>Ingreso</span><strong>{ficha.fechaIngreso ? date(ficha.fechaIngreso) : "—"}</strong></div>
           <div><span>Entrega estimada</span><strong>{ficha.fechaEntregaEstimada ? date(ficha.fechaEntregaEstimada) : "—"}</strong></div>
           <div><span>Entrega real</span><strong>{ficha.fechaEntregaReal ? date(ficha.fechaEntregaReal) : "—"}</strong></div>
+          {ficha.trabajos.filter((item) => item.estadoTrabajo === "Realizado").length > 0 && <><hr /><h4>Trabajos realizados</h4>{ficha.trabajos.filter((item) => item.estadoTrabajo === "Realizado").map((item) => <div key={item.id}><span>{item.descripcion}</span><strong>{money(item.subtotal)}</strong></div>)}</>}
           <div className="total"><span>Total final</span><strong>{money(ficha.total)}</strong></div>
         </aside>
       </section>
@@ -591,12 +607,13 @@ export function FichaDetail({
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setServiceOpen(false)}>Cancelar</button><button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>
       </Dialog>
-      <Dialog open={closeOpen} title="Cerrar ficha" onClose={() => setCloseOpen(false)}>
-        <p>¿Está seguro que desea cerrar esta ficha?</p>
+      <Dialog open={closeOpen} title="Aprobar revisión y entregar" onClose={() => setCloseOpen(false)} className="delivery-modal">
+        <p>¿Está seguro que desea entregar esta ficha?</p>
+        {priorServices.length > 0 && <section className="line-items-list"><h3>Services previos sin ficha</h3>{priorServices.map((service) => <label key={service.id} className="line-check"><input type="checkbox" checked={selectedServiceIds.includes(service.id)} onChange={(event) => setSelectedServiceIds((ids) => event.target.checked ? [...ids, service.id] : ids.filter((id) => id !== service.id))} />{date(service.fecha)} · {service.kilometraje} km{service.observaciones ? ` · ${service.observaciones}` : ""}</label>)}</section>}
+        {!priorServices.length && <p>No hay services previos para asociar.</p>}
         <div className="modal-actions">
           <button type="button" className="button secondary" onClick={() => setCloseOpen(false)}>Cancelar</button>
-          <button type="button" className="button secondary" disabled={Boolean(pending)} onClick={() => { setCloseOpen(false); void aprobarRevision(true); }}>Aceptar y Registrar Service</button>
-          <button type="button" className="button primary" disabled={Boolean(pending)} onClick={() => { setCloseOpen(false); void aprobarRevision(false); }}>Aceptar</button>
+          <button type="button" className="button primary" disabled={Boolean(pending)} onClick={() => { setCloseOpen(false); void aprobarRevision(); }}>Aprobar y entregar</button>
         </div>
       </Dialog>
     </div>

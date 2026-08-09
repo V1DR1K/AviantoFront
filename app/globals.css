@@ -736,6 +736,10 @@ td small {
   grid-template-columns: minmax(0, 1.6fr) minmax(270px, 0.72fr);
   gap: 18px;
 }
+
+.profile-form-layout { margin-top: 10px; }
+
+.delivery-modal { max-width: 500px; }
 .form-stack {
   display: grid;
   gap: 18px;
