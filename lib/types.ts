@@ -80,6 +80,17 @@ export interface MotovehiculoResponse {
   createdAt: string;
   updatedAt: string;
 }
+export interface PerfilRequest {
+  marcaId: string;
+  modelo: string;
+  patente: string;
+  anio?: number;
+  kilometraje?: number;
+  observaciones?: string;
+  clienteNombre: string;
+  clienteTelefono: string;
+}
+export type PerfilResponse = MotovehiculoResponse;
 export interface MotoConfigServiceRequest {
   kmServicePeriodo?: number;
   mesesServicePeriodo?: number;

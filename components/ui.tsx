@@ -64,10 +64,11 @@ function useModalFocus(open: boolean, onClose: () => void) {
   return [ref, onKeyDown] as const;
 }
 export function StatusBadge({ status }: { status: string }) {
+  const label = status === "Carga" ? "Ingresada" : status;
   return (
-    <span className={`status ${statusTone(status)}`} data-status={status.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}>
+    <span className={`status ${statusTone(label)}`} data-status={label.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}>
       <StatusIcon status={status} />
-      {status}
+      {label}
     </span>
   );
 }

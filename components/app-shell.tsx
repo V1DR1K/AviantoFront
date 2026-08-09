@@ -1,7 +1,6 @@
 "use client";
 import { useState, type ReactNode } from "react";
 import {
-  Bike,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -18,8 +17,8 @@ import {
 import type { AuthSession } from "../lib/auth";
 const home = { id: "dashboard", label: "Inicio", icon: LayoutDashboard };
 const navGroups = [
-  { id: "operation", label: "Operación", items: [{ id: "orders", label: "Fichas", icon: ClipboardList }, { id: "repuestos", label: "Repuestos", icon: Package }] },
-  { id: "records", label: "Registros", items: [{ id: "clients", label: "Clientes", icon: Users }, { id: "vehicles", label: "Motos", icon: Bike }, { id: "catalog", label: "Controles", icon: Package }] },
+  { id: "operation", label: "Operación", items: [{ id: "profiles", label: "Perfiles", icon: ClipboardList }, { id: "repuestos", label: "Repuestos", icon: Package }] },
+  { id: "records", label: "Registros", items: [{ id: "clients", label: "Clientes", icon: Users }, { id: "catalog", label: "Controles", icon: Package }] },
 ];
 export function AppShell({
   children,
@@ -114,9 +113,9 @@ export function AppShell({
           <button
             className="button mobile-new"
             onClick={onNewOrder}
-            aria-label="Nueva ficha"
+            aria-label="Nuevo perfil"
           >
-            <Plus size={17} /> <span>Nueva ficha</span>
+            <Plus size={17} /> <span>Nuevo perfil</span>
           </button>
         </header>
         {children}
@@ -146,7 +145,7 @@ export function AppShell({
               setMenuOpen(false);
             }}
           >
-            + Nueva ficha
+            + Nuevo perfil
           </button>
           <button className="settings mobile-logout" onClick={onLogout}>
             <LogOut size={18} /> Cerrar sesión
@@ -155,11 +154,11 @@ export function AppShell({
       )}
       <nav className="mobile-nav">
         <button
-          className={page === "orders" ? "active" : ""}
-          onClick={() => go("orders")}
+          className={page === "profiles" ? "active" : ""}
+          onClick={() => go("profiles")}
         >
           <ClipboardList size={20} />
-          <span>Fichas</span>
+          <span>Perfiles</span>
         </button>
         <button onClick={back}>
           <ChevronLeft size={20} />

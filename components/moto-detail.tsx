@@ -5,6 +5,7 @@ import { Eye, Plus, Settings2 } from "lucide-react";
 import { api } from "../lib/api";
 import { money } from "../lib/format";
 import type {
+  ClienteResponse,
   FichaResponse,
   MotovehiculoResponse,
   NextServiceResponse,
@@ -34,8 +35,9 @@ export function MotoDetail({
   onNewRepuesto: (prefill: { motoId: string; clienteId?: string | null }) => void;
   notify: (message: string) => void;
 }) {
-  const [tab, setTab] = useState<"general" | "services" | "fichas" | "repuestos">("general");
+  const [tab, setTab] = useState<"general" | "client" | "services" | "fichas" | "repuestos">("general");
   const [moto, setMoto] = useState<MotovehiculoResponse | null>(null);
+  const [client, setClient] = useState<ClienteResponse | null>(null);
   const [services, setServices] = useState<ServiceResponse[]>([]);
   const [nextService, setNextService] = useState<NextServiceResponse | null>(null);
   const [fichas, setFichas] = useState<FichaResponse[]>([]);
@@ -54,7 +56,7 @@ export function MotoDetail({
 
   const load = () =>
     void api<MotovehiculoResponse>(`/motovehiculos/${id}`)
-      .then((next) => { setMoto(next); })
+      .then((next) => { setMoto(next); if (next.propietarioId) void api<ClienteResponse>(`/clientes/${next.propietarioId}`).then(setClient).catch(() => setClient(null)); })
       .catch((reason) => setError(errorMessage(reason)));
   const loadServices = () => void api<ServiceResponse[]>(`/motovehiculos/${id}/services`).then(setServices).catch(() => undefined);
   const loadNext = () => void api<NextServiceResponse[]>("/services/proximos").then((list) => setNextService(list.find((next) => next.motoId === id) ?? null)).catch(() => undefined);
@@ -116,14 +118,15 @@ export function MotoDetail({
   if (!moto) return <div className="page">Cargando…</div>;
 
   const tabs: { id: typeof tab; label: string }[] = [
-    { id: "general", label: "General" },
+    { id: "general", label: "Datos" },
+    { id: "client", label: "Cliente" },
     { id: "services", label: "Service" },
-    { id: "fichas", label: "Fichas" },
+    { id: "fichas", label: "Ficha" },
     { id: "repuestos", label: "Repuestos" },
   ];
   return (
     <div className="page">
-      <button className="back" onClick={onBack}>← Volver a motos</button>
+      <button className="back" onClick={onBack}>← Volver a perfiles</button>
       <div className="detail-title">
         <div>
           <p>{moto.patente}</p>
@@ -159,7 +162,6 @@ export function MotoDetail({
             <button className="button secondary" onClick={openConfig}><Settings2 size={17} />Configurar service</button>
           </div>
           <dl className="record-detail">
-            <div><dt>Cliente</dt><dd>{moto.propietario ?? "—"}</dd></div>
             <div><dt>Marca / modelo</dt><dd>{moto.marca} {moto.modelo}</dd></div>
             <div><dt>Patente</dt><dd>{moto.patente}</dd></div>
             <div><dt>Año</dt><dd>{moto.anio ?? "—"}</dd></div>
@@ -171,6 +173,16 @@ export function MotoDetail({
             <div><dt>Periodo meses</dt><dd>{moto.mesesServicePeriodo ?? "—"} meses</dd></div>
             <div><dt>Observaciones</dt><dd>{moto.observaciones || "—"}</dd></div>
           </dl>
+        </section>
+      )}
+      {tab === "client" && (
+        <section className="panel form-stack">
+          <div className="panel-head"><div><h2>Cliente</h2><p>Propietario actual de la moto.</p></div></div>
+          <dl className="record-detail">
+            <div><dt>Nombre y apellido</dt><dd>{moto.propietario ?? "—"}</dd></div>
+            <div><dt>Teléfono</dt><dd>{client?.telefono ?? "—"}</dd></div>
+          </dl>
+          <p>Los datos de contacto y el historial de propietarios se administran desde Clientes.</p>
         </section>
       )}
       {tab === "services" && (
@@ -192,13 +204,13 @@ export function MotoDetail({
       )}
       {tab === "fichas" && (
         <section className="panel table-panel">
-          <div className="panel-head"><h2>Fichas de trabajo</h2><button className="button secondary" onClick={() => onNewFicha({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nueva ficha</button></div>
+          <div className="panel-head"><div><h2>Ficha</h2><p>Trabajo actual e historial de ingresos al taller.</p></div><button className="button secondary" onClick={() => onNewFicha({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nueva ficha</button></div>
           {fichas.length ? (
             <table>
               <thead><tr><th>Ficha</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
               <tbody>{fichas.map((ficha) => <tr key={ficha.id}><td data-label="Ficha">{ficha.numero}</td><td data-label="Estado"><StatusBadge status={ficha.estado} /></td><td data-label="Pago">{ficha.estadoPago}</td><td data-label="Total">{money(ficha.total)}</td><td className="table-actions"><button onClick={() => onOpenFicha(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
             </table>
-          ) : <EmptyState title="Sin fichas" body="Esta moto todavía no tiene fichas de trabajo." />}
+          ) : <EmptyState title="Sin fichas" body="Esta moto todavía no tiene ingresos de trabajo." />}
         </section>
       )}
       {tab === "repuestos" && (

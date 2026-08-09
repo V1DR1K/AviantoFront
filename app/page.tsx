@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "../components/app-shell";
 import { FichaForm } from "../components/ficha-form";
+import { ProfileForm } from "../components/profile-form";
+import { ProfilesView } from "../components/profiles-view";
 import {
   Dashboard,
   FichaDetail,
@@ -69,7 +71,7 @@ export default function Home() {
   if (!session) return <LoginView onAuthenticated={setSession} />;
 
   const openFicha = (ficha: FichaResponse) => { setFichaId(ficha.id); setPage("fichas"); };
-  const openMoto = (id: string) => { setMotoId(id); setPage("moto"); };
+  const openMoto = (id: string) => { setMotoId(id); setPage("profile"); };
   const openRepuesto = (repuesto: { id: string }) => { setRepuestoId(repuesto.id); setPage("repuesto"); };
   const createFichaForMoto = (prefill: { motoId: string; clienteId?: string | null }) => { setFichaPrefill(prefill); setPage("create"); };
   const createRepuestoForMoto = (prefill: { motoId: string; clienteId?: string | null }) => { setRepuestoPrefill(prefill); setPage("repuestos"); };
@@ -81,24 +83,28 @@ export default function Home() {
   };
 
   let content;
-  if (effectivePage === "create")
-    content = <FichaForm initialClientId={fichaPrefill?.clienteId} initialMotoId={fichaPrefill?.motoId} onClose={() => { const backToMoto = Boolean(fichaPrefill); setFichaPrefill(null); setPage(backToMoto ? "moto" : "orders"); }} onSave={(ficha) => { setFichaPrefill(null); setToast("Ficha creada."); setRefreshKey((key) => key + 1); openFicha(ficha); }} />;
+  if (effectivePage === "new-profile")
+    content = <ProfileForm onClose={() => setPage("profiles")} onOpenProfile={openMoto} onCreated={(id) => { setToast("Perfil creado."); openMoto(id); }} />;
+  else if (effectivePage === "create")
+    content = <FichaForm initialClientId={fichaPrefill?.clienteId} initialMotoId={fichaPrefill?.motoId} onClose={() => { const backToMoto = Boolean(fichaPrefill); setFichaPrefill(null); setPage(backToMoto ? "profile" : "profiles"); }} onSave={(ficha) => { setFichaPrefill(null); setToast("Ficha creada."); setRefreshKey((key) => key + 1); openFicha(ficha); }} />;
   else if (effectivePage === "edit" && editFichaId)
-    content = <FichaForm key={editFichaId} fichaKey={editFichaId} onClose={() => setPage("orders")} onSave={() => { setToast("Ficha actualizada."); setRefreshKey((key) => key + 1); setPage("orders"); }} />;
+    content = <FichaForm key={editFichaId} fichaKey={editFichaId} onClose={() => setPage("profiles")} onSave={() => { setToast("Ficha actualizada."); setRefreshKey((key) => key + 1); setPage("profiles"); }} />;
   else if (effectivePage === "dashboard")
     content = (
       <Dashboard
-        onNewOrder={() => { setFichaPrefill(null); setPage("create"); }}
+        onNewOrder={() => setPage("new-profile")}
         onSelect={openFicha}
         onOpenMoto={openMoto}
         userName={session.user.nombre}
       />
     );
+  else if (effectivePage === "profiles")
+    content = <ProfilesView onNew={() => setPage("new-profile")} onOpen={openMoto} />;
   else if (effectivePage === "orders")
     content = (
       <FichasView
         key={refreshKey}
-        onNewOrder={() => { setFichaPrefill(null); setPage("create"); }}
+        onNewOrder={() => setPage("new-profile")}
         onSelect={(ficha) => openFicha(ficha)}
         onEdit={(ficha) => { setEditFichaId(ficha.id); setPage("edit"); }}
         onDelete={(ficha) => setConfirmation({
@@ -111,16 +117,16 @@ else if (effectivePage === "fichas" && fichaId)
     content = (
       <FichaDetail
         fichaKey={fichaId}
-        onBack={() => setPage("orders")}
+        onBack={() => setPage("profiles")}
         onConfirm={(label, action) => setConfirmation({ label, action })}
         onOpenMoto={openMoto}
       />
     );
-  else if (effectivePage === "moto" && motoId)
+  else if (effectivePage === "profile" && motoId)
     content = (
       <MotoDetail
         id={motoId}
-        onBack={() => setPage("vehicles")}
+        onBack={() => setPage("profiles")}
         onOpenFicha={openFicha}
         onOpenRepuesto={openRepuesto}
         onNewFicha={createFichaForMoto}
@@ -148,7 +154,7 @@ else if (effectivePage === "fichas" && fichaId)
     <AppShell
       page={effectivePage}
       onPage={setEffectivePage}
-      onNewOrder={() => { setFichaPrefill(null); setPage("create"); }}
+        onNewOrder={() => setPage("new-profile")}
       session={session}
       onLogout={async () => {
         await logout();

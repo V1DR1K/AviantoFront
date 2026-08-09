@@ -15,6 +15,7 @@ Base URL: `/api`. El frontend usa DTOs; no expone entidades de persistencia.
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Clientes      | `GET/POST /clientes`, `GET/PUT/DELETE /clientes/{id}`, `GET /clientes/autocomplete?q=`                                                                                                                                                                  |
 | Motovehículos | `GET/POST /motovehiculos`, `GET/PUT/DELETE /motovehiculos/{id}`, `GET /motovehiculos/autocomplete?q=`                                                                                                                                                   |
+| Perfiles      | `GET/POST /perfiles`, `GET /perfiles/{id}`. Un perfil representa la vista integral de una moto, su propietario y su historial operativo.                                                                                                                |
 | Catálogo      | `GET/POST /catalogo-items`, `GET/PUT/DELETE /catalogo-items/{id}`, `GET /catalogo-items/{id}/price-history`, `GET /catalogo-items/duplicates?descripcion=`                                                                                              |
 | Pedidos       | `GET/POST /pedidos`, `GET/PUT/DELETE /pedidos/{id}`, `PATCH /pedidos/{id}/estado`, `POST /pedidos/{id}/duplicate`                                                                                                                                       |
 | Auditoría     | `GET /auditoria`                                                                                                                                                                                                                                        |
@@ -34,6 +35,7 @@ Base URL: `/api`. El frontend usa DTOs; no expone entidades de persistencia.
 
 - `GET /clientes`: `q`, `activo`, `includeDeleted`.
 - `GET /motovehiculos`: `q`, `clienteId`, `marcaId`, `activo`, `includeDeleted`.
+- `GET /perfiles`: `q` (dominio, moto o propietario) y `estado`. La búsqueda de dominio ignora mayúsculas, espacios y guiones.
 - `GET /catalogo-items`: `q`, `tipo`, `categoriaId`, `activo`, `includeDeleted`.
 - `GET /pedidos`: `q`, `clienteId`, `patente`, `numero`, `estado`, `documento`, `fechaDesde`, `fechaHasta`, `includeDeleted`.
 - `GET /auditoria`: `q`, `usuarioId`, `modulo`, `accion`, `fechaDesde`, `fechaHasta`.
@@ -45,6 +47,8 @@ Base URL: `/api`. El frontend usa DTOs; no expone entidades de persistencia.
 - `CategoriaCatalogo`: `id`, `nombre`, `activo`, `createdAt`, `updatedAt`.
 - `Usuario`: `id`, `nombre`, `email`, `rol` (`ADMINISTRACION` | `OPERARIO`), `activo`, `createdAt`, `updatedAt`. Las credenciales y su hash no se devuelven nunca.
 - `MotovehiculoRequest`: `clienteId`, `marcaId`, `modelo`, `patente`, `anio?`, `kilometraje?`, `color?`, `cilindrada?`, `observaciones?`. La respuesta expone adicionalmente `cliente` y `marca` como etiquetas de lectura.
+- `ProfileRequest`: `marcaId`, `modelo`, `patente`, `anio?`, `kilometraje?`, `observaciones?`, `clienteNombre`, `clienteTelefono`. Crea el cliente, la moto y su relación de propietario en una única operación.
+- El estado de Perfil se deriva de la última ficha no cancelada: `Carga` se expone como `Ingresada`; sin fichas válidas se expone como `Disponible`.
 - `ItemCatalogoRequest`: `descripcion`, `tipo` (`Pieza` | `Trabajo`), `categoriaId`, `precioBase` numérico no negativo, `observaciones?`. **No existe código interno.** La respuesta expone `categoria` como etiqueta de lectura.
 - `PedidoRequest`: `clienteId`, `motovehiculoId`, `documento` (`Presupuesto` | `Factura`), `vencimiento`, `observaciones`, `descuentoGlobal`, `iva` e `items`. El backend debe validar que la moto pertenezca al cliente.
 
