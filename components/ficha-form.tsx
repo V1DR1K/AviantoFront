@@ -8,13 +8,11 @@ import type {
   ClienteResponse,
   FichaRequest,
   FichaResponse,
-  MarcaMotoResponse,
   MotovehiculoResponse,
   PageResponse,
   PhotoResponse,
 } from "../lib/types";
 import { ConfirmModal } from "./ui";
-import { VehicleAbmModal } from "./modal/abm-form-modal";
 
 type Line = {
   key: string;
@@ -93,7 +91,6 @@ export function FichaForm({
     !editing || loadedEstado === "Carga" || loadedEstado === "En proceso";
   const [clients, setClients] = useState<ClienteResponse[]>([]);
   const [vehicles, setVehicles] = useState<MotovehiculoResponse[]>([]);
-  const [brands, setBrands] = useState<MarcaMotoResponse[]>([]);
   const [patenteQuery, setPatenteQuery] = useState("");
   const [patenteBusy, setPatenteBusy] = useState(false);
   const [clientId, setClientId] = useState(initialClientId ?? "");
@@ -111,7 +108,6 @@ export function FichaForm({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [closeConfirmation, setCloseConfirmation] = useState(false);
-  const [newVehicleOpen, setNewVehicleOpen] = useState(false);
   const plateLocked = Boolean(initialMotoId);
   const prefill = useRef<{ motoId?: string } | null>(
     initialMotoId ? { motoId: initialMotoId } : null,
@@ -257,18 +253,6 @@ export function FichaForm({
         ),
       );
   }, [clientId, reloadKey]);
-  useEffect(() => {
-    if (!newVehicleOpen || brands.length) return;
-    void api<MarcaMotoResponse[]>("/configuracion/marcas-moto")
-      .then((next) => setBrands(next.filter((brand) => brand.activo)))
-      .catch((reason) =>
-        setError(
-          reason instanceof Error
-            ? reason.message
-            : "No se pudieron cargar las marcas.",
-        ),
-      );
-  }, [newVehicleOpen, brands.length]);
   useEffect(() => {
     if (!fichaKey) return;
     void api<FichaResponse>(`/fichas/${fichaKey}`)
@@ -581,15 +565,6 @@ export function FichaForm({
                   placeholder="KM actual"
                 />
               </label>
-              <button
-                className="button secondary add-vehicle"
-                type="button"
-                disabled={plateLocked}
-                onClick={() => setNewVehicleOpen(true)}
-              >
-                <Plus size={17} />
-                <span>Agregar moto</span>
-              </button>
             </div>
           </section>
           <section className="form-section">
@@ -774,38 +749,6 @@ export function FichaForm({
           </button>
         </aside>
       </div>
-      <VehicleAbmModal
-        open={newVehicleOpen}
-        mode="agregar"
-        clientId={clientId}
-        clientName={clients.find((client) => client.id === clientId)?.nombre}
-        brands={brands}
-        clients={clients}
-        onClose={() => setNewVehicleOpen(false)}
-        onSubmit={async (values) => {
-          try {
-            const vehicle = await api<MotovehiculoResponse>("/motovehiculos", {
-              method: "POST",
-              body: JSON.stringify({
-                ...values,
-                anio: values.anio ? Number(values.anio) : null,
-                kilometraje: values.kilometraje
-                  ? Number(values.kilometraje)
-                  : null,
-              }),
-            });
-            setVehicles((all) => [...all, vehicle]);
-            setVehicleId(vehicle.id);
-            setNewVehicleOpen(false);
-          } catch (reason) {
-            setError(
-              reason instanceof Error
-                ? reason.message
-                : "No se pudo guardar la moto.",
-            );
-          }
-        }}
-      />
       <ConfirmModal
         open={closeConfirmation}
         title="¿Cerrar ficha?"
