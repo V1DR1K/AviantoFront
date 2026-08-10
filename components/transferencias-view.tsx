@@ -4,7 +4,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { ArrowDownUp, ArrowRightLeft, Download, Eye, Filter, Plus, X } from "lucide-react";
 import { api, download } from "../lib/api";
 import { todayInAr } from "../lib/dates";
-import type { AutocompleteResponse, MotovehiculoResponse, PageResponse, TransferRequest, TransferResponse } from "../lib/types";
+import type { AutocompleteResponse, ClienteResponse, MotovehiculoResponse, PageResponse, TransferRequest, TransferResponse } from "../lib/types";
+import { AbmFormModal } from "./modal/abm-form-modal";
 import { Dialog, EmptyState, Pagination, SearchBox } from "./ui";
 
 const date = (value?: string | null) => {
@@ -13,6 +14,14 @@ const date = (value?: string | null) => {
   return new Intl.DateTimeFormat("es-AR").format(new Date(source));
 };
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible completar la operación.";
+const clientFields = [
+  { key: "nombre", label: "Nombre y apellido / razón social", required: true, wide: true },
+  { key: "telefono", label: "Teléfono", type: "tel" as const, required: true },
+  { key: "documento", label: "DNI o CUIT" },
+  { key: "email", label: "Email", type: "email" as const },
+  { key: "direccion", label: "Dirección", wide: true },
+  { key: "observaciones", label: "Observaciones", type: "textarea" as const, wide: true },
+];
 
 function AutocompleteList({ items, onChoose }: { items: AutocompleteResponse[]; onChoose: (item: AutocompleteResponse) => void }) {
   if (!items.length) return <p className="suggestions-empty">Sin coincidencias.</p>;
@@ -30,6 +39,7 @@ function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onC
   const [selectedClient, setSelectedClient] = useState<AutocompleteResponse | null>(null);
   const [fechaTransferencia, setFechaTransferencia] = useState(todayInAr());
   const [observaciones, setObservaciones] = useState("");
+  const [newClientOpen, setNewClientOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +89,16 @@ function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onC
     setClientQuery(item.label);
     setClientSuggestions([]);
   };
+  const createClient = async (values: Record<string, string>) => {
+    try {
+      const client = await api<ClienteResponse>("/clientes", { method: "POST", body: JSON.stringify(values) });
+      chooseClient({ id: client.id, label: client.nombre, secondary: client.documento ?? client.telefono });
+      setNewClientOpen(false);
+      setError(null);
+    } catch (reason) {
+      setError(errorMessage(reason));
+    }
+  };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!selectedMoto) return setError("Seleccioná la moto que querés transferir.");
@@ -119,8 +139,7 @@ function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onC
       <section className="transfer-step">
         <div className="transfer-step-number">2</div>
         <div className="transfer-step-content">
-          <h3>Asigná el nuevo cliente</h3>
-          <p>El historial de fichas anteriores no se modifica.</p>
+          <div className="transfer-client-head"><div><h3>Asigná el nuevo cliente</h3><p>El historial de fichas anteriores no se modifica.</p></div><button type="button" className="button secondary transfer-add-client" disabled={busy} onClick={() => setNewClientOpen(true)}>+ Agregar Cliente</button></div>
           <div className="autocomplete-field">
             <input value={clientQuery} autoComplete="off" placeholder="Buscar por nombre o documento" disabled={!selectedMoto || Boolean(selectedClient) || busy} onChange={(event) => { setClientQuery(event.target.value); setSelectedClient(null); }} />
             {selectedMoto && !selectedClient && clientQuery.trim().length >= 2 && <AutocompleteList items={clientSuggestions} onChoose={chooseClient} />}
@@ -149,6 +168,7 @@ function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onC
         <button type="submit" className="button primary" disabled={busy || !selectedMoto || !selectedClient}><ArrowRightLeft size={17} />{busy ? "Registrando..." : "Confirmar transferencia"}</button>
       </div>
     </form>
+    <AbmFormModal open={newClientOpen} resource="cliente" mode="agregar" fields={clientFields} onClose={() => setNewClientOpen(false)} onSubmit={createClient} />
   </Dialog>;
 }
 

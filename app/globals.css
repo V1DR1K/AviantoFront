@@ -804,11 +804,10 @@ td small {
 }
 .two-col {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
 .order-form .two-col {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: 1fr;
 }
 .form-close {
   min-height: 44px;
@@ -1279,11 +1278,23 @@ a.existing-photo {
 .transfer-modal {
   width: min(760px, 100%);
   max-width: 760px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .transfer-form {
   display: grid;
   gap: 15px;
   margin-top: 20px;
+}
+.transfer-form > .modal-actions {
+  position: sticky;
+  bottom: -25px;
+  z-index: 2;
+  margin: 0 -25px -25px;
+  padding: 15px 25px 25px;
+  background: #fff;
+  border-top: 1px solid var(--line);
 }
 .transfer-step {
   display: grid;
@@ -1316,6 +1327,21 @@ a.existing-photo {
 .transfer-step-content p {
   margin: 0 0 10px;
   color: var(--muted);
+  font-size: 13px;
+}
+.transfer-client-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+.transfer-client-head p {
+  margin-bottom: 0;
+}
+.transfer-add-client {
+  flex: 0 0 auto;
+  padding: 8px 10px;
   font-size: 13px;
 }
 .transfer-step .autocomplete-field {
@@ -1439,6 +1465,10 @@ a.existing-photo {
 .form-modal.wide {
   width: min(1200px, 100%);
   max-width: 1200px;
+}
+.form-modal.wide.transfer-modal {
+  width: min(760px, 100%);
+  max-width: 760px;
 }
 .dialog-intro {
   padding-right: 35px;
@@ -2148,8 +2178,15 @@ td.table-actions {
     width: 100%;
   }
   .transfer-modal {
-    max-height: calc(100vh - 30px);
+    max-height: calc(100dvh - 20px);
     overflow-y: auto;
+  }
+  .transfer-client-head {
+    display: grid;
+    gap: 8px;
+  }
+  .transfer-add-client {
+    width: 100%;
   }
   .transfer-vehicle {
     grid-template-columns: 1fr auto;
