@@ -182,6 +182,11 @@ export interface TransferRequest {
   fechaTransferencia: string;
   observaciones?: string;
 }
+export interface TransferUpdateRequest {
+  clienteNuevoId: string;
+  fechaTransferencia: string;
+  observaciones?: string;
+}
 export interface TransferResponse {
   id: string;
   motoId: string;

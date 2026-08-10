@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowDownUp, ArrowRightLeft, Download, Eye, Filter, Plus, X } from "lucide-react";
+import { ArrowDownUp, ArrowRightLeft, Download, Edit3, Eye, Filter, Plus, Trash2, X } from "lucide-react";
 import { api, download } from "../lib/api";
 import { todayInAr } from "../lib/dates";
-import type { AutocompleteResponse, ClienteResponse, MotovehiculoResponse, PageResponse, TransferRequest, TransferResponse } from "../lib/types";
+import type { AutocompleteResponse, ClienteResponse, MotovehiculoResponse, PageResponse, TransferRequest, TransferResponse, TransferUpdateRequest } from "../lib/types";
 import { AbmFormModal } from "./modal/abm-form-modal";
-import { Dialog, EmptyState, Pagination, SearchBox } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox } from "./ui";
 
 const date = (value?: string | null) => {
   if (!value) return "—";
@@ -172,6 +172,52 @@ function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onC
   </Dialog>;
 }
 
+function TransferEditDialog({ transfer, onClose, onSaved, notify }: { transfer: TransferResponse | null; onClose: () => void; onSaved: () => void; notify: (message: string) => void }) {
+  const [clientQuery, setClientQuery] = useState(transfer?.clienteNuevo ?? "");
+  const [clientSuggestions, setClientSuggestions] = useState<AutocompleteResponse[]>([]);
+  const [selectedClient, setSelectedClient] = useState<AutocompleteResponse | null>(transfer ? { id: transfer.clienteNuevoId, label: transfer.clienteNuevo, secondary: "" } : null);
+  const [fechaTransferencia, setFechaTransferencia] = useState(transfer?.fechaTransferencia ?? todayInAr());
+  const [observaciones, setObservaciones] = useState(transfer?.observaciones ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!transfer || clientQuery.trim().length < 2 || selectedClient) return;
+    let active = true;
+    void api<AutocompleteResponse[]>("/clientes/autocomplete", {}, { q: clientQuery.trim() })
+      .then((items) => { if (active) setClientSuggestions(items); })
+      .catch(() => { if (active) setClientSuggestions([]); });
+    return () => { active = false; };
+  }, [transfer, clientQuery, selectedClient]);
+  if (!transfer) return null;
+  const close = () => { if (!busy) onClose(); };
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedClient) { setError("Seleccioná el nuevo cliente."); return; }
+    setBusy(true);
+    setError(null);
+    const payload: TransferUpdateRequest = { clienteNuevoId: selectedClient.id, fechaTransferencia, observaciones: observaciones || undefined };
+    try {
+      await api<TransferResponse>(`/transferencias/${transfer.id}`, { method: "PUT", body: JSON.stringify(payload) });
+      onClose();
+      onSaved();
+      notify("Transferencia actualizada.");
+    } catch (reason) {
+      setError(errorMessage(reason));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return <Dialog open title="Editar transferencia" onClose={close} wide className="transfer-modal">
+    <form className="transfer-form" onSubmit={(event) => void submit(event)}>
+      {error && <p className="login-pending" role="alert">{error}</p>}
+      <section className="transfer-step"><div className="transfer-step-number">1</div><div className="transfer-step-content"><h3>{transfer.patente}</h3><p>{transfer.moto} · Cliente anterior: {transfer.clienteAnterior}</p></div></section>
+      <section className="transfer-step"><div className="transfer-step-number">2</div><div className="transfer-step-content"><h3>Asigná el nuevo cliente</h3><div className="autocomplete-field"><input value={clientQuery} autoComplete="off" placeholder="Buscar por nombre o documento" disabled={Boolean(selectedClient) || busy} onChange={(event) => { setClientQuery(event.target.value); setSelectedClient(null); }} />{!selectedClient && clientQuery.trim().length >= 2 && <AutocompleteList items={clientSuggestions} onChoose={(item) => { setSelectedClient(item); setClientQuery(item.label); setClientSuggestions([]); }} />}</div>{selectedClient && <div className="transfer-selection"><span>Nuevo cliente</span><strong>{selectedClient.label}</strong><button type="button" className="icon-button" aria-label="Cambiar cliente" onClick={() => { setSelectedClient(null); setClientQuery(""); }}><X size={17} /></button></div>}</div></section>
+      <section className="transfer-step"><div className="transfer-step-number">3</div><div className="transfer-step-content"><h3>Definí la vigencia</h3><div className="two-col transfer-fields"><label>Fecha de transferencia<input type="date" value={fechaTransferencia} max={todayInAr()} onChange={(event) => setFechaTransferencia(event.target.value)} required /></label><label>Observaciones <span className="field-optional">Opcional</span><textarea value={observaciones} onChange={(event) => setObservaciones(event.target.value)} /></label></div></div></section>
+      <div className="modal-actions"><button type="button" className="button secondary" onClick={close} disabled={busy}>Cancelar</button><button type="submit" className="button primary" disabled={busy || !selectedClient}>{busy ? "Guardando..." : "Guardar cambios"}</button></div>
+    </form>
+  </Dialog>;
+}
+
 export function TransferenciasView({ canTransfer, onOpenMoto, notify }: { canTransfer: boolean; onOpenMoto: (id: string) => void; notify: (message: string) => void }) {
   const [query, setQuery] = useState("");
   const [desde, setDesde] = useState("");
@@ -180,6 +226,8 @@ export function TransferenciasView({ canTransfer, onOpenMoto, notify }: { canTra
   const [result, setResult] = useState<PageResponse<TransferResponse> | null>(null);
   const [page, setPage] = useState(1);
   const [flowOpen, setFlowOpen] = useState(false);
+  const [editing, setEditing] = useState<TransferResponse | null>(null);
+  const [deleting, setDeleting] = useState<TransferResponse | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const params = { q: query || undefined, fechaDesde: desde || undefined, fechaHasta: hasta || undefined, sortBy: "fechaTransferencia", direction };
@@ -188,6 +236,18 @@ export function TransferenciasView({ canTransfer, onOpenMoto, notify }: { canTra
       .then(setResult)
       .catch((reason) => setError(errorMessage(reason)));
   }, [query, desde, hasta, direction, page, reloadKey]);
+  const removeTransfer = async () => {
+    if (!deleting) return;
+    const selected = deleting;
+    setDeleting(null);
+    try {
+      await api(`/transferencias/${selected.id}`, { method: "DELETE" });
+      setReloadKey((value) => value + 1);
+      notify("Transferencia eliminada y períodos recalculados.");
+    } catch (reason) {
+      setError(errorMessage(reason));
+    }
+  };
   return <div className="page">
     <div className="page-heading">
       <div><h1>Transferencias</h1><p>Historial de cambios de titularidad de las motos.</p></div>
@@ -202,9 +262,11 @@ export function TransferenciasView({ canTransfer, onOpenMoto, notify }: { canTra
         <button className="button secondary" onClick={() => { setDirection((value) => value === "DESC" ? "ASC" : "DESC"); setPage(1); }} aria-label="Cambiar orden de transferencias"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
         <button className="button secondary" onClick={() => void download("/transferencias/export.xlsx", "transferencias.xlsx", params).catch((reason) => setError(errorMessage(reason)))}><Download size={17} />Exportar Excel</button>
       </div>
-      {result?.content.length ? <table><thead><tr><th>Patente</th><th>Fecha</th><th>Cliente anterior</th><th>Cliente nuevo</th><th>Observaciones</th><th /></tr></thead><tbody>{result.content.map((transfer) => <tr key={transfer.id}><td data-label="Patente"><strong>{transfer.patente}</strong><small>{transfer.moto}</small></td><td data-label="Fecha">{date(transfer.fechaTransferencia)}</td><td data-label="Cliente anterior">{transfer.clienteAnterior}</td><td data-label="Cliente nuevo">{transfer.clienteNuevo}</td><td data-label="Observaciones">{transfer.observaciones || "—"}</td><td className="table-actions"><button onClick={() => onOpenMoto(transfer.motoId)} aria-label={`Ver moto ${transfer.patente}`}><Eye size={17} /></button></td></tr>)}</tbody></table> : result ? <EmptyState title="No hay transferencias" body="Probá ajustar los filtros o registrá una nueva transferencia." action={canTransfer ? <button className="button primary" onClick={() => setFlowOpen(true)}><Plus size={17} />Nueva transferencia</button> : undefined} /> : <div className="table-loading" role="status">Cargando transferencias...</div>}
+      {result?.content.length ? <table><thead><tr><th>Patente</th><th>Fecha</th><th>Cliente anterior</th><th>Cliente nuevo</th><th>Observaciones</th><th>Acciones</th></tr></thead><tbody>{result.content.map((transfer) => <tr key={transfer.id}><td data-label="Patente"><strong>{transfer.patente}</strong><small>{transfer.moto}</small></td><td data-label="Fecha">{date(transfer.fechaTransferencia)}</td><td data-label="Cliente anterior">{transfer.clienteAnterior}</td><td data-label="Cliente nuevo">{transfer.clienteNuevo}</td><td data-label="Observaciones">{transfer.observaciones || "—"}</td><td className="table-actions"><button onClick={() => onOpenMoto(transfer.motoId)} aria-label={`Ver moto ${transfer.patente}`}><Eye size={17} /></button>{canTransfer && <><button onClick={() => setEditing(transfer)} aria-label={`Editar transferencia de ${transfer.patente}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(transfer)} aria-label={`Eliminar transferencia de ${transfer.patente}`}><Trash2 size={17} /></button></>}</td></tr>)}</tbody></table> : result ? <EmptyState title="No hay transferencias" body="Probá ajustar los filtros o registrá una nueva transferencia." action={canTransfer ? <button className="button primary" onClick={() => setFlowOpen(true)}><Plus size={17} />Nueva transferencia</button> : undefined} /> : <div className="table-loading" role="status">Cargando transferencias...</div>}
       <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
     </section>
     <TransferDialog open={flowOpen} onClose={() => setFlowOpen(false)} onSaved={() => { setPage(1); setReloadKey((value) => value + 1); }} notify={notify} />
+    <TransferEditDialog key={editing?.id ?? "none"} transfer={editing} onClose={() => setEditing(null)} onSaved={() => { setPage(1); setReloadKey((value) => value + 1); }} notify={notify} />
+    <ConfirmModal open={deleting !== null} title="Eliminar transferencia" body={`Se dará de baja la transferencia de ${deleting?.patente ?? "la moto seleccionada"} y se recalculará su historial de propietarios. Los registros no se borrarán de la base de datos.`} confirmLabel="Eliminar transferencia" onClose={() => setDeleting(null)} onConfirm={removeTransfer} />
   </div>;
 }

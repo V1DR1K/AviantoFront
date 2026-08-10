@@ -101,7 +101,7 @@ export default function Home() {
       />
     );
   else if (effectivePage === "profiles")
-    content = <ProfilesView onNew={() => setPage("new-profile")} onOpen={openMoto} />;
+    content = <ProfilesView onNew={() => setPage("new-profile")} onOpen={openMoto} notify={setToast} />;
   else if (effectivePage === "orders")
     content = (
       <FichasView
