@@ -15,6 +15,7 @@ import { MotoDetail } from "../components/moto-detail";
 import { RepuestoDetail, RepuestosView } from "../components/repuestos-view";
 import { ConfirmModal, Toast } from "../components/ui";
 import { AdminView, SettingsView } from "../components/admin-view";
+import { TrabajosCatalogoView } from "../components/trabajos-catalogo-view";
 import type { FichaResponse } from "../lib/types";
 import { LoginView } from "../components/login-view";
 import { clearSession, decodeAccessExpiry, getSession, logout, refreshSession, type AuthSession } from "../lib/auth";
@@ -76,9 +77,9 @@ export default function Home() {
   const createFichaForMoto = (prefill: { motoId: string; clienteId?: string | null }) => { setFichaPrefill(prefill); setPage("create"); };
   const createRepuestoForMoto = (prefill: { motoId: string; clienteId?: string | null }) => { setRepuestoPrefill(prefill); setPage("repuestos"); };
   const restricted = session.user.rol !== "ADMINISTRACION";
-  const effectivePage = restricted && (page === "audit" || page === "settings") ? "dashboard" : page;
+  const effectivePage = restricted && (page === "audit" || page === "settings" || page === "trabajos") ? "dashboard" : page;
   const setEffectivePage = (target: string) => {
-    if (restricted && (target === "audit" || target === "settings")) return setPage("dashboard");
+    if (restricted && (target === "audit" || target === "settings" || target === "trabajos")) return setPage("dashboard");
     setPage(target);
   };
 
@@ -138,6 +139,7 @@ else if (effectivePage === "fichas" && fichaId)
     content = <RepuestosView onOpen={openRepuesto} notify={setToast} createPrefill={repuestoPrefill} onPrefillHandled={() => setRepuestoPrefill(null)} />;
   else if (effectivePage === "repuesto" && repuestoId)
     content = <RepuestoDetail repuestoId={repuestoId} onBack={() => setPage("repuestos")} notify={setToast} />;
+  else if (effectivePage === "trabajos") content = <TrabajosCatalogoView notify={setToast} />;
   else if (["clients", "vehicles", "catalog", "audit"].includes(effectivePage))
     content = (
       <AdminView

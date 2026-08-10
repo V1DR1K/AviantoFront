@@ -11,6 +11,7 @@ import type {
   MotovehiculoResponse,
   PageResponse,
   PhotoResponse,
+  TrabajoCatalogoResponse,
 } from "../lib/types";
 import { ConfirmModal } from "./ui";
 
@@ -20,6 +21,7 @@ type Line = {
   precioUnitario: number;
   descuento: number;
   realizado: boolean;
+  catalogo?: boolean;
 };
 type PhotoDraft = { file: File; url: string };
 
@@ -101,6 +103,9 @@ export function FichaForm({
   const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState("");
   const [kilometrajeIngreso, setKilometrajeIngreso] = useState("");
   const [trabajos, setTrabajos] = useState<Line[]>([]);
+  const [workQuery, setWorkQuery] = useState("");
+  const [workOpen, setWorkOpen] = useState<string | null>(null);
+  const [workSuggestions, setWorkSuggestions] = useState<TrabajoCatalogoResponse[]>([]);
   const [notes, setNotes] = useState("");
   const [iva, setIva] = useState(false);
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
@@ -160,6 +165,13 @@ export function FichaForm({
         ),
       );
   }, []);
+  useEffect(() => {
+    let active = true;
+    void api<TrabajoCatalogoResponse[]>("/configuracion/trabajos/autocomplete", {}, { q: workQuery })
+      .then((items) => { if (active) setWorkSuggestions(items); })
+      .catch(() => { if (active) setWorkSuggestions([]); });
+    return () => { active = false; };
+  }, [workQuery]);
   useEffect(() => {
     if (initialMotoId) void api<MotovehiculoResponse>(`/motovehiculos/${initialMotoId}`).then((moto) => setPatenteQuery(moto.patente)).catch(() => undefined);
   }, [initialMotoId]);
@@ -325,6 +337,10 @@ export function FichaForm({
     setTrabajos((all) =>
       all.map((line) => (line.key === key ? { ...line, ...changes } : line)),
     );
+  const chooseTrabajo = (key: string, trabajo: TrabajoCatalogoResponse) => {
+    updateLine(key, { descripcion: trabajo.descripcion, precioUnitario: Number(trabajo.precioBase), catalogo: true });
+    setWorkOpen(null);
+  };
   const attachPhotos = async (files: File[]) => {
     try {
       const converted = await Promise.all(files.map(asWebp));
@@ -566,6 +582,17 @@ export function FichaForm({
                 />
               </label>
             </div>
+            {currentVehicle && <section className="panel moto-data-card">
+              <div className="panel-head"><h3>Datos de la moto</h3><span className="muted">Información del Perfil</span></div>
+              <dl className="record-detail">
+                <div><dt>Marca / modelo</dt><dd>{currentVehicle.marca} {currentVehicle.modelo}</dd></div>
+                <div><dt>Patente</dt><dd>{currentVehicle.patente}</dd></div>
+                <div><dt>Año</dt><dd>{currentVehicle.anio ?? "—"}</dd></div>
+                <div><dt>Kilometraje actual</dt><dd>{currentVehicle.kilometraje?.toLocaleString("es-AR") ?? "—"}</dd></div>
+                <div><dt>Estado</dt><dd>{currentVehicle.estado}</dd></div>
+                <div><dt>Observaciones</dt><dd>{currentVehicle.observaciones || "—"}</dd></div>
+              </dl>
+            </section>}
           </section>
           <section className="form-section">
             <h2>2. Trabajos a realizar</h2>
@@ -574,16 +601,26 @@ export function FichaForm({
                 <div className="line-item" key={trabajo.key}>
                   <label className="line-descr">
                     Descripción
-                    <input
-                      type="text"
-                      value={trabajo.descripcion}
-                      onChange={(event) =>
-                        updateLine(trabajo.key, {
-                          descripcion: event.target.value,
-                        })
-                      }
-                      placeholder="Ej.: Cambio de aceite"
-                    />
+                    <div className="autocomplete-field">
+                      <input
+                        type="text"
+                        value={trabajo.descripcion}
+                        readOnly={trabajo.catalogo}
+                        onFocus={() => { if (trabajo.catalogo) return; setWorkOpen(trabajo.key); setWorkQuery(trabajo.descripcion); void api<TrabajoCatalogoResponse[]>("/configuracion/trabajos/autocomplete", {}, { q: trabajo.descripcion }).then(setWorkSuggestions).catch(() => setWorkSuggestions([])); }}
+                        onBlur={() => window.setTimeout(() => setWorkOpen((key) => key === trabajo.key ? null : key), 120)}
+                        onChange={(event) => {
+                          if (trabajo.catalogo) return;
+                          updateLine(trabajo.key, { descripcion: event.target.value });
+                          setWorkQuery(event.target.value);
+                          setWorkOpen(trabajo.key);
+                        }}
+                        placeholder="Ej.: Cambio de aceite"
+                        autoComplete="off"
+                      />
+                      {workOpen === trabajo.key && <div className="suggestions">
+                        {workSuggestions.length ? workSuggestions.map((option) => <button type="button" key={option.id} onMouseDown={(event) => event.preventDefault()} onClick={() => chooseTrabajo(trabajo.key, option)}><span>{option.descripcion}</span><small>{money(option.precioBase)}</small></button>) : <p>Sin trabajos coincidentes. Podés ingresar una descripción manual.</p>}
+                      </div>}
+                    </div>
                   </label>
                   <label>
                     Precio

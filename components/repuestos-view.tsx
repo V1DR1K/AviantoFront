@@ -228,7 +228,7 @@ function CreateRepuestoDialog({
         <div className="repuesto-pick">
           <label>Cliente<select value={clientId} onChange={(event) => changeClient(event.target.value)} required><option value="">Seleccionar</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.nombre}</option>)}</select></label>
            <label>Moto<select value={motoId} onChange={(event) => changeMoto(event.target.value)} required disabled={!clientId}><option value="">Seleccionar</option>{motoOptions.map((moto) => <option key={moto.id} value={moto.id}>{moto.marca} {moto.modelo} · {moto.patente}</option>)}</select></label>
-          <label>Ficha (opcional)<select value={fichaId} onChange={(event) => changeFicha(event.target.value)} disabled={!motoId}><option value="">Sin ficha</option>{fichas.map((ficha) => <option key={ficha.id} value={ficha.id}>{ficha.numero} · {ficha.estado}</option>)}</select></label>
+          <label>Ficha (opcional)<select value={fichaId} onChange={(event) => changeFicha(event.target.value)} disabled={!motoId}><option value="">Sin ficha</option>{fichas.map((ficha) => <option key={ficha.id} value={ficha.id}>{ficha.numero} · {ficha.estado} · {date(ficha.fechaIngreso)}</option>)}</select></label>
           <label>Proveedor<input value={proveedor} onChange={(event) => setProveedor(event.target.value)} /></label>
         </div>
         <div className="repuesto-items">

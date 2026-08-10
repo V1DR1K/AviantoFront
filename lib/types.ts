@@ -97,6 +97,14 @@ export interface MotoConfigServiceRequest {
   mesesServicePeriodo?: number;
   serviceObservaciones?: string;
 }
+export interface TrabajoCatalogoResponse {
+  id: string;
+  descripcion: string;
+  precioBase: number;
+  activo: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface FichaTrabajoRequest {
   descripcion: string;

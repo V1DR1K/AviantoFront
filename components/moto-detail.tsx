@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Eye, Plus, Settings2 } from "lucide-react";
+import { ArrowDownUp, Eye, Filter, Plus, Settings2 } from "lucide-react";
 import { api } from "../lib/api";
 import { money } from "../lib/format";
 import type {
@@ -11,13 +11,18 @@ import type {
   NextServiceResponse,
   OwnerResponse,
   PageResponse,
+  PagoStatus,
   RepuestoResponse,
+  RepuestoState,
   ServiceResponse,
 } from "../lib/types";
-import { Dialog, EmptyState, StatusBadge } from "./ui";
+import { Dialog, EmptyState, Pagination, StatusBadge } from "./ui";
 
 const date = (value?: string | null) => (value ? new Intl.DateTimeFormat("es-AR").format(new Date(value)) : "—");
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
+const fichaStates = ["Carga", "En proceso", "Revisión", "Entregada", "Cancelada"] as const;
+const pagoStates: PagoStatus[] = ["No pagado", "Parcial", "Pagado"];
+const repuestoStates: RepuestoState[] = ["En curso", "Completado", "Cancelado"];
 
 export function MotoDetail({
   id,
@@ -40,10 +45,29 @@ export function MotoDetail({
   const [moto, setMoto] = useState<MotovehiculoResponse | null>(null);
   const [client, setClient] = useState<ClienteResponse | null>(null);
   const [owners, setOwners] = useState<OwnerResponse[]>([]);
-  const [services, setServices] = useState<ServiceResponse[]>([]);
+  const [services, setServices] = useState<PageResponse<ServiceResponse> | null>(null);
   const [nextService, setNextService] = useState<NextServiceResponse | null>(null);
-  const [fichas, setFichas] = useState<FichaResponse[]>([]);
-  const [repuestos, setRepuestos] = useState<RepuestoResponse[]>([]);
+  const [fichas, setFichas] = useState<PageResponse<FichaResponse> | null>(null);
+  const [repuestos, setRepuestos] = useState<PageResponse<RepuestoResponse> | null>(null);
+  const [serviceDesde, setServiceDesde] = useState("");
+  const [serviceHasta, setServiceHasta] = useState("");
+  const [serviceSort, setServiceSort] = useState("fecha");
+  const [serviceDirection, setServiceDirection] = useState<"ASC" | "DESC">("DESC");
+  const [servicePage, setServicePage] = useState(1);
+  const [fichaDesde, setFichaDesde] = useState("");
+  const [fichaHasta, setFichaHasta] = useState("");
+  const [fichaEstado, setFichaEstado] = useState("");
+  const [fichaPago, setFichaPago] = useState("");
+  const [fichaSort, setFichaSort] = useState("fechaIngreso");
+  const [fichaDirection, setFichaDirection] = useState<"ASC" | "DESC">("DESC");
+  const [fichaPage, setFichaPage] = useState(1);
+  const [repuestoDesde, setRepuestoDesde] = useState("");
+  const [repuestoHasta, setRepuestoHasta] = useState("");
+  const [repuestoEstado, setRepuestoEstado] = useState("");
+  const [repuestoPago, setRepuestoPago] = useState("");
+  const [repuestoSort, setRepuestoSort] = useState("fecha");
+  const [repuestoDirection, setRepuestoDirection] = useState<"ASC" | "DESC">("DESC");
+  const [repuestoPage, setRepuestoPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [serviceOpen, setServiceOpen] = useState(false);
   const [serviceKm, setServiceKm] = useState("");
@@ -60,15 +84,17 @@ export function MotoDetail({
     void api<MotovehiculoResponse>(`/motovehiculos/${id}`)
       .then((next) => { setMoto(next); if (next.propietarioId) void api<ClienteResponse>(`/clientes/${next.propietarioId}`).then(setClient).catch(() => setClient(null)); })
       .catch((reason) => setError(errorMessage(reason)));
-  const loadServices = () => void api<ServiceResponse[]>(`/motovehiculos/${id}/services`).then(setServices).catch(() => undefined);
+  const loadServices = () => void api<PageResponse<ServiceResponse>>(`/motovehiculos/${id}/services/historial`, {}, { fechaDesde: serviceDesde || undefined, fechaHasta: serviceHasta || undefined, page: servicePage - 1, size: 10, sortBy: serviceSort, direction: serviceDirection }).then(setServices).catch(() => undefined);
+  const loadFichas = () => void api<PageResponse<FichaResponse>>("/fichas", {}, { motoId: id, fechaDesde: fichaDesde || undefined, fechaHasta: fichaHasta || undefined, estado: fichaEstado || undefined, estadoPago: fichaPago || undefined, page: fichaPage - 1, size: 10, sortBy: fichaSort, direction: fichaDirection }).then(setFichas).catch(() => undefined);
+  const loadRepuestos = () => void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { motoId: id, fechaDesde: repuestoDesde || undefined, fechaHasta: repuestoHasta || undefined, estado: repuestoEstado || undefined, estadoPago: repuestoPago || undefined, page: repuestoPage - 1, size: 10, sortBy: repuestoSort, direction: repuestoDirection }).then(setRepuestos).catch(() => undefined);
   const loadNext = () => void api<NextServiceResponse[]>("/services/proximos").then((list) => setNextService(list.find((next) => next.motoId === id) ?? null)).catch(() => undefined);
   useEffect(load, [id]);
+  useEffect(() => { loadServices(); }, [id, serviceDesde, serviceHasta, serviceSort, serviceDirection, servicePage]);
+  useEffect(() => { loadFichas(); }, [id, fichaDesde, fichaHasta, fichaEstado, fichaPago, fichaSort, fichaDirection, fichaPage]);
+  useEffect(() => { loadRepuestos(); }, [id, repuestoDesde, repuestoHasta, repuestoEstado, repuestoPago, repuestoSort, repuestoDirection, repuestoPage]);
   useEffect(() => {
-    loadServices();
     loadNext();
     void api<OwnerResponse[]>(`/motovehiculos/${id}/propietarios`).then(setOwners).catch(() => undefined);
-    void api<PageResponse<FichaResponse>>("/fichas", {}, { motoId: id, size: 50 }).then((result) => setFichas(result.content)).catch(() => undefined);
-    void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { motoId: id, size: 50 }).then((result) => setRepuestos(result.content)).catch(() => undefined);
   }, [id]);
 
   const addService = async () => {
@@ -181,34 +207,59 @@ export function MotoDetail({
             </div>
           </div>
           <div className="metrics service-kpis"><section className="metric"><span>Último service</span><strong>{moto.kmUltimoService != null ? `${moto.kmUltimoService.toLocaleString("es-AR")} km` : "—"}</strong><small>{date(moto.fechaUltimoService)}</small></section><section className="metric"><span>Período</span><strong>{moto.kmServicePeriodo ?? "—"} km</strong><small>{moto.mesesServicePeriodo ?? "—"} meses</small></section><section className="metric"><span>Próximo service</span><strong>{nextService?.proximKm != null ? `${nextService.proximKm.toLocaleString("es-AR")} km` : "—"}</strong><small>{nextService?.proximaFecha ? date(nextService.proximaFecha) : nextService?.sinReferencia ? "Sin referencia" : "—"}</small></section></div>
-          {services.length ? (
+          <div className="filter-bar">
+            <label><span className="date-label">Desde</span><input type="date" value={serviceDesde} onChange={(event) => { setServiceDesde(event.target.value); setServicePage(1); }} /></label>
+            <label><span className="date-label">Hasta</span><input type="date" value={serviceHasta} onChange={(event) => { setServiceHasta(event.target.value); setServicePage(1); }} /></label>
+            <label><Filter size={16} /><select value={serviceSort} onChange={(event) => { setServiceSort(event.target.value); setServicePage(1); }}><option value="fecha">Fecha</option><option value="kilometraje">Kilometraje</option></select></label>
+            <button className="button secondary" onClick={() => { setServiceDirection((value) => value === "ASC" ? "DESC" : "ASC"); setServicePage(1); }} aria-label="Cambiar orden de services"><ArrowDownUp size={16} />{serviceDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
+          </div>
+          {services?.content.length ? (
             <table>
               <thead><tr><th>Fecha</th><th>Kilometraje</th><th>Ficha</th><th>Observaciones</th></tr></thead>
-              <tbody>{services.map((service) => <tr key={service.id}><td data-label="Fecha">{date(service.fecha)}</td><td data-label="Kilometraje">{service.kilometraje}</td><td data-label="Ficha">{service.fichaNumero ?? "—"}</td><td data-label="Observaciones">{service.observaciones || "—"}</td></tr>)}</tbody>
+              <tbody>{services.content.map((service) => <tr key={service.id}><td data-label="Fecha">{date(service.fecha)}</td><td data-label="Kilometraje">{service.kilometraje}</td><td data-label="Ficha">{service.fichaNumero ?? "—"}</td><td data-label="Observaciones">{service.observaciones || "—"}</td></tr>)}</tbody>
             </table>
           ) : <EmptyState title="Sin services" body="Registrá el primer service de la moto." />}
+          <Pagination page={servicePage} total={services?.totalPages || 1} onPage={setServicePage} />
         </section>
       )}
       {tab === "fichas" && (
         <section className="panel table-panel">
           <div className="panel-head"><div><h2>Ficha</h2><p>Trabajo actual e historial de ingresos al taller.</p></div><button className="button secondary" onClick={() => onNewFicha({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nueva ficha</button></div>
-          {fichas.length ? (
+          <div className="filter-bar">
+            <label><span className="date-label">Desde</span><input type="date" value={fichaDesde} onChange={(event) => { setFichaDesde(event.target.value); setFichaPage(1); }} /></label>
+            <label><span className="date-label">Hasta</span><input type="date" value={fichaHasta} onChange={(event) => { setFichaHasta(event.target.value); setFichaPage(1); }} /></label>
+            <label><Filter size={16} /><select value={fichaEstado} onChange={(event) => { setFichaEstado(event.target.value); setFichaPage(1); }}><option value="">Todos los estados</option>{fichaStates.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+            <label><Filter size={16} /><select value={fichaPago} onChange={(event) => { setFichaPago(event.target.value); setFichaPage(1); }}><option value="">Todos los pagos</option>{pagoStates.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+            <label><Filter size={16} /><select value={fichaSort} onChange={(event) => { setFichaSort(event.target.value); setFichaPage(1); }}><option value="fechaIngreso">Fecha</option><option value="estado">Estado</option><option value="estadoPago">Pago</option></select></label>
+            <button className="button secondary" onClick={() => { setFichaDirection((value) => value === "ASC" ? "DESC" : "ASC"); setFichaPage(1); }} aria-label="Cambiar orden de fichas"><ArrowDownUp size={16} />{fichaDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
+          </div>
+          {fichas?.content.length ? (
             <table>
-              <thead><tr><th>Ficha</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
-              <tbody>{fichas.map((ficha) => <tr key={ficha.id}><td data-label="Ficha">{ficha.numero}</td><td data-label="Estado"><StatusBadge status={ficha.estado} /></td><td data-label="Pago">{ficha.estadoPago}</td><td data-label="Total">{money(ficha.total)}</td><td className="table-actions"><button onClick={() => onOpenFicha(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
+              <thead><tr><th>Ficha</th><th>Ingreso</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
+              <tbody>{fichas.content.map((ficha) => <tr key={ficha.id}><td data-label="Ficha">{ficha.numero}</td><td data-label="Ingreso">{date(ficha.fechaIngreso)}</td><td data-label="Estado"><StatusBadge status={ficha.estado} /></td><td data-label="Pago"><StatusBadge status={ficha.estadoPago} /></td><td data-label="Total">{money(ficha.total)}</td><td className="table-actions"><button onClick={() => onOpenFicha(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
             </table>
           ) : <EmptyState title="Sin fichas" body="Esta moto todavía no tiene ingresos de trabajo." />}
+          <Pagination page={fichaPage} total={fichas?.totalPages || 1} onPage={setFichaPage} />
         </section>
       )}
       {tab === "repuestos" && (
         <section className="panel table-panel">
           <div className="panel-head"><h2>Pedidos de repuestos</h2><button className="button secondary" onClick={() => onNewRepuesto({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nuevo pedido</button></div>
-          {repuestos.length ? (
+          <div className="filter-bar">
+            <label><span className="date-label">Desde</span><input type="date" value={repuestoDesde} onChange={(event) => { setRepuestoDesde(event.target.value); setRepuestoPage(1); }} /></label>
+            <label><span className="date-label">Hasta</span><input type="date" value={repuestoHasta} onChange={(event) => { setRepuestoHasta(event.target.value); setRepuestoPage(1); }} /></label>
+            <label><Filter size={16} /><select value={repuestoEstado} onChange={(event) => { setRepuestoEstado(event.target.value); setRepuestoPage(1); }}><option value="">Todos los estados</option>{repuestoStates.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+            <label><Filter size={16} /><select value={repuestoPago} onChange={(event) => { setRepuestoPago(event.target.value); setRepuestoPage(1); }}><option value="">Todos los pagos</option>{pagoStates.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+            <label><Filter size={16} /><select value={repuestoSort} onChange={(event) => { setRepuestoSort(event.target.value); setRepuestoPage(1); }}><option value="fecha">Fecha</option><option value="estado">Estado</option><option value="estadoPago">Pago</option></select></label>
+            <button className="button secondary" onClick={() => { setRepuestoDirection((value) => value === "ASC" ? "DESC" : "ASC"); setRepuestoPage(1); }} aria-label="Cambiar orden de pedidos"><ArrowDownUp size={16} />{repuestoDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
+          </div>
+          {repuestos?.content.length ? (
             <table>
-              <thead><tr><th>Pedido</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
-              <tbody>{repuestos.map((repuesto) => <tr key={repuesto.id}><td data-label="Pedido">{repuesto.numero}</td><td data-label="Estado"><StatusBadge status={repuesto.estado} /></td><td data-label="Pago">{repuesto.estadoPago}</td><td data-label="Total">{money(repuesto.total)}</td><td className="table-actions"><button onClick={() => onOpenRepuesto(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
+              <thead><tr><th>Pedido</th><th>Fecha</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
+              <tbody>{repuestos.content.map((repuesto) => <tr key={repuesto.id}><td data-label="Pedido">{repuesto.numero}</td><td data-label="Fecha">{date(repuesto.fecha)}</td><td data-label="Estado"><StatusBadge status={repuesto.estado} /></td><td data-label="Pago"><StatusBadge status={repuesto.estadoPago} /></td><td data-label="Total">{money(repuesto.total)}</td><td className="table-actions"><button onClick={() => onOpenRepuesto(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
             </table>
           ) : <EmptyState title="Sin repuestos" body="Aún no hay pedidos de repuestos para esta moto." />}
+          <Pagination page={repuestoPage} total={repuestos?.totalPages || 1} onPage={setRepuestoPage} />
         </section>
       )}
       <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)}>

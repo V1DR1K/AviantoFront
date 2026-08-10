@@ -945,10 +945,23 @@ td small {
   margin: 0;
   accent-color: var(--blue);
 }
+.line-item > strong,
+.line-item > .line-check,
+.line-item > button {
+  margin: 2em auto 1em auto;
+}
 .line-item button {
   border: 0;
   background: none;
   color: var(--red);
+}
+.line-item .autocomplete-field .suggestions button {
+  color: var(--ink);
+  background: #fff;
+  border: 0;
+}
+.line-item .autocomplete-field .suggestions button:hover {
+  background: #eef5fa;
 }
 .photo-button {
   border: 1px dashed #96abc0;
@@ -1264,8 +1277,8 @@ a.existing-photo {
   position: relative;
 }
 .form-modal.wide {
-  max-width: 700px;
-  width: min(700px, 100%);
+  width: min(1200px, 100%);
+  max-width: 1200px;
 }
 .dialog-intro {
   padding-right: 35px;

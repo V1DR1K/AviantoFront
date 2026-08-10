@@ -13,12 +13,13 @@ import {
   Plus,
   Settings,
   Users,
+  Wrench,
 } from "lucide-react";
 import type { AuthSession } from "../lib/auth";
 const home = { id: "dashboard", label: "Inicio", icon: LayoutDashboard };
 const navGroups = [
   { id: "operation", label: "Operación", items: [{ id: "profiles", label: "Perfiles", icon: ClipboardList }, { id: "repuestos", label: "Repuestos", icon: Package }] },
-  { id: "records", label: "Registros", items: [{ id: "clients", label: "Clientes", icon: Users }, { id: "catalog", label: "Controles", icon: Package }] },
+  { id: "records", label: "Registros", items: [{ id: "clients", label: "Clientes", icon: Users }, { id: "catalog", label: "Controles", icon: Package }, { id: "trabajos", label: "Trabajos", icon: Wrench, adminOnly: true }] },
 ];
 export function AppShell({
   children,
@@ -47,7 +48,7 @@ export function AppShell({
     if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
     else onPage("dashboard");
   };
-  const renderItem = (item: typeof home) => {
+  const renderItem = (item: typeof home & { adminOnly?: boolean }) => {
     const Icon = item.icon;
     return (
       <button key={item.id} className={page === item.id ? "active" : ""} onClick={() => go(item.id)} title={item.label}>
@@ -78,7 +79,7 @@ export function AppShell({
                 <button className="nav-group-toggle" onClick={() => setOpenGroup((current) => current === group.id ? "" : group.id)} aria-expanded={expanded} title={group.label}>
                   <span>{group.label}</span><ChevronDown size={17} aria-hidden="true" />
                 </button>
-                <div className="nav-group-items">{group.items.map(renderItem)}</div>
+                <div className="nav-group-items">{group.items.filter((item) => !item.adminOnly || isAdmin).map(renderItem)}</div>
               </section>
             );
           })}
@@ -134,7 +135,7 @@ export function AppShell({
           {navGroups.map((group) => (
             <section className="mobile-nav-group" key={group.id}>
               <p>{group.label}</p>
-              {group.items.map(renderItem)}
+               {group.items.filter((item) => !item.adminOnly || isAdmin).map(renderItem)}
             </section>
           ))}
           {isAdmin && renderItem({ id: "audit", label: "Auditoría", icon: FileText })}
