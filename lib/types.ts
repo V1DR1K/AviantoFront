@@ -176,6 +176,26 @@ export interface OwnerResponse {
   actual: boolean;
   observaciones?: string;
 }
+export interface TransferRequest {
+  motoId: string;
+  clienteNuevoId: string;
+  fechaTransferencia: string;
+  observaciones?: string;
+}
+export interface TransferResponse {
+  id: string;
+  motoId: string;
+  patente: string;
+  moto: string;
+  clienteAnteriorId: string;
+  clienteAnterior: string;
+  clienteNuevoId: string;
+  clienteNuevo: string;
+  fechaTransferencia: string;
+  observaciones?: string | null;
+  realizadaPor?: string | null;
+  createdAt: string;
+}
 export interface ServiceRequest {
   fichaId?: string;
   kilometraje: number;

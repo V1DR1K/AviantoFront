@@ -9,16 +9,16 @@ import type {
   FichaResponse,
   MotovehiculoResponse,
   NextServiceResponse,
-  OwnerResponse,
   PageResponse,
   PagoStatus,
   RepuestoResponse,
   RepuestoState,
   ServiceResponse,
+  TransferResponse,
 } from "../lib/types";
 import { Dialog, EmptyState, Pagination, StatusBadge } from "./ui";
 
-const date = (value?: string | null) => (value ? new Intl.DateTimeFormat("es-AR").format(new Date(value)) : "—");
+const date = (value?: string | null) => (value ? new Intl.DateTimeFormat("es-AR").format(new Date(value.includes("T") ? value : `${value}T12:00:00`)) : "—");
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
 const fichaStates = ["Carga", "En proceso", "Revisión", "Entregada", "Cancelada"] as const;
 const pagoStates: PagoStatus[] = ["No pagado", "Parcial", "Pagado"];
@@ -44,7 +44,7 @@ export function MotoDetail({
   const [tab, setTab] = useState<"general" | "client" | "services" | "fichas" | "repuestos">("general");
   const [moto, setMoto] = useState<MotovehiculoResponse | null>(null);
   const [client, setClient] = useState<ClienteResponse | null>(null);
-  const [owners, setOwners] = useState<OwnerResponse[]>([]);
+  const [transfers, setTransfers] = useState<TransferResponse[]>([]);
   const [services, setServices] = useState<PageResponse<ServiceResponse> | null>(null);
   const [nextService, setNextService] = useState<NextServiceResponse | null>(null);
   const [fichas, setFichas] = useState<PageResponse<FichaResponse> | null>(null);
@@ -94,7 +94,7 @@ export function MotoDetail({
   useEffect(() => { loadRepuestos(); }, [id, repuestoDesde, repuestoHasta, repuestoEstado, repuestoPago, repuestoSort, repuestoDirection, repuestoPage]);
   useEffect(() => {
     loadNext();
-    void api<OwnerResponse[]>(`/motovehiculos/${id}/propietarios`).then(setOwners).catch(() => undefined);
+    void api<TransferResponse[]>(`/motovehiculos/${id}/transferencias`).then(setTransfers).catch(() => undefined);
   }, [id]);
 
   const addService = async () => {
@@ -148,7 +148,7 @@ export function MotoDetail({
 
   const tabs: { id: typeof tab; label: string }[] = [
     { id: "general", label: "Datos" },
-    { id: "client", label: "Cliente" },
+    { id: "client", label: "Clientes" },
     { id: "services", label: "Service" },
     { id: "fichas", label: "Ficha" },
     { id: "repuestos", label: "Repuestos" },
@@ -189,12 +189,12 @@ export function MotoDetail({
       )}
       {tab === "client" && (
         <section className="panel form-stack">
-          <div className="panel-head"><div><h2>Cliente</h2><p>Propietario actual de la moto.</p></div></div>
+          <div className="panel-head"><div><h2>Clientes</h2><p>Propietario actual e historial de transferencias.</p></div></div>
           <dl className="record-detail">
             <div><dt>Nombre y apellido</dt><dd>{moto.propietario ?? "—"}</dd></div>
             <div><dt>Teléfono</dt><dd>{client?.telefono ?? "—"}</dd></div>
           </dl>
-          <section className="table-panel"><h3>Propietarios anteriores</h3>{owners.filter((owner) => !owner.actual).length ? <table><thead><tr><th>Cliente</th><th>Desde</th><th>Hasta</th><th>Observaciones</th></tr></thead><tbody>{owners.filter((owner) => !owner.actual).sort((a, b) => a.fechaDesde.localeCompare(b.fechaDesde)).map((owner) => <tr key={owner.id}><td data-label="Cliente">{owner.cliente}</td><td data-label="Desde">{date(owner.fechaDesde)}</td><td data-label="Hasta">{date(owner.fechaHasta)}</td><td data-label="Observaciones">{owner.observaciones || "—"}</td></tr>)}</tbody></table> : <p>Esta moto no tiene propietarios anteriores.</p>}</section>
+          <section className="table-panel"><div className="panel-head"><div><h3>Historial de transferencias</h3><p>Los clientes anteriores permanecen asociados a sus fichas históricas.</p></div></div>{transfers.length ? <table><thead><tr><th>Fecha</th><th>Cliente anterior</th><th>Cliente nuevo</th><th>Observaciones</th></tr></thead><tbody>{transfers.map((transfer) => <tr key={transfer.id}><td data-label="Fecha">{date(transfer.fechaTransferencia)}</td><td data-label="Cliente anterior">{transfer.clienteAnterior}</td><td data-label="Cliente nuevo">{transfer.clienteNuevo}</td><td data-label="Observaciones">{transfer.observaciones || "—"}</td></tr>)}</tbody></table> : <p>Esta moto no tiene transferencias registradas.</p>}</section>
         </section>
       )}
       {tab === "services" && (

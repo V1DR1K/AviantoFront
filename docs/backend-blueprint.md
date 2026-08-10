@@ -8,11 +8,13 @@ El backend vive exclusivamente en `AviantoBack` y se implementará con Java, Spr
 
 ## Dominios
 
-`Cliente`, `Motovehiculo`, `MarcaMoto`, `ItemCatalogo`, `CategoriaCatalogo`, `Pedido`, `PedidoItem`, `PedidoFoto`, `Usuario`, `Auditoria` y `PriceHistory`. `PedidoItem` conserva precio, descripción y tipo como snapshot. Las eliminaciones se modelan con `deletedAt/deletedBy`, no borrado físico.
+`Cliente`, `Motovehiculo`, `PropietarioMoto`, `TransferenciaMoto`, `MarcaMoto`, `ItemCatalogo`, `CategoriaCatalogo`, `Pedido`, `PedidoItem`, `PedidoFoto`, `Usuario`, `Auditoria` y `PriceHistory`. `PedidoItem` conserva precio, descripción y tipo como snapshot. `PropietarioMoto` conserva los períodos efectivos; `TransferenciaMoto` registra cada evento con cliente anterior, cliente nuevo, fecha y actor. Las eliminaciones se modelan con `deletedAt/deletedBy`, no borrado físico.
 
 ## Reglas
 
 - Cliente posee múltiples motos; una moto pertenece a un cliente.
+- Una transferencia cierra el período vigente de `PropietarioMoto`, crea el nuevo período y persiste `TransferenciaMoto` en la misma transacción. Las fichas existentes no cambian de cliente.
+- No se permite transferir a un cliente inactivo, al mismo cliente, sin propietario vigente, con fecha futura o con un período solapado. El cambio de titularidad requiere `ADMINISTRACION`.
 - Motovehiculo referencia a `MarcaMoto`; ItemCatalogo referencia a `CategoriaCatalogo`. No se persiste código interno de catálogo.
 - Usuario posee los roles `ADMINISTRACION` u `OPERARIO`; contraseñas hasheadas y secretos permanecen fuera de todos los DTOs.
 - Ítems inactivos no se sugieren para pedidos nuevos pero siguen visibles en históricos.

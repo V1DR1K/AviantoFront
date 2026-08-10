@@ -13,6 +13,7 @@ import {
 } from "../components/views";
 import { MotoDetail } from "../components/moto-detail";
 import { RepuestoDetail, RepuestosView } from "../components/repuestos-view";
+import { TransferenciasView } from "../components/transferencias-view";
 import { ConfirmModal, Toast } from "../components/ui";
 import { AdminView, SettingsView } from "../components/admin-view";
 import { TrabajosCatalogoView } from "../components/trabajos-catalogo-view";
@@ -137,6 +138,8 @@ else if (effectivePage === "fichas" && fichaId)
     );
   else if (effectivePage === "repuestos")
     content = <RepuestosView onOpen={openRepuesto} notify={setToast} createPrefill={repuestoPrefill} onPrefillHandled={() => setRepuestoPrefill(null)} />;
+  else if (effectivePage === "transfers")
+    content = <TransferenciasView canTransfer={session.user.rol === "ADMINISTRACION"} onOpenMoto={openMoto} notify={setToast} />;
   else if (effectivePage === "repuesto" && repuestoId)
     content = <RepuestoDetail repuestoId={repuestoId} onBack={() => setPage("repuestos")} notify={setToast} />;
   else if (effectivePage === "trabajos") content = <TrabajosCatalogoView notify={setToast} />;

@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  ArrowRightLeft,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -18,7 +19,7 @@ import {
 import type { AuthSession } from "../lib/auth";
 const home = { id: "dashboard", label: "Inicio", icon: LayoutDashboard };
 const navGroups = [
-  { id: "operation", label: "Operación", items: [{ id: "profiles", label: "Perfiles", icon: ClipboardList }, { id: "repuestos", label: "Repuestos", icon: Package }] },
+  { id: "operation", label: "Operaciones", items: [{ id: "profiles", label: "Perfiles", icon: ClipboardList }, { id: "transfers", label: "Transferencias", icon: ArrowRightLeft }, { id: "repuestos", label: "Repuestos", icon: Package }] },
   { id: "records", label: "Registros", items: [{ id: "clients", label: "Clientes", icon: Users }, { id: "catalog", label: "Controles", icon: Package }, { id: "trabajos", label: "Trabajos", icon: Wrench, adminOnly: true }] },
 ];
 export function AppShell({

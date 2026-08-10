@@ -160,6 +160,15 @@ The system uses softly rounded technical documents: primary surfaces use the sur
 - **Desktop:** Fixed navy rail with brand mark, icon-plus-label destinations, and a bottom-aligned new-order action. Active and hover items use a lighter navy row with white text.
 - **Tablet:** The rail keeps icons but hides its labels and supporting content.
 - **Mobile:** Sticky navy header, fixed white bottom bar for the first five destinations, and a left-side drawer for every destination plus the primary new-order action.
+- **Transfer entry:** Transferencias lives inside Operaciones and remains visible to both roles. Its mutation action is rendered only for Administración; read access never disappears because history is operational context.
+
+### Transfer Register
+
+- **List:** The transfer register uses the existing table-panel language: a search field, date boundaries, explicit order toggle, Excel export, and a ruled table with patente, effective date, previous client, new client, and notes.
+- **Mutation:** A protected wide dialog is justified because titularity is a sensitive, irreversible business action. It follows three labeled steps—select motorcycle, select new client, define effective date—and ends with a visible anterior-to-new summary before confirmation.
+- **Record truth:** Transfer dates are effective dates, not creation timestamps. Historical work orders keep their original client, while the motorcycle's Clientes tab shows the current owner and the transfer event history.
+- **States:** The flow includes empty search results, loading feedback, invalid ownership, inactive clients, same-client selection, future dates, API errors, disabled submission and success toast.
+- **Responsive behavior:** The register keeps the existing card-like mobile table conversion. The transfer dialog stacks fields, keeps the current-owner summary visible and makes the final action full width below 680px.
 
 ### Status Badges
 
