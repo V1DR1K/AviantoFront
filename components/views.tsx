@@ -19,7 +19,7 @@ import type {
   TallerResponse,
   TrabajoStatus,
 } from "../lib/types";
-import { Dialog, EmptyState, Pagination, SearchBox, StatusBadge } from "./ui";
+import { Dialog, EmptyState, Pagination, SearchBox, StatusBadge, type Notify } from "./ui";
 
 const date = (value: string) =>
   new Intl.DateTimeFormat("es-AR").format(new Date(value));
@@ -286,7 +286,7 @@ export function FichasView({
             <ArrowDownUp size={16} />
             {direction === "DESC" ? "Más recientes" : "Más antiguos"}
           </button>
-          <button className="button secondary" onClick={() => void download("/fichas/export.xlsx", "fichas.xlsx", params).catch((reason) => setError(errorMessage(reason)))}>
+           <button className="button secondary" onClick={() => void download("/fichas/export.xlsx", "fichas.xlsx", params).catch((reason) => setError(errorMessage(reason)))}>
             <Download size={17} />Exportar Excel
           </button>
         </div>
@@ -365,11 +365,13 @@ export function FichaDetail({
   onBack,
   onConfirm,
   onOpenMoto,
+  notify,
 }: {
   fichaKey: string;
   onBack: () => void;
   onConfirm: (label: string, action: () => void | Promise<void>) => void;
   onOpenMoto: (motoId: string) => void;
+  notify: Notify;
 }) {
   const [ficha, setFicha] = useState<FichaResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -412,6 +414,7 @@ export function FichaDetail({
     })
       .then(() => {
         setRevision(null);
+        notify("Revisión aprobada y ficha entregada.");
         onOpenMoto(ficha.motoId);
       })
       .catch((reason) => setError(errorMessage(reason)))
@@ -422,7 +425,7 @@ export function FichaDetail({
       method: "PATCH",
       body: JSON.stringify(body),
     })
-      .then(setRevision)
+      .then((next) => { setRevision(next); notify("Control de revisión actualizado."); })
       .catch((reason) => setError(errorMessage(reason)));
   if (!ficha)
     return (
@@ -431,12 +434,13 @@ export function FichaDetail({
         {error ? <p className="login-pending">{error}</p> : <p>Cargando ficha…</p>}
       </div>
     );
-  const update = async (path: string, body: Record<string, string>, id: string) => {
+  const update = async (path: string, body: Record<string, string>, id: string, successMessage?: string) => {
     if (pending) return;
     setPending(id);
     try {
       const next = await api<FichaResponse>(path, { method: "PATCH", body: JSON.stringify(body) });
       setFicha(next);
+      if (successMessage) notify(successMessage);
     } catch (reason) {
       setError(errorMessage(reason));
     } finally {
@@ -463,6 +467,7 @@ export function FichaDetail({
       setServiceDate("");
       setServiceNotes("");
       if (returnToMotoAfterService) onOpenMoto(ficha.motoId);
+      notify("Service registrado.");
     } catch (reason) {
       setError(errorMessage(reason));
     } finally {
@@ -475,17 +480,17 @@ export function FichaDetail({
   const currentStep = flowSteps.indexOf(current);
   const bottomActions: { key: string; label: string; className: string; onClick: () => void }[] = [];
   if (current === "Carga")
-    bottomActions.push({ key: "iniciar", label: "Comenzar trabajo", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "En proceso" }, "estado-en-proceso") });
+     bottomActions.push({ key: "iniciar", label: "Comenzar trabajo", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "En proceso" }, "estado-en-proceso", "Ficha marcada en proceso.") });
   else if (current === "En proceso")
-    bottomActions.push({ key: "revision", label: "Enviar a revisión", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Revisión" }, "estado-revision") });
+     bottomActions.push({ key: "revision", label: "Enviar a revisión", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Revisión" }, "estado-revision", "Ficha enviada a revisión.") });
   else if (current === "Revisión")
     bottomActions.push({ key: "aprobar", label: "Aprobar revisión y entregar", className: "primary", onClick: openDelivery });
   else if (current === "Entregada")
     bottomActions.push({ key: "service", label: "Registrar service", className: "primary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setReturnToMotoAfterService(false); setServiceOpen(true); } });
   if (ficha.estadoPago !== "Pagado")
-    bottomActions.push({ key: "pago", label: ficha.estadoPago === "Parcial" ? "Completar pago" : "Marcar como pagada", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/pago`, { estadoPago: "Pagado" }, "pago-pagado") });
+     bottomActions.push({ key: "pago", label: ficha.estadoPago === "Parcial" ? "Completar pago" : "Marcar como pagada", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/pago`, { estadoPago: "Pagado" }, "pago-pagado", "Pago marcado como completado.") });
   if (current !== "Entregada" && current !== "Cancelada")
-    bottomActions.push({ key: "cancelar", label: "Cancelar ficha", className: "danger", onClick: () => onConfirm("Cancelar ficha", () => update(`/fichas/${ficha.id}/estado`, { estado: "Cancelada" }, "estado-cancelada")) });
+     bottomActions.push({ key: "cancelar", label: "Cancelar ficha", className: "danger", onClick: () => onConfirm("Cancelar ficha", () => api<FichaResponse>(`/fichas/${ficha.id}/estado`, { method: "PATCH", body: JSON.stringify({ estado: "Cancelada" }) }).then(setFicha)) });
   return (
     <div className="page">
       <button className="back" onClick={onBack}>← Volver a fichas</button>
@@ -547,8 +552,8 @@ export function FichaDetail({
                   item={item}
                   locked={locked}
                   canDelete={current === "En proceso"}
-                  onDelete={() => onConfirm("Eliminar trabajo", () => api(`/fichas/${ficha.id}/trabajos/${item.id}`, { method: "DELETE" }).then(load))}
-                  onState={(estado) => void update(`/fichas/${ficha.id}/trabajos/${item.id}/estado`, { estado }, `item-${item.id}`)}
+                   onDelete={() => onConfirm("Eliminar trabajo", () => api(`/fichas/${ficha.id}/trabajos/${item.id}`, { method: "DELETE" }).then(load))}
+                   onState={(estado) => void update(`/fichas/${ficha.id}/trabajos/${item.id}/estado`, { estado }, `item-${item.id}`, "Trabajo actualizado.")}
                 />
               ))}
             </div>

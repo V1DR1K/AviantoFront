@@ -1,6 +1,10 @@
 "use client";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { AlertTriangle, CheckCircle2, Clock3, Search, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, Info, Search, X } from "lucide-react";
+
+export type ToastTone = "success" | "error" | "warning" | "info";
+export type ToastState = { message: string; tone: ToastTone };
+export type Notify = (message: string, tone?: ToastTone) => void;
 
 function statusToneValue(status: string) {
   const s = status.toLowerCase();
@@ -195,22 +199,29 @@ export function Dialog({
   );
 }
 export function Toast({
-  message,
+  notification,
   onClose,
 }: {
-  message: string | null;
+  notification: ToastState | null;
   onClose: () => void;
 }) {
   useEffect(() => {
-    if (!message) return;
+    if (!notification) return;
     const timer = window.setTimeout(onClose, 4000);
     return () => window.clearTimeout(timer);
-  }, [message, onClose]);
-  if (!message) return null;
+  }, [notification, onClose]);
+  if (!notification) return null;
+  const Icon = notification.tone === "success"
+    ? CheckCircle2
+    : notification.tone === "error"
+      ? AlertTriangle
+      : notification.tone === "warning"
+        ? Clock3
+        : Info;
   return (
-    <div className="toast" role="status">
-      <CheckCircle2 size={18} />
-      <span>{message}</span>
+    <div className={`toast toast-${notification.tone}`} role={notification.tone === "error" ? "alert" : "status"}>
+      <Icon size={18} aria-hidden="true" />
+      <span>{notification.message}</span>
       <button onClick={onClose} aria-label="Cerrar notificación">
         <X size={16} />
       </button>

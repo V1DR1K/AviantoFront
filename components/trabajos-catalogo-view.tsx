@@ -6,11 +6,11 @@ import { api } from "../lib/api";
 import { money, parsePrice } from "../lib/format";
 import type { TrabajoCatalogoResponse } from "../lib/types";
 import { AbmFormModal } from "./modal/abm-form-modal";
-import { ConfirmModal, Dialog, EmptyState, SearchBox } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, SearchBox, type Notify } from "./ui";
 
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar los trabajos.";
 
-export function TrabajosCatalogoView({ notify }: { notify: (message: string) => void }) {
+export function TrabajosCatalogoView({ notify }: { notify: Notify }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("Todos");
   const [rows, setRows] = useState<TrabajoCatalogoResponse[]>([]);
@@ -34,7 +34,7 @@ export function TrabajosCatalogoView({ notify }: { notify: (message: string) => 
       setEditing(null);
       load();
       notify(`Trabajo ${editing ? "actualizado" : "creado"}.`);
-    } catch (reason) { setError(errorMessage(reason)); }
+    } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); }
   };
   return <div className="page">
     <div className="page-heading">

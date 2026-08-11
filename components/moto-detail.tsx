@@ -16,7 +16,7 @@ import type {
   ServiceResponse,
   TransferResponse,
 } from "../lib/types";
-import { Dialog, EmptyState, Pagination, StatusBadge } from "./ui";
+import { Dialog, EmptyState, Pagination, StatusBadge, type Notify } from "./ui";
 
 const date = (value?: string | null) => (value ? new Intl.DateTimeFormat("es-AR").format(new Date(value.includes("T") ? value : `${value}T12:00:00`)) : "—");
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
@@ -39,7 +39,7 @@ export function MotoDetail({
   onOpenRepuesto: (repuesto: RepuestoResponse) => void;
   onNewFicha: (prefill: { motoId: string; clienteId?: string | null }) => void;
   onNewRepuesto: (prefill: { motoId: string; clienteId?: string | null }) => void;
-  notify: (message: string) => void;
+  notify: Notify;
 }) {
   const [tab, setTab] = useState<"general" | "client" | "services" | "fichas" | "repuestos">("general");
   const [moto, setMoto] = useState<MotovehiculoResponse | null>(null);
@@ -114,7 +114,7 @@ export function MotoDetail({
       setServiceDate("");
       setServiceNotes("");
       notify("Service registrado.");
-    } catch (reason) { setError(errorMessage(reason)); } finally { setServiceSaving(false); }
+    } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); } finally { setServiceSaving(false); }
   };
 
   const saveConfig = async () => {
@@ -133,7 +133,7 @@ export function MotoDetail({
       loadNext();
       setConfigOpen(false);
       notify("Configuración de service guardada.");
-    } catch (reason) { setError(errorMessage(reason)); } finally { setConfigSaving(false); }
+    } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); } finally { setConfigSaving(false); }
   };
 
   const openConfig = () => {

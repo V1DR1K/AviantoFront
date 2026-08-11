@@ -6,7 +6,7 @@ import { api, download } from "../lib/api";
 import { todayInAr } from "../lib/dates";
 import type { AutocompleteResponse, ClienteResponse, MotovehiculoResponse, PageResponse, TransferRequest, TransferResponse, TransferUpdateRequest } from "../lib/types";
 import { AbmFormModal } from "./modal/abm-form-modal";
-import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, type Notify } from "./ui";
 
 const date = (value?: string | null) => {
   if (!value) return "—";
@@ -30,7 +30,7 @@ function AutocompleteList({ items, onChoose }: { items: AutocompleteResponse[]; 
   </div>;
 }
 
-function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onClose: () => void; onSaved: () => void; notify: (message: string) => void }) {
+function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onClose: () => void; onSaved: () => void; notify: Notify }) {
   const [motoQuery, setMotoQuery] = useState("");
   const [motoSuggestions, setMotoSuggestions] = useState<AutocompleteResponse[]>([]);
   const [selectedMoto, setSelectedMoto] = useState<MotovehiculoResponse | null>(null);
@@ -95,8 +95,11 @@ function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onC
       chooseClient({ id: client.id, label: client.nombre, secondary: client.documento ?? client.telefono });
       setNewClientOpen(false);
       setError(null);
+      notify("Cliente creado.");
     } catch (reason) {
-      setError(errorMessage(reason));
+      const message = errorMessage(reason);
+      setError(message);
+      notify(message, "error");
     }
   };
   const submit = async (event: FormEvent) => {
@@ -168,11 +171,11 @@ function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onC
         <button type="submit" className="button primary" disabled={busy || !selectedMoto || !selectedClient}><ArrowRightLeft size={17} />{busy ? "Registrando..." : "Confirmar transferencia"}</button>
       </div>
     </form>
-    <AbmFormModal open={newClientOpen} resource="cliente" mode="agregar" fields={clientFields} onClose={() => setNewClientOpen(false)} onSubmit={createClient} />
+    <AbmFormModal open={newClientOpen} resource="cliente" mode="agregar" fields={clientFields} onClose={() => setNewClientOpen(false)} onSubmit={createClient} onError={(message) => notify(message, "error")} />
   </Dialog>;
 }
 
-function TransferEditDialog({ transfer, onClose, onSaved, notify }: { transfer: TransferResponse | null; onClose: () => void; onSaved: () => void; notify: (message: string) => void }) {
+function TransferEditDialog({ transfer, onClose, onSaved, notify }: { transfer: TransferResponse | null; onClose: () => void; onSaved: () => void; notify: Notify }) {
   const [clientQuery, setClientQuery] = useState(transfer?.clienteNuevo ?? "");
   const [clientSuggestions, setClientSuggestions] = useState<AutocompleteResponse[]>([]);
   const [selectedClient, setSelectedClient] = useState<AutocompleteResponse | null>(transfer ? { id: transfer.clienteNuevoId, label: transfer.clienteNuevo, secondary: "" } : null);
@@ -218,7 +221,7 @@ function TransferEditDialog({ transfer, onClose, onSaved, notify }: { transfer: 
   </Dialog>;
 }
 
-export function TransferenciasView({ canTransfer, onOpenMoto, notify }: { canTransfer: boolean; onOpenMoto: (id: string) => void; notify: (message: string) => void }) {
+export function TransferenciasView({ canTransfer, onOpenMoto, notify }: { canTransfer: boolean; onOpenMoto: (id: string) => void; notify: Notify }) {
   const [query, setQuery] = useState("");
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
@@ -245,7 +248,9 @@ export function TransferenciasView({ canTransfer, onOpenMoto, notify }: { canTra
       setReloadKey((value) => value + 1);
       notify("Transferencia eliminada y períodos recalculados.");
     } catch (reason) {
-      setError(errorMessage(reason));
+      const message = errorMessage(reason);
+      setError(message);
+      notify(message, "error");
     }
   };
   return <div className="page">
@@ -260,7 +265,7 @@ export function TransferenciasView({ canTransfer, onOpenMoto, notify }: { canTra
         <label><Filter size={16} /><span className="date-label">Desde</span><input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); setPage(1); }} /></label>
         <label><Filter size={16} /><span className="date-label">Hasta</span><input type="date" value={hasta} onChange={(event) => { setHasta(event.target.value); setPage(1); }} /></label>
         <button className="button secondary" onClick={() => { setDirection((value) => value === "DESC" ? "ASC" : "DESC"); setPage(1); }} aria-label="Cambiar orden de transferencias"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
-        <button className="button secondary" onClick={() => void download("/transferencias/export.xlsx", "transferencias.xlsx", params).catch((reason) => setError(errorMessage(reason)))}><Download size={17} />Exportar Excel</button>
+         <button className="button secondary" onClick={() => void download("/transferencias/export.xlsx", "transferencias.xlsx", params).catch((reason) => setError(errorMessage(reason)))}><Download size={17} />Exportar Excel</button>
       </div>
       {result?.content.length ? <table><thead><tr><th>Patente</th><th>Fecha</th><th>Cliente anterior</th><th>Cliente nuevo</th><th>Observaciones</th><th>Acciones</th></tr></thead><tbody>{result.content.map((transfer) => <tr key={transfer.id}><td data-label="Patente"><strong>{transfer.patente}</strong><small>{transfer.moto}</small></td><td data-label="Fecha">{date(transfer.fechaTransferencia)}</td><td data-label="Cliente anterior">{transfer.clienteAnterior}</td><td data-label="Cliente nuevo">{transfer.clienteNuevo}</td><td data-label="Observaciones">{transfer.observaciones || "—"}</td><td className="table-actions"><button onClick={() => onOpenMoto(transfer.motoId)} aria-label={`Ver moto ${transfer.patente}`}><Eye size={17} /></button>{canTransfer && <><button onClick={() => setEditing(transfer)} aria-label={`Editar transferencia de ${transfer.patente}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(transfer)} aria-label={`Eliminar transferencia de ${transfer.patente}`}><Trash2 size={17} /></button></>}</td></tr>)}</tbody></table> : result ? <EmptyState title="No hay transferencias" body="Probá ajustar los filtros o registrá una nueva transferencia." action={canTransfer ? <button className="button primary" onClick={() => setFlowOpen(true)}><Plus size={17} />Nueva transferencia</button> : undefined} /> : <div className="table-loading" role="status">Cargando transferencias...</div>}
       <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />

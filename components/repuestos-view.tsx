@@ -15,7 +15,7 @@ import type {
   RepuestoResponse,
   RepuestoState,
 } from "../lib/types";
-import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, StatusBadge } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, StatusBadge, type Notify } from "./ui";
 
 const date = (value: string) => new Intl.DateTimeFormat("es-AR").format(new Date(value));
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
@@ -28,11 +28,13 @@ export function RepuestosView({
   onOpen,
   notify,
   createPrefill,
+  startCreate = false,
   onPrefillHandled,
 }: {
   onOpen: (repuesto: RepuestoResponse) => void;
-  notify: (message: string) => void;
+  notify: Notify;
   createPrefill?: { motoId: string; clienteId?: string | null } | null;
+  startCreate?: boolean;
   onPrefillHandled?: () => void;
 }) {
   const [query, setQuery] = useState("");
@@ -44,7 +46,7 @@ export function RepuestosView({
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<PageResponse<RepuestoResponse> | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(startCreate);
   const [editing, setEditing] = useState<RepuestoResponse | null>(null);
   const [deleting, setDeleting] = useState<RepuestoResponse | null>(null);
   const [clients, setClients] = useState<ClienteResponse[]>([]);
@@ -149,7 +151,7 @@ function CreateRepuestoDialog({
   onClose: () => void;
   onSaved: (repuesto: RepuestoResponse) => void;
   onError: (message: string) => void;
-  notify: (message: string) => void;
+  notify: Notify;
 }) {
   const [clientId, setClientId] = useState(initial?.clienteId ?? prefill?.clienteId ?? "");
   const [motoId, setMotoId] = useState(initial?.motoId ?? prefill?.motoId ?? "");
@@ -219,7 +221,7 @@ function CreateRepuestoDialog({
           });
       notify(`Pedido ${repuesto.numero} ${initial ? "actualizado" : "creado"}.`);
       onSaved(repuesto);
-    } catch (reason) { onError(errorMessage(reason)); } finally { setSaving(false); }
+    } catch (reason) { const message = errorMessage(reason); onError(message); notify(message, "error"); } finally { setSaving(false); }
   };
   const setRow = (key: string, changes: Partial<typeof rows[number]>) => setRows((all) => all.map((row) => row.key === key ? { ...row, ...changes } : row));
   return (
@@ -260,7 +262,7 @@ export function RepuestoDetail({
 }: {
   repuestoId: string;
   onBack: () => void;
-  notify: (message: string) => void;
+  notify: Notify;
 }) {
   const [repuesto, setRepuesto] = useState<RepuestoResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -270,8 +272,8 @@ export function RepuestoDetail({
   if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><p className="login-pending">{error}</p></div>;
   if (!repuesto) return <div className="page">Cargando…</div>;
   const locked = repuesto.estado === "Cancelado";
-  const setItemState = async (itemId: string, estado: RepuestoItemState) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/items/${itemId}/estado`, { method: "PATCH", body: JSON.stringify({ estado }) }); setRepuesto(next); } catch (reason) { setError(errorMessage(reason)); } finally { setPending(false); } };
-  const patch = async (path: string, body: Record<string, string>) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(path, { method: "PATCH", body: JSON.stringify(body) }); setRepuesto(next); return next; } catch (reason) { setError(errorMessage(reason)); return null; } finally { setPending(false); } };
+  const setItemState = async (itemId: string, estado: RepuestoItemState) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/items/${itemId}/estado`, { method: "PATCH", body: JSON.stringify({ estado }) }); setRepuesto(next); notify(`Ítem marcado como ${estado}.`); } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); } finally { setPending(false); } };
+  const patch = async (path: string, body: Record<string, string>) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(path, { method: "PATCH", body: JSON.stringify(body) }); setRepuesto(next); return next; } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); return null; } finally { setPending(false); } };
   return (
     <div className="page">
       <button className="back" onClick={onBack}>← Volver a repuestos</button>

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Download, Edit3, Eye, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download } from "../lib/api";
 import type { AuditoriaResponse, ClienteResponse, ControlResponse, MarcaMotoResponse, MotovehiculoResponse, PageResponse } from "../lib/types";
-import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, type Notify } from "./ui";
 import { AbmFormModal, type AbmField, VehicleAbmModal } from "./modal/abm-form-modal";
 
 type Resource = "clients" | "vehicles" | "catalog" | "audit";
@@ -41,12 +41,12 @@ function cell(row: DataRow, column: string) {
   return "—";
 }
 
-export function AdminView({ resource, notify, onOpenVehicle, onOpenServices }: { resource: Resource; notify: (message: string) => void; onOpenVehicle?: (id: string) => void; onOpenServices?: () => void }) {
+export function AdminView({ resource, notify, onOpenVehicle, onOpenServices }: { resource: Resource; notify: Notify; onOpenVehicle?: (id: string) => void; onOpenServices?: () => void }) {
   if (resource === "audit") return <AuditView />;
   return <Records resource={resource} notify={notify} onOpenVehicle={onOpenVehicle} onOpenServices={onOpenServices} />;
 }
 
-function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource: Exclude<Resource, "audit">; notify: (message: string) => void; onOpenVehicle?: (id: string) => void; onOpenServices?: () => void }) {
+function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource: Exclude<Resource, "audit">; notify: Notify; onOpenVehicle?: (id: string) => void; onOpenServices?: () => void }) {
   const config = configs[resource]; const [rows, setRows] = useState<DataRow[]>([]); const [query, setQuery] = useState(""); const [filter, setFilter] = useState("Todos"); const [page, setPage] = useState(1); const [total, setTotal] = useState(1); const [editing, setEditing] = useState<DataRow | null>(null); const [detail, setDetail] = useState<DataRow | null>(null); const [deleting, setDeleting] = useState<DataRow | null>(null); const [clients, setClients] = useState<ClienteResponse[]>([]); const [brands, setBrands] = useState<MarcaMotoResponse[]>([]); const [error, setError] = useState<string | null>(null);
   const load = () => { const params = { q: query || undefined, activo: filter === "Todos" ? undefined : filter === "Activo", page: page - 1, size: 20 }; if (resource === "catalog") { void api<ControlResponse[]>("/configuracion/controles", {}, { includeDeleted: false }).then((list) => { setRows(list.map((item) => rowFor("catalog", item))); setTotal(1); }).catch((reason) => setError(requestError(reason))); return; } void api<PageResponse<ClienteResponse | MotovehiculoResponse>>(config.endpoint, {}, params).then((result) => { setRows(result.content.map((item) => rowFor(resource, item))); setTotal(result.totalPages || 1); }).catch((reason) => setError(requestError(reason))); };
   useEffect(load, [resource, query, filter, page, config.endpoint]);

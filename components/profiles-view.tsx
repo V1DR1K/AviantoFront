@@ -5,9 +5,9 @@ import { Edit3, Eye, Plus, Trash2 } from "lucide-react";
 import { api } from "../lib/api";
 import type { MarcaMotoResponse, PageResponse, PerfilResponse } from "../lib/types";
 import { AbmFormModal, type AbmField } from "./modal/abm-form-modal";
-import { ConfirmModal, EmptyState, Pagination, SearchBox, StatusBadge } from "./ui";
+import { ConfirmModal, EmptyState, Pagination, SearchBox, StatusBadge, type Notify } from "./ui";
 
-export function ProfilesView({ onNew, onOpen, notify }: { onNew: () => void; onOpen: (id: string) => void; notify: (message: string) => void }) {
+export function ProfilesView({ onNew, onOpen, notify }: { onNew: () => void; onOpen: (id: string) => void; notify: Notify }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<PageResponse<PerfilResponse> | null>(null);
@@ -42,7 +42,9 @@ export function ProfilesView({ onNew, onOpen, notify }: { onNew: () => void; onO
       setReloadKey((key) => key + 1);
       notify("Perfil actualizado.");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "No se pudo actualizar el perfil.");
+      const message = reason instanceof Error ? reason.message : "No se pudo actualizar el perfil.";
+      setError(message);
+      notify(message, "error");
     }
   };
   const removeProfile = async () => {
@@ -55,7 +57,9 @@ export function ProfilesView({ onNew, onOpen, notify }: { onNew: () => void; onO
       notify(`Perfil ${selected.patente} eliminado.`);
     } catch (reason) {
       setDeleting(null);
-      setError(reason instanceof Error ? reason.message : "No se pudo eliminar el perfil.");
+      const message = reason instanceof Error ? reason.message : "No se pudo eliminar el perfil.";
+      setError(message);
+      notify(message, "error");
     }
   };
   return <div className="page">

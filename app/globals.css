@@ -9,6 +9,7 @@
   --muted: #607188;
   --green: #137a4d;
   --red: #b42318;
+  --warning: #76510a;
   --white: #fff;
   --radius: 14px;
   --shadow: 0 12px 28px rgba(18, 53, 91, 0.09);
@@ -1120,6 +1121,8 @@ a.existing-photo {
   word-break: break-word;
 }
 .summary-group {
+  display: flex;
+  flex-direction: column;
   margin-top: 17px;
 }
 .summary-group h4 {
@@ -1130,10 +1133,14 @@ a.existing-photo {
   color: #51677e;
 }
 .summary-actions {
-  display: grid;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 8px;
 }
 .summary-actions .button {
+  width: auto;
+  flex: 1 1 auto;
   margin-top: 0;
   justify-content: flex-start;
   white-space: normal;
@@ -1721,12 +1728,21 @@ td.table-actions {
   display: flex;
   align-items: center;
   gap: 9px;
-  background: #103c2a;
+   background: var(--green);
   color: white;
   padding: 13px 15px;
   border-radius: 10px;
   box-shadow: 0 14px 34px rgba(11, 31, 56, 0.25);
   max-width: 390px;
+}
+.toast-error {
+  background: var(--red);
+}
+.toast-warning {
+  background: var(--warning);
+}
+.toast-info {
+  background: var(--navy);
 }
 .toast button {
   border: 0;

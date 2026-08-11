@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Dialog } from "../ui";
 import { priceInput } from "../../lib/format";
 import type { ClienteResponse, MarcaMotoResponse } from "../../lib/types";
@@ -27,18 +27,37 @@ export function AbmFormModal({
   initialValues = {},
   onClose,
   onSubmit,
+  onError,
 }: {
   open: boolean;
   resource: string;
   mode: "agregar" | "modificar";
   fields: AbmField[];
-  initialValues?: Record<string, string | number | boolean | null | undefined>;
+  initialValues?: unknown;
   onClose: () => void;
   onSubmit: (values: Record<string, string>) => void | Promise<unknown>;
+  onError?: (message: string) => void;
 }) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const valueFor = (field: AbmField) => values[field.key] ?? (field.type === "currency" ? priceInput(initialValues[field.key]) : String(initialValues[field.key] ?? ""));
+  const [error, setError] = useState<string | null>(null);
+  const initial = initialValues && typeof initialValues === "object" ? initialValues as Record<string, string | number | boolean | null | undefined> : {};
+  const valueFor = (field: AbmField) => values[field.key] ?? (field.type === "currency" ? priceInput(initial[field.key]) : String(initial[field.key] ?? ""));
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (saving) return;
+    setError(null);
+    setSaving(true);
+    try {
+      await onSubmit(Object.fromEntries(fields.map((field) => [field.key, valueFor(field)])));
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : "No fue posible guardar el registro.";
+      setError(message);
+      onError?.(message);
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
     <Dialog
       open={open}
@@ -48,20 +67,9 @@ export function AbmFormModal({
     >
       <form
         className="record-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (saving) return;
-          const result = onSubmit(
-            Object.fromEntries(
-              fields.map((field) => [field.key, valueFor(field)]),
-            ),
-          );
-          if (result instanceof Promise) {
-            setSaving(true);
-            void result.finally(() => setSaving(false));
-          }
-        }}
+        onSubmit={(event) => void submit(event)}
       >
+        {error && <p className="login-pending" role="alert">{error}</p>}
         {fields.map((field) => (
           <label
             key={field.key}

@@ -582,18 +582,18 @@ export function FichaForm({
                 />
               </label>
             </div>
-            {currentVehicle && <section className="panel moto-data-card">
-              <div className="panel-head"><h3>Datos de la moto</h3><span className="muted">Información del Perfil</span></div>
-              <dl className="record-detail">
-                <div><dt>Marca / modelo</dt><dd>{currentVehicle.marca} {currentVehicle.modelo}</dd></div>
-                <div><dt>Patente</dt><dd>{currentVehicle.patente}</dd></div>
-                <div><dt>Año</dt><dd>{currentVehicle.anio ?? "—"}</dd></div>
-                <div><dt>Kilometraje actual</dt><dd>{currentVehicle.kilometraje?.toLocaleString("es-AR") ?? "—"}</dd></div>
-                <div><dt>Estado</dt><dd>{currentVehicle.estado}</dd></div>
-                <div><dt>Observaciones</dt><dd>{currentVehicle.observaciones || "—"}</dd></div>
-              </dl>
-            </section>}
           </section>
+          {currentVehicle && <section className="panel moto-data-card">
+            <div className="panel-head"><h3>Datos de la moto</h3><span className="muted">Información del Perfil</span></div>
+            <dl className="record-detail">
+              <div><dt>Marca / modelo</dt><dd>{currentVehicle.marca} {currentVehicle.modelo}</dd></div>
+              <div><dt>Patente</dt><dd>{currentVehicle.patente}</dd></div>
+              <div><dt>Año</dt><dd>{currentVehicle.anio ?? "—"}</dd></div>
+              <div><dt>Kilometraje actual</dt><dd>{currentVehicle.kilometraje?.toLocaleString("es-AR") ?? "—"}</dd></div>
+              <div><dt>Estado</dt><dd>{currentVehicle.estado}</dd></div>
+              <div><dt>Observaciones</dt><dd>{currentVehicle.observaciones || "—"}</dd></div>
+            </dl>
+          </section>}
           <section className="form-section">
             <h2>2. Trabajos a realizar</h2>
             <div className="line-items">

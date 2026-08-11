@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { LogIn } from "lucide-react";
 import { login, type AuthSession } from "../lib/auth";
+import type { Notify } from "./ui";
 
-export function LoginView({ onAuthenticated }: { onAuthenticated: (session: AuthSession) => void }) {
+export function LoginView({ onAuthenticated, notify }: { onAuthenticated: (session: AuthSession) => void; notify: Notify }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   return (
@@ -28,8 +29,11 @@ export function LoginView({ onAuthenticated }: { onAuthenticated: (session: Auth
             setError(null);
             try {
               onAuthenticated(await login(String(data.get("username") ?? ""), String(data.get("password") ?? "")));
+              notify("Sesión iniciada.");
             } catch (reason) {
-              setError(reason instanceof Error ? reason.message : "No fue posible iniciar sesión.");
+              const message = reason instanceof Error ? reason.message : "No fue posible iniciar sesión.";
+              setError(message);
+              notify(message, "error");
             } finally {
               setPending(false);
             }

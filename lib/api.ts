@@ -26,6 +26,11 @@ async function messageFor(response: Response) {
   }
 }
 
+function notifyApiError(message: string, status: number) {
+  if (status !== 401 && typeof window !== "undefined")
+    window.dispatchEvent(new CustomEvent("avianto:api-error", { detail: { message, status } }));
+}
+
 export async function api<T>(
   path: string,
   init: RequestInit = {},
@@ -38,7 +43,11 @@ export async function api<T>(
       ...init.headers,
     },
   });
-  if (!response.ok) throw new ApiError(await messageFor(response), response.status);
+  if (!response.ok) {
+    const message = await messageFor(response);
+    notifyApiError(message, response.status);
+    throw new ApiError(message, response.status);
+  }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
@@ -49,7 +58,11 @@ export async function download(
   params?: Record<string, string | number | boolean | undefined>,
 ) {
   const response = await authenticatedFetch(apiUrl(path, params));
-  if (!response.ok) throw new ApiError(await messageFor(response), response.status);
+  if (!response.ok) {
+    const message = await messageFor(response);
+    notifyApiError(message, response.status);
+    throw new ApiError(message, response.status);
+  }
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -57,6 +70,8 @@ export async function download(
   anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
+  if (typeof window !== "undefined")
+    window.dispatchEvent(new CustomEvent("avianto:download-success", { detail: { filename } }));
 }
 
 export async function objectUrl(path: string) {
