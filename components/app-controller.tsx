@@ -21,6 +21,7 @@ import { AdminView, SettingsView } from "./admin-view";
 import { TrabajosCatalogoView } from "./trabajos-catalogo-view";
 import type { FichaResponse } from "../lib/types";
 import { LoginView } from "./login-view";
+import { IntakeView } from "./intake-view";
 import {
   clearSession,
   decodeAccessExpiry,
@@ -56,6 +57,7 @@ function routeState(pathname: string, search: string): RouteState {
   if (segments[0] === "perfiles" && segments[1] === "nuevo" && segments.length === 2) {
     return { page: "new-profile" };
   }
+  if (segments[0] === "ingresar" && segments.length === 1) return { page: "intake" };
   if (segments[0] === "perfiles" && segments.length === 1) return { page: "profiles" };
   if (segments[0] === "motos" && segments.length === 2) return { page: "profile", motoId: segments[1] };
   if (segments[0] === "fichas" && segments[1] === "nueva" && segments.length === 2) {
@@ -82,6 +84,8 @@ function routeState(pathname: string, search: string): RouteState {
     administracion: "settings",
     services: "services",
     reportes: "reports",
+    taller: "taller-dashboard",
+    ventas: "ventas-dashboard",
   };
   const page = segments.length === 1 ? pages[segments[0]] : undefined;
   return page ? { page } : { page: "dashboard", invalid: true };
@@ -99,13 +103,19 @@ const pathForPage = (page: string) => ({
   audit: "/auditoria",
   settings: "/administracion",
   services: "/services",
-  reports: "/reportes",
+    reports: "/reportes",
+    intake: "/ingresar",
+    "taller-dashboard": "/taller",
+    "ventas-dashboard": "/ventas",
   "new-profile": "/perfiles/nuevo",
   orders: "/fichas",
 }[page] ?? "/");
 
 const shellPage = (page: string) => {
   if (page === "new-profile" || page === "profile") return "profiles";
+  if (page === "intake") return "dashboard";
+  if (page === "taller-dashboard") return "taller-dashboard";
+  if (page === "ventas-dashboard") return "ventas-dashboard";
   if (page === "repuesto-create" || page === "repuesto") return "repuestos";
   return page;
 };
@@ -227,12 +237,18 @@ export function AppController() {
   let content: ReactNode;
   if (currentPage === "new-profile") {
     content = <ProfileForm onClose={() => navigate("/perfiles")} onOpenProfile={openMoto} onCreated={(id) => { notify("Perfil creado."); openMoto(id); }} notify={notify} />;
+  } else if (currentPage === "intake") {
+    content = <IntakeView onClose={() => navigate("/")} onOpenProfile={openMoto} notify={notify} />;
   } else if (currentPage === "create") {
     content = <FichaForm key={`${pathname}?${urlSearch}`} initialClientId={route.initialClientId} initialMotoId={route.initialMotoId} onClose={() => navigate(route.returnTo || "/perfiles")} onSave={(ficha) => { notify("Ficha creada."); setRefreshKey((key) => key + 1); openFicha(ficha); }} />;
   } else if (currentPage === "edit" && route.fichaId) {
     content = <FichaForm key={route.fichaId} fichaKey={route.fichaId} onClose={() => navigate("/perfiles")} onSave={() => { notify("Ficha actualizada."); setRefreshKey((key) => key + 1); navigate("/perfiles"); }} />;
   } else if (currentPage === "dashboard") {
-    content = <Dashboard onNewOrder={() => navigate("/perfiles/nuevo")} onSelect={openFicha} onOpenMoto={openMoto} userName={session.user.nombre} />;
+    content = <Dashboard onNewOrder={() => navigate("/perfiles/nuevo")} onIntake={() => navigate("/ingresar")} onSelect={openFicha} onOpenMoto={openMoto} userName={session.user.nombre} />;
+  } else if (currentPage === "taller-dashboard") {
+    content = <Dashboard initialSection="taller" onNewOrder={() => navigate("/perfiles/nuevo")} onIntake={() => navigate("/ingresar")} onSelect={openFicha} onOpenMoto={openMoto} userName={session.user.nombre} />;
+  } else if (currentPage === "ventas-dashboard") {
+    content = <Dashboard initialSection="ventas" onNewOrder={() => navigate("/perfiles/nuevo")} onIntake={() => navigate("/ingresar")} onSelect={openFicha} onOpenMoto={openMoto} userName={session.user.nombre} />;
   } else if (currentPage === "profiles") {
     content = <ProfilesView onNew={() => navigate("/perfiles/nuevo")} onOpen={openMoto} notify={notify} />;
   } else if (currentPage === "orders") {

@@ -1,4 +1,6 @@
-export type FichaStatus = "Carga" | "En proceso" | "Revisión" | "Entregada" | "Cancelada";
+export type FichaStatus = "Cargada" | "En proceso" | "Revisión" | "Entregada" | "Cancelada";
+export type MotoSection = "Taller" | "Venta";
+export type MotoStatus = "Fuera del taller" | "Ingresada Taller" | "Cargada" | "En proceso" | "En revisión" | "Entregada" | "Ingresada Venta" | "En venta" | "Transferencia en curso" | "Vendida";
 export type PagoStatus = "No pagado" | "Parcial" | "Pagado";
 export type TrabajoStatus = "Pendiente" | "Realizado" | "Cancelado";
 export type RepuestoItemType = "REPUESTO" | "ACCESORIO";export type RepuestoItemState = "Pendiente de pedir" | "Pedido" | "Recibido" | "Entregado" | "Cancelado";
@@ -69,7 +71,9 @@ export interface MotovehiculoResponse {
   patente: string;
   anio?: number | null;
   kilometraje?: number | null;
-  estado: "Carga" | "En proceso" | "Revisión" | "Entregada" | "Cancelada" | "Disponible";
+  seccion?: MotoSection | null;
+  ingresada: boolean;
+  estado: MotoStatus;
   kmUltimoService?: number | null;
   fechaUltimoService?: string | null;
   kmServicePeriodo: number | null;
@@ -347,12 +351,12 @@ export interface TallerMotoResponse {
   moto: string;
   cliente: string | null;
   kilometraje: number | null;
-  fichaId: string;
-  fichaNumero: string;
-  estado: FichaStatus;
+  fichaId: string | null;
+  fichaNumero: string | null;
+  estado: MotoStatus;
   fechaIngreso: string | null;
 }
-export interface TallerEstadoResponse { estado: FichaStatus; motos: TallerMotoResponse[]; }
+export interface TallerEstadoResponse { estado: MotoStatus; motos: TallerMotoResponse[]; }
 export interface TallerResponse { estados: TallerEstadoResponse[]; }
 export interface DashboardFichaResponse {
   id: string;
@@ -366,4 +370,7 @@ export interface DashboardFichaResponse {
 }
 export interface DashboardFichaEstadoResponse { estado: FichaStatus; fichas: DashboardFichaResponse[]; }
 export interface DashboardFichasResponse { estados: DashboardFichaEstadoResponse[]; }
+export interface VentaMotoResponse { motoId: string; patente: string; moto: string; cliente: string | null; kilometraje: number | null; estado: MotoStatus; fechaIngreso: string | null; }
+export interface VentaEstadoResponse { estado: MotoStatus; motos: VentaMotoResponse[]; }
+export interface VentaResponse { estados: VentaEstadoResponse[]; }
 export interface AutocompleteResponse { id: string; label: string; secondary?: string; }

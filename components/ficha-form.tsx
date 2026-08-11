@@ -90,7 +90,7 @@ export function FichaForm({
   const editing = Boolean(fichaKey);
   const [loadedEstado, setLoadedEstado] = useState<string | null>(null);
   const editable =
-    !editing || loadedEstado === "Carga" || loadedEstado === "En proceso";
+    !editing || loadedEstado === "Cargada" || loadedEstado === "En proceso";
   const [clients, setClients] = useState<ClienteResponse[]>([]);
   const [vehicles, setVehicles] = useState<MotovehiculoResponse[]>([]);
   const [patenteQuery, setPatenteQuery] = useState("");
@@ -202,12 +202,13 @@ export function FichaForm({
         setVehicleId("");
         return;
       }
-      setVehicles(page.content);
-      const owner = page.content.find(
+      const available = page.content.filter((moto) => moto.ingresada && moto.seccion === "Taller");
+      setVehicles(available);
+      const owner = available.find(
         (moto) => moto.propietarioId,
       )?.propietarioId;
       if (owner) chooseClient(owner);
-      setVehicleId(page.content[0]?.id ?? "");
+      setVehicleId(available[0]?.id ?? "");
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : "No se pudo buscar la moto.",
@@ -224,14 +225,15 @@ export function FichaForm({
       { clienteId: clientId, activo: true, size: 100 },
     )
       .then((page) => {
-        let first = page.content[0]?.id ?? "";
+        const available = page.content.filter((moto) => moto.ingresada && moto.seccion === "Taller");
+        let first = available[0]?.id ?? "";
         if (prefill.current?.motoId)
           first = page.content.some(
             (moto) => moto.id === prefill.current?.motoId,
           )
             ? prefill.current.motoId
             : first;
-        setVehicles(page.content);
+        setVehicles(available);
         setVehicleId(first);
         void (async () => {
           const missing =
@@ -464,7 +466,7 @@ export function FichaForm({
       {editing && !editable && (
         <p className="login-pending" role="alert">
           Esta ficha ya está en &quot;{loadedEstado}&quot;. Solo se pueden
-          editar fichas en &quot;Carga&quot; o &quot;En proceso&quot;.
+          editar fichas en &quot;Cargada&quot; o &quot;En proceso&quot;.
         </p>
       )}
       <div className="form-layout">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDownUp, Eye, Filter, Plus, Settings2 } from "lucide-react";
+import { ArrowDownUp, Eye, Filter, LogIn, LogOut, Plus, Settings2, Tag } from "lucide-react";
 import { api } from "../lib/api";
 import { money } from "../lib/format";
 import type {
@@ -20,7 +20,7 @@ import { Dialog, EmptyState, Pagination, StatusBadge, type Notify } from "./ui";
 
 const date = (value?: string | null) => (value ? new Intl.DateTimeFormat("es-AR").format(new Date(value.includes("T") ? value : `${value}T12:00:00`)) : "—");
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
-const fichaStates = ["Carga", "En proceso", "Revisión", "Entregada", "Cancelada"] as const;
+const fichaStates = ["Cargada", "En proceso", "Revisión", "Entregada", "Cancelada"] as const;
 const pagoStates: PagoStatus[] = ["No pagado", "Parcial", "Pagado"];
 const repuestoStates: RepuestoState[] = ["En curso", "Completado", "Cancelado"];
 
@@ -79,6 +79,8 @@ export function MotoDetail({
   const [configMonths, setConfigMonths] = useState("");
   const [configNotes, setConfigNotes] = useState("");
   const [configSaving, setConfigSaving] = useState(false);
+  const [intakeOpen, setIntakeOpen] = useState(false);
+  const [intakeSection, setIntakeSection] = useState<"TALLER" | "VENTA">("TALLER");
 
   const load = () =>
     void api<MotovehiculoResponse>(`/motovehiculos/${id}`)
@@ -142,6 +144,10 @@ export function MotoDetail({
     setConfigNotes(moto?.serviceObservaciones ?? "");
     setConfigOpen(true);
   };
+  const runMotoAction = async (path: string, options: RequestInit = {}) => {
+    try { const next = await api<MotovehiculoResponse>(path, options); setMoto(next); setIntakeOpen(false); notify("Estado de la moto actualizado."); }
+    catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); }
+  };
 
   if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><p className="login-pending">{error}</p></div>;
   if (!moto) return <div className="page">Cargando…</div>;
@@ -164,6 +170,7 @@ export function MotoDetail({
         </div>
         <div className="detail-stack">
           <StatusBadge status={moto.estado} />
+          {!moto.ingresada ? <button className="button secondary" onClick={() => setIntakeOpen(true)}><LogIn size={17} />Ingresar</button> : moto.seccion === "Venta" && moto.estado === "Ingresada Venta" ? <button className="button secondary" onClick={() => void runMotoAction(`/motovehiculos/${moto.id}/venta/estado`, { method: "PATCH", body: JSON.stringify({ estado: "En venta" }) })}><Tag size={17} />Marcar en venta</button> : moto.seccion === "Venta" && moto.estado === "Transferencia en curso" ? <button className="button primary" onClick={() => void runMotoAction(`/motovehiculos/${moto.id}/venta/completar`, { method: "POST" })}><LogOut size={17} />Completar venta</button> : <button className="button secondary" onClick={() => void runMotoAction(`/motovehiculos/${moto.id}/entrega`, { method: "POST" })}><LogOut size={17} />Entregar</button>}
           <strong>{moto.anio ?? "—"}</strong>
         </div>
       </div>
@@ -224,7 +231,7 @@ export function MotoDetail({
       )}
       {tab === "fichas" && (
         <section className="panel table-panel">
-          <div className="panel-head"><div><h2>Ficha</h2><p>Trabajo actual e historial de ingresos al taller.</p></div><button className="button secondary" onClick={() => onNewFicha({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nueva ficha</button></div>
+           <div className="panel-head"><div><h2>Ficha</h2><p>Trabajo actual e historial de ingresos al taller.</p></div><button className="button secondary" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewFicha({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nueva ficha</button></div>
           <div className="filter-bar">
             <label><span className="date-label">Desde</span><input type="date" value={fichaDesde} onChange={(event) => { setFichaDesde(event.target.value); setFichaPage(1); }} /></label>
             <label><span className="date-label">Hasta</span><input type="date" value={fichaHasta} onChange={(event) => { setFichaHasta(event.target.value); setFichaPage(1); }} /></label>
@@ -244,7 +251,7 @@ export function MotoDetail({
       )}
       {tab === "repuestos" && (
         <section className="panel table-panel">
-          <div className="panel-head"><h2>Pedidos de repuestos</h2><button className="button secondary" onClick={() => onNewRepuesto({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nuevo pedido</button></div>
+           <div className="panel-head"><h2>Pedidos de repuestos</h2><button className="button secondary" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewRepuesto({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nuevo pedido</button></div>
           <div className="filter-bar">
             <label><span className="date-label">Desde</span><input type="date" value={repuestoDesde} onChange={(event) => { setRepuestoDesde(event.target.value); setRepuestoPage(1); }} /></label>
             <label><span className="date-label">Hasta</span><input type="date" value={repuestoHasta} onChange={(event) => { setRepuestoHasta(event.target.value); setRepuestoPage(1); }} /></label>
@@ -278,6 +285,7 @@ export function MotoDetail({
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setConfigOpen(false)}>Cancelar</button><button className="button primary" disabled={configSaving}>{configSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>
       </Dialog>
+      <Dialog open={intakeOpen} title="Ingresar moto" onClose={() => setIntakeOpen(false)}><p>Elegí el destino operativo para esta moto.</p><div className="intake-options"><button className={intakeSection === "TALLER" ? "selected" : ""} onClick={() => setIntakeSection("TALLER")}>Taller</button><button className={intakeSection === "VENTA" ? "selected" : ""} onClick={() => setIntakeSection("VENTA")}>Ventas</button></div><div className="modal-actions"><button className="button secondary" onClick={() => setIntakeOpen(false)}>Cancelar</button><button className="button primary" onClick={() => void runMotoAction(`/motovehiculos/${moto.id}/ingreso`, { method: "POST", body: JSON.stringify({ seccion: intakeSection }) })}>Ingresar</button></div></Dialog>
     </div>
   );
 }

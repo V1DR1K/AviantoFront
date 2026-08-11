@@ -105,6 +105,7 @@ function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onC
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!selectedMoto) return setError("Seleccioná la moto que querés transferir.");
+    if (selectedMoto.seccion !== "Venta" || !selectedMoto.ingresada || selectedMoto.estado !== "En venta") return setError("La moto debe estar ingresada en Ventas y marcada En venta.");
     if (!selectedMoto.propietarioId || !selectedMoto.propietario) return setError("La moto no tiene un propietario actual.");
     if (!selectedClient) return setError("Seleccioná el nuevo cliente.");
     if (selectedClient.id === selectedMoto.propietarioId) return setError("El nuevo cliente debe ser diferente al actual.");
@@ -115,7 +116,7 @@ function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onC
       await api<TransferResponse>("/transferencias", { method: "POST", body: JSON.stringify(payload) });
       reset();
       onClose();
-      notify("Transferencia registrada.");
+       notify("Transferencia en curso. Completá la venta desde el perfil de la moto.");
       onSaved();
     } catch (reason) { setError(errorMessage(reason)); } finally { setBusy(false); }
   };

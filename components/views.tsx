@@ -17,6 +17,7 @@ import type {
   RevisionResponse,
   ServiceResponse,
   TallerResponse,
+  VentaResponse,
   TrabajoStatus,
 } from "../lib/types";
 import { Dialog, EmptyState, Pagination, SearchBox, StatusBadge, type Notify } from "./ui";
@@ -26,7 +27,7 @@ const date = (value: string) =>
 const errorMessage = (reason: unknown) =>
   reason instanceof Error ? reason.message : "No fue posible cargar la información.";
 const tabKey = (estado: string) =>
-  ({ "Carga": "carga", "En proceso": "en-proceso", "Revisión": "revision", "Entregada": "entregada", "Cancelada": "cancelada" } as Record<string, string>)[estado] ?? "carga";
+  ({ "Ingresada Taller": "ingresada", "Cargada": "cargada", "En proceso": "en-proceso", "En revisión": "revision", "Entregada": "entregada", "Cancelada": "cancelada", "Ingresada Venta": "ingresada", "En venta": "en-venta", "Transferencia en curso": "transferencia", "Vendida": "vendida" } as Record<string, string>)[estado] ?? "estado";
 function Metric({ label, value, tone }: { label: string; value: string; tone: string }) {
   return <section className={`metric ${tone}`}><span>{label}</span><strong>{value}</strong><small>Período seleccionado</small></section>;
 }
@@ -72,42 +73,53 @@ function OrderPhotos({ photos, onChange }: { photos: PhotoResponse[]; onChange: 
   );
 }
 
-const fichaStatuses: FichaStatus[] = ["Carga", "En proceso", "Revisión", "Entregada", "Cancelada"];
+const fichaStatuses: FichaStatus[] = ["Cargada", "En proceso", "Revisión", "Entregada", "Cancelada"];
 
 export function Dashboard({
   onNewOrder,
+  onIntake,
   onSelect,
   onOpenMoto,
   userName,
+  initialSection = "taller",
 }: {
   onNewOrder: () => void;
+  onIntake?: () => void;
   onSelect: (ficha: FichaResponse) => void;
   onOpenMoto: (id: string) => void;
   userName?: string;
+  initialSection?: "taller" | "ventas";
 }) {
   const [taller, setTaller] = useState<TallerResponse | null>(null);
   const [fichasAgrupadas, setFichasAgrupadas] = useState<DashboardFichasResponse | null>(null);
+  const [ventas, setVentas] = useState<VentaResponse | null>(null);
   const [groupBy, setGroupBy] = useState<"moto" | "ficha">("moto");
-  const [tab, setTab] = useState<FichaStatus>("Carga");
+  const [section, setSection] = useState<"taller" | "ventas">(initialSection);
+  const [tab, setTab] = useState<string>(initialSection === "ventas" ? "Ingresada Venta" : "Ingresada Taller");
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     void Promise.all([
       api<TallerResponse>("/dashboard/taller"),
       api<DashboardFichasResponse>("/dashboard/fichas"),
+      api<VentaResponse>("/dashboard/ventas"),
     ])
-      .then(([nextTaller, nextFichas]) => { setTaller(nextTaller); setFichasAgrupadas(nextFichas); })
+      .then(([nextTaller, nextFichas, nextVentas]) => { setTaller(nextTaller); setFichasAgrupadas(nextFichas); setVentas(nextVentas); })
       .catch((reason) => setError(errorMessage(reason)));
   }, []);
   const talleres = taller?.estados ?? [];
+  const ventasEstados = ventas?.estados ?? [];
   const motos = talleres.find((item) => item.estado === tab)?.motos ?? [];
   const fichas = fichasAgrupadas?.estados.find((item) => item.estado === tab)?.fichas ?? [];
   const estados = groupBy === "moto" ? talleres : fichasAgrupadas?.estados ?? [];
-  const count = (estado: FichaStatus) => {
+  const count = (estado: string) => {
     const item = estados.find((entry) => entry.estado === estado);
     return item ? "motos" in item ? item.motos.length : item.fichas.length : 0;
   };
-  const visible = groupBy === "moto" ? motos.length : fichas.length;
-  const label = groupBy === "moto" ? "motos" : "fichas";
+  const salesCount = (estado: string) => ventasEstados.find((entry) => entry.estado === estado)?.motos.length ?? 0;
+  const sales = ventasEstados.find((item) => item.estado === tab)?.motos ?? [];
+  const visible = section === "ventas" ? sales.length : groupBy === "moto" ? motos.length : fichas.length;
+  const label = section === "ventas" ? "motos" : groupBy === "moto" ? "motos" : "fichas";
+  const changeSection = (next: "taller" | "ventas") => { setSection(next); setTab(next === "ventas" ? "Ingresada Venta" : groupBy === "moto" ? "Ingresada Taller" : "Cargada"); };
   return (
     <div className="page">
       <div className="page-heading">
@@ -115,19 +127,29 @@ export function Dashboard({
           <h1>Buenos días, {userName}</h1>
           <p>Estado actual del taller.</p>
         </div>
-        <button className="button primary" onClick={onNewOrder}>
-          <Plus size={19} />Nueva ficha
-        </button>
+        <div className="page-actions"><button className="button secondary" onClick={onIntake}><Plus size={19} />Ingresar moto</button><button className="button primary" onClick={onNewOrder}><Plus size={19} />Nuevo perfil</button></div>
       </div>
       {error && <p className="login-pending">{error}</p>}
       {taller && fichasAgrupadas && (
         <>
+          <nav className="tabs dashboard-section-tabs" aria-label="Sección del dashboard">
+            <button className={section === "taller" ? "active" : ""} onClick={() => changeSection("taller")}>Taller</button>
+            <button className={section === "ventas" ? "active" : ""} onClick={() => changeSection("ventas")}>Ventas</button>
+          </nav>
           <div className="metrics dashboard-metrics">
-            <DashboardMetric label="En pantalla" value={`${visible} ${label}`} detail={`${tab} · agrupadas por ${groupBy}`} />
-            <DashboardMetric label="En curso" value={String(count("Carga") + count("En proceso") + count("Revisión"))} detail={`${label} en carga, proceso o revisión`} />
-            <DashboardMetric label="Entregadas" value={String(count("Entregada"))} detail={`${label} finalizadas`} />
-            <DashboardMetric label="Canceladas" value={String(count("Cancelada"))} detail={`${label} sin continuar`} />
+            <DashboardMetric label="En pantalla" value={`${visible} ${label}`} detail={`${tab} · ${section === "ventas" ? "ventas" : `agrupadas por ${groupBy}`}`} />
+            <DashboardMetric label={section === "ventas" ? "En venta" : "En curso"} value={String(section === "ventas" ? sales.length : count("Cargada") + count("En proceso") + count("En revisión"))} detail={section === "ventas" ? "motos disponibles o en gestión" : `${label} en carga, proceso o revisión`} />
+            <DashboardMetric label={section === "ventas" ? "Vendidas" : "Entregadas"} value={String(section === "ventas" ? salesCount("Vendida") : count("Entregada"))} detail={section === "ventas" ? "transferencias completadas" : `${label} finalizadas`} />
+            <DashboardMetric label={section === "ventas" ? "En transferencia" : "Ingresadas"} value={String(section === "ventas" ? salesCount("Transferencia en curso") : count("Ingresada Taller"))} detail={section === "ventas" ? "operaciones en curso" : "motos dentro del taller"} />
           </div>
+          {section === "ventas" ? (
+            <section className="table-panel taller-panel">
+              <nav className="tabs taller-tabs" aria-label="Estado de las ventas">
+                {ventasEstados.map((item) => <button key={item.estado} className={`${tab === item.estado ? "active" : ""} tab-${tabKey(item.estado)}`} onClick={() => setTab(item.estado)}>{item.estado}<span className="tab-count">{item.motos.length}</span></button>)}
+              </nav>
+              {sales.length ? <table><thead><tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Estado</th><th /></tr></thead><tbody>{sales.map((moto) => <tr key={moto.motoId}><td data-label="Moto">{moto.patente}<small>{moto.moto}</small></td><td data-label="Cliente">{moto.cliente ?? "—"}</td><td data-label="KM actual">{moto.kilometraje != null ? moto.kilometraje.toLocaleString("es-AR") : "—"}</td><td data-label="Estado"><StatusBadge status={moto.estado} /></td><td data-label="Acción"><button className="row-action" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button></td></tr>)}</tbody></table> : <EmptyState title={`Sin motos ${tab.toLowerCase()}`} body="No hay motos en este estado por el momento." />}
+            </section>
+          ) : (
           <section className="table-panel taller-panel">
             <nav className="tabs dashboard-group-tabs" aria-label="Agrupar tablero">
               <button className={groupBy === "moto" ? "active" : ""} onClick={() => setGroupBy("moto")}>Agrupar por moto</button>
@@ -148,7 +170,7 @@ export function Dashboard({
             {groupBy === "moto" && (motos.length ? (
               <table>
                 <thead>
-                  <tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Ingreso</th><th>Ficha</th><th>Estado</th><th /></tr>
+                   <tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Ingreso</th><th>Ficha</th><th>Estado</th><th /></tr>
                 </thead>
                 <tbody>
                   {motos.map((moto) => (
@@ -157,7 +179,7 @@ export function Dashboard({
                       <td data-label="Cliente">{moto.cliente}</td>
                       <td data-label="KM actual">{moto.kilometraje != null ? moto.kilometraje.toLocaleString("es-AR") : "—"}</td>
                       <td data-label="Ingreso">{moto.fechaIngreso ? date(moto.fechaIngreso) : "—"}</td>
-                      <td data-label="Ficha">{moto.fichaNumero}</td>
+                       <td data-label="Ficha">{moto.fichaNumero ?? "—"}</td>
                       <td data-label="Estado"><StatusBadge status={moto.estado} /></td>
                       <td data-label="Acción"><button className="row-action" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button></td>
                     </tr>
@@ -190,6 +212,7 @@ export function Dashboard({
               <EmptyState title={`Sin fichas en ${tab}`} body="No hay fichas en este estado por el momento." />
             ))}
           </section>
+          )}
         </>
       )}
     </div>
@@ -297,7 +320,7 @@ export function FichasView({
             </thead>
             <tbody>
               {result.content.map((ficha) => {
-                const editable = ficha.estado === "Carga" || ficha.estado === "En proceso";
+                 const editable = ficha.estado === "Cargada" || ficha.estado === "En proceso";
                 return (
                   <tr key={ficha.id}>
                     <td data-label="Ficha">{ficha.numero}</td>
@@ -476,10 +499,10 @@ export function FichaDetail({
   };
   const locked = current === "Cancelada" || current === "Entregada";
   const pendingControls = revision?.controles.filter((control) => control.estado === "Pendiente") ?? [];
-  const flowSteps: FichaStatus[] = ["Carga", "En proceso", "Revisión", "Entregada"];
+  const flowSteps: FichaStatus[] = ["Cargada", "En proceso", "Revisión", "Entregada"];
   const currentStep = flowSteps.indexOf(current);
   const bottomActions: { key: string; label: string; className: string; onClick: () => void }[] = [];
-  if (current === "Carga")
+   if (current === "Cargada")
      bottomActions.push({ key: "iniciar", label: "Comenzar trabajo", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "En proceso" }, "estado-en-proceso", "Ficha marcada en proceso.") });
   else if (current === "En proceso")
      bottomActions.push({ key: "revision", label: "Enviar a revisión", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Revisión" }, "estado-revision", "Ficha enviada a revisión.") });

@@ -19,7 +19,8 @@ import {
 import type { AuthSession } from "../lib/auth";
 const home = { id: "dashboard", label: "Inicio", icon: LayoutDashboard };
 const navGroups = [
-  { id: "operation", label: "Operaciones", items: [{ id: "profiles", label: "Perfiles", icon: ClipboardList }, { id: "transfers", label: "Transferencias", icon: ArrowRightLeft }, { id: "repuestos", label: "Repuestos", icon: Package }] },
+  { id: "taller", label: "Taller", items: [{ id: "taller-dashboard", label: "Dashboard Taller", icon: LayoutDashboard }, { id: "profiles", label: "Perfiles", icon: ClipboardList }, { id: "repuestos", label: "Pedidos", icon: Package }] },
+  { id: "ventas", label: "Ventas", items: [{ id: "ventas-dashboard", label: "Dashboard Ventas", icon: LayoutDashboard }, { id: "transfers", label: "Transferencias", icon: ArrowRightLeft }] },
   { id: "records", label: "Registros", items: [{ id: "clients", label: "Clientes", icon: Users }, { id: "catalog", label: "Controles", icon: Package }, { id: "trabajos", label: "Trabajos", icon: Wrench, adminOnly: true }] },
 ];
 export function AppShell({

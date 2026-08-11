@@ -115,7 +115,7 @@ export function RepuestosView({
         prefill={createPrefill}
         clients={clients}
         notify={notify}
-        onLoadVehicles={async (clienteId) => { const r = await api<PageResponse<MotovehiculoResponse>>("/motovehiculos", {}, { clienteId, size: 100, activo: true }); return r.content; }}
+         onLoadVehicles={async (clienteId) => { const r = await api<PageResponse<MotovehiculoResponse>>("/motovehiculos", {}, { clienteId, size: 100, activo: true }); return r.content.filter((moto) => moto.ingresada && moto.seccion === "Taller"); }}
         onClose={() => { setCreateOpen(false); setEditing(null); onPrefillHandled?.(); }}
         onSaved={(repuesto) => { setCreateOpen(false); setEditing(null); onPrefillHandled?.(); refresh(); onOpen(repuesto); }}
         onError={setError}
