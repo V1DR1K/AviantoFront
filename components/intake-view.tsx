@@ -18,13 +18,20 @@ export function IntakeView({ open, onClose, onOpenProfile, notify }: { open: boo
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [brandsError, setBrandsError] = useState<string | null>(null);
+  const [clientsError, setClientsError] = useState<string | null>(null);
 
   useEffect(() => {
-    void Promise.all([
-      api<MarcaMotoResponse[]>("/configuracion/marcas-moto"),
-      api<PageResponse<ClienteResponse>>("/clientes", {}, { activo: true, size: 100 }),
-    ]).then(([nextBrands, nextClients]) => { setBrands(nextBrands.filter((item) => item.activo)); setClients(nextClients.content); }).catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudieron cargar los datos."));
-  }, []);
+    if (!open) return;
+    let active = true;
+    void api<MarcaMotoResponse[]>("/configuracion/marcas-moto")
+      .then((nextBrands) => { if (active) { setBrands(nextBrands.filter((item) => item.activo)); setBrandsError(null); } })
+      .catch((reason) => { if (active) setBrandsError(reason instanceof Error ? reason.message : "No se pudieron cargar las marcas."); });
+    void api<PageResponse<ClienteResponse>>("/clientes", {}, { activo: true, size: 100 })
+      .then((nextClients) => { if (active) { setClients(nextClients.content.filter((client) => client.activo)); setClientsError(null); } })
+      .catch((reason) => { if (active) setClientsError(reason instanceof Error ? reason.message : "No se pudieron cargar los clientes."); });
+    return () => { active = false; };
+  }, [open]);
 
   const search = async () => {
     const normalized = plate.replace(/[^a-z0-9]/gi, "").toUpperCase();
@@ -51,9 +58,19 @@ export function IntakeView({ open, onClose, onOpenProfile, notify }: { open: boo
     } catch (reason) { const message = reason instanceof Error ? reason.message : "No se pudo ingresar la moto."; setError(message); notify(message, "error"); }
     finally { setBusy(false); }
   };
+  const loadingBrands = open && !brands.length && !brandsError;
+  const loadingClients = open && !clients.length && !clientsError;
+  const optionsError = [brandsError && `Marcas: ${brandsError}`, clientsError && `Clientes: ${clientsError}`].filter(Boolean).join(" ") || null;
+  const brandOptions = brands.length
+    ? brands.map((brand) => ({ value: brand.id, label: brand.nombre }))
+    : [{ value: "__brands-empty", label: loadingBrands ? "Cargando marcas..." : "No hay marcas disponibles", disabled: true }];
+  const clientOptions = clients.length
+    ? clients.map((client) => ({ value: client.id, label: client.nombre }))
+    : [{ value: "__clients-empty", label: loadingClients ? "Cargando clientes..." : "No hay clientes disponibles", disabled: true }];
   return <Dialog open={open} title="Ingresar una moto" onClose={onClose} wide className="intake-modal">
      <p>Buscá la moto y elegí el destino operativo antes de abrir su perfil.</p>
      {error && <p className="login-pending" role="alert">{error}</p>}
+     {optionsError && <p className="login-pending" role="alert">{optionsError}</p>}
       <section className="panel intake-card">
         <div className="intake-field">
           <label htmlFor="intake-plate">Dominio</label>
@@ -63,7 +80,7 @@ export function IntakeView({ open, onClose, onOpenProfile, notify }: { open: boo
           </div>
         </div>
         {searched && profile && <div className="intake-found"><div><strong>{profile.patente}</strong><span>{profile.marca} {profile.modelo} · {profile.propietario ?? "Sin propietario"}</span></div><StatusBadge status={profile.estado} /></div>}
-        {searched && !profile && <section className="intake-new-profile"><h3>Perfil nuevo</h3><div className="two-col"><SelectField label="Marca" value={values.marcaId ?? ""} onChange={(value) => set("marcaId", value)} placeholder="Seleccionar" options={brands.map((brand) => ({ value: brand.id, label: brand.nombre }))} required /><label className="intake-field">Modelo<input value={values.modelo ?? ""} onChange={(event) => set("modelo", event.target.value)} placeholder="Ej.: Wave 110, FZ 25..." autoComplete="off" /></label><SelectField label="Cliente" value={values.clienteId ?? ""} onChange={(value) => set("clienteId", value)} placeholder="Seleccionar" options={clients.map((client) => ({ value: client.id, label: client.nombre }))} required /><button type="button" className="button secondary" onClick={() => setNewClientOpen(true)}><Plus size={17} />Agregar cliente</button></div></section>}
+        {searched && !profile && <section className="intake-new-profile"><h3>Perfil nuevo</h3><div className="two-col"><SelectField label="Marca" value={values.marcaId ?? ""} onChange={(value) => set("marcaId", value)} placeholder="Seleccionar" options={brandOptions} required /><label className="intake-field">Modelo<input value={values.modelo ?? ""} onChange={(event) => set("modelo", event.target.value)} placeholder="Ej.: Wave 110, FZ 25..." autoComplete="off" /></label><SelectField label="Cliente" value={values.clienteId ?? ""} onChange={(value) => set("clienteId", value)} placeholder="Seleccionar" options={clientOptions} required /><button type="button" className="button secondary" onClick={() => setNewClientOpen(true)}><Plus size={17} />Agregar cliente</button></div></section>}
      </section>
      {searched && <section className="panel intake-destination"><h2>Destino de ingreso</h2><div className="intake-options"><button type="button" className={section === "TALLER" ? "selected" : ""} onClick={() => setSection("TALLER")}><strong>Taller</strong><span>Fichas de trabajo y pedidos de repuestos.</span></button><button type="button" className={section === "VENTA" ? "selected" : ""} onClick={() => setSection("VENTA")}><strong>Ventas</strong><span>Publicación y transferencia de la moto.</span></button></div><button className="button primary large" disabled={busy || Boolean(profile?.ingresada)} onClick={() => void submit()}><ArrowRight size={18} />{busy ? "Ingresando..." : "Ingresar y abrir perfil"}</button></section>}
      <AbmFormModal open={newClientOpen} resource="cliente" mode="agregar" fields={[{ key: "nombre", label: "Nombre y apellido", required: true, wide: true }, { key: "telefono", label: "Teléfono", type: "tel", required: true }, { key: "documento", label: "DNI o CUIT" }]} onClose={() => setNewClientOpen(false)} onSubmit={async (clientValues) => { const client = await api<ClienteResponse>("/clientes", { method: "POST", body: JSON.stringify(clientValues) }); setClients((all) => [...all, client]); set("clienteId", client.id); setNewClientOpen(false); notify("Cliente creado."); }} onError={(message) => notify(message, "error")} />
