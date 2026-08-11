@@ -418,11 +418,8 @@ export function ConfirmModal({
   if (!open) return null;
   const run = () => {
     if (pending) return;
-    const result = onConfirm();
-    if (result instanceof Promise) {
-      setPending(true);
-      void result.finally(() => setPending(false));
-    }
+    setPending(true);
+    void Promise.resolve().then(onConfirm).catch(() => undefined).finally(() => setPending(false));
   };
   return (
     <div className="modal-backdrop">

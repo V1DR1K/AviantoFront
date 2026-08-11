@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppShell } from "./app-shell";
 import { FichaForm } from "./ficha-form";
@@ -48,6 +48,9 @@ type RouteState = {
 
 const safeReturnTo = (value: string | null) =>
   value && value.startsWith("/") ? value : undefined;
+
+const confirmationError = (reason: unknown) =>
+  reason instanceof Error ? reason.message : "No fue posible completar la acción.";
 
 function routeState(pathname: string, search: string): RouteState {
   const segments = pathname.split("/").filter(Boolean).map(decodeURIComponent);
@@ -143,11 +146,21 @@ export function AppController() {
   const [session, setSession] = useState<AuthSession | null | undefined>(undefined);
   const [refreshKey, setRefreshKey] = useState(0);
   const [confirmation, setConfirmation] = useState<{
-    label: string;
+    title: string;
+    body: string;
+    confirmLabel: string;
+    successMessage: string;
+    variant?: "danger" | "success";
     action: () => void | Promise<unknown>;
   } | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
-  const notify: Notify = (message, tone = "success") => setToast({ message, tone });
+  const lastToast = useRef<{ message: string; tone: ToastState["tone"]; at: number } | null>(null);
+  const notify = useCallback<Notify>((message, tone = "success") => {
+    const now = Date.now();
+    if (lastToast.current?.message === message && lastToast.current.tone === tone && now - lastToast.current.at < 500) return;
+    lastToast.current = { message, tone, at: now };
+    setToast({ message, tone });
+  }, []);
   const route = routeState(pathname || "/", urlSearch);
 
   useEffect(() => {
@@ -190,7 +203,7 @@ export function AppController() {
       window.removeEventListener("avianto:api-error", apiError);
       window.removeEventListener("avianto:download-success", downloadSuccess);
     };
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     if (!session) return;
@@ -209,7 +222,7 @@ export function AppController() {
     };
     const id = window.setInterval(tick, 60_000);
     return () => window.clearInterval(id);
-  }, [session]);
+  }, [notify, session]);
 
   useEffect(() => {
     if (route.invalid) router.replace("/");
@@ -246,21 +259,21 @@ export function AppController() {
   if (currentPage === "new-profile") {
     content = <ProfileForm onClose={() => navigate("/perfiles")} onOpenProfile={openMoto} onCreated={(id) => { notify("Perfil creado."); openMoto(id); }} notify={notify} />;
   } else if (currentPage === "create") {
-     content = <FichaForm key={`${pathname}?${urlSearch}`} initialClientId={route.initialClientId} initialMotoId={route.initialMotoId} onClose={() => navigate(route.returnTo || "/perfiles")} onSave={(ficha) => { notify("Ficha creada."); setRefreshKey((key) => key + 1); openFicha(ficha, route.returnTo); }} />;
+     content = <FichaForm key={`${pathname}?${urlSearch}`} initialClientId={route.initialClientId} initialMotoId={route.initialMotoId} onClose={() => navigate(route.returnTo || "/perfiles")} onSave={(ficha) => { notify("Ficha creada correctamente."); setRefreshKey((key) => key + 1); openFicha(ficha, route.returnTo); }} notify={notify} />;
   } else if (currentPage === "edit" && route.fichaId) {
-     content = <FichaForm key={route.fichaId} fichaKey={route.fichaId} onClose={() => navigate(route.returnTo || "/fichas")} onSave={() => { notify("Ficha actualizada."); setRefreshKey((key) => key + 1); navigate(route.returnTo || "/fichas"); }} />;
+     content = <FichaForm key={route.fichaId} fichaKey={route.fichaId} onClose={() => navigate(route.returnTo || "/fichas")} onSave={() => { notify("Ficha actualizada correctamente."); setRefreshKey((key) => key + 1); navigate(route.returnTo || "/fichas"); }} notify={notify} />;
   } else if (currentPage === "dashboard") {
-     content = <Dashboard onNewOrder={() => navigate("/perfiles/nuevo")} onIntake={() => navigate("/ingresar?returnTo=%2F")} onSelect={(ficha) => openFicha(ficha, "/")} onOpenMoto={(id) => openMoto(id, "/")} userName={session.user.nombre} />;
+      content = <Dashboard onNewOrder={() => navigate("/perfiles/nuevo")} onIntake={() => navigate("/ingresar?returnTo=%2F")} onSelect={(ficha) => openFicha(ficha, "/")} onOpenMoto={(id) => openMoto(id, "/")} userName={session.user.nombre} notify={notify} />;
   } else if (currentPage === "taller-dashboard") {
-      content = <Dashboard initialSection="taller" onNewOrder={() => navigate("/perfiles/nuevo")} onIntake={() => navigate("/ingresar?returnTo=%2Ftaller&base=taller")} onSelect={(ficha) => openFicha(ficha, "/taller")} onOpenMoto={(id) => openMoto(id, "/taller")} userName={session.user.nombre} />;
+       content = <Dashboard initialSection="taller" onNewOrder={() => navigate("/perfiles/nuevo")} onIntake={() => navigate("/ingresar?returnTo=%2Ftaller&base=taller")} onSelect={(ficha) => openFicha(ficha, "/taller")} onOpenMoto={(id) => openMoto(id, "/taller")} userName={session.user.nombre} notify={notify} />;
   } else if (currentPage === "sales") {
       content = <VentasView onIntake={() => navigate("/ingresar?returnTo=%2Fventas&base=sales")} onOpenMoto={(id) => openMoto(id, "/ventas")} onOpenTransfers={(id) => navigate(`/transferencias?motoId=${encodeURIComponent(id)}`)} notify={notify} canCompleteSale={session.user.rol === "ADMINISTRACION"} />;
   } else if (currentPage === "profiles") {
     content = <ProfilesView onNew={() => navigate("/perfiles/nuevo")} onOpen={openMoto} notify={notify} />;
   } else if (currentPage === "orders") {
-     content = <FichasView key={refreshKey} onNewOrder={() => navigate("/fichas/nueva?returnTo=%2Ffichas")} onSelect={(ficha) => openFicha(ficha, "/fichas")} onEdit={(ficha) => navigate(`/fichas/${ficha.id}/editar?returnTo=%2Ffichas`)} onDelete={(ficha) => setConfirmation({ label: "Borrar ficha", action: () => api(`/fichas/${ficha.id}`, { method: "DELETE" }).then(() => setRefreshKey((key) => key + 1)) })} />;
+      content = <FichasView key={refreshKey} onNewOrder={() => navigate("/fichas/nueva?returnTo=%2Ffichas")} onSelect={(ficha) => openFicha(ficha, "/fichas")} onEdit={(ficha) => navigate(`/fichas/${ficha.id}/editar?returnTo=%2Ffichas`)} onDelete={(ficha) => setConfirmation({ title: "Eliminar ficha", body: `Vas a dar de baja la ficha ${ficha.numero}. El historial conservará el registro para auditoría.`, confirmLabel: "Eliminar ficha", successMessage: "Ficha eliminada correctamente.", action: () => api(`/fichas/${ficha.id}`, { method: "DELETE" }).then(() => setRefreshKey((key) => key + 1)) })} notify={notify} />;
   } else if (currentPage === "fichas" && route.fichaId) {
-     content = <FichaDetail fichaKey={route.fichaId} onBack={() => navigate(route.returnTo || "/fichas")} onConfirm={(label, action) => setConfirmation({ label, action })} onOpenMoto={(id) => openMoto(id, route.returnTo || `/fichas/${route.fichaId}`, "fichas")} notify={notify} />;
+      content = <FichaDetail fichaKey={route.fichaId} onBack={() => navigate(route.returnTo || "/fichas")} onConfirm={(request) => setConfirmation(request)} onOpenMoto={(id) => openMoto(id, route.returnTo || `/fichas/${route.fichaId}`, "fichas")} notify={notify} />;
   } else if (currentPage === "profile" && route.motoId) {
      content = <MotoDetail key={`${pathname}?${urlSearch}`} id={route.motoId} initialTab={route.tab} onBack={() => navigate(route.returnTo || "/perfiles")} onOpenFicha={(ficha) => openFicha(ficha, `/motos/${route.motoId}?tab=fichas`)} onOpenRepuesto={(repuesto) => openRepuesto(repuesto, `/motos/${route.motoId}?tab=repuestos`)} onNewFicha={createFichaForMoto} onNewRepuesto={createRepuestoForMoto} notify={notify} />;
   } else if (currentPage === "transfers") {
@@ -277,11 +290,11 @@ export function AppController() {
   } else if (["clients", "vehicles", "catalog", "audit"].includes(currentPage)) {
      content = <AdminView resource={currentPage as "clients" | "vehicles" | "catalog" | "audit"} notify={notify} onOpenVehicle={(id) => openMoto(id, "/motos", "general")} onOpenServices={() => navigate("/services")} />;
   } else if (currentPage === "services") {
-     content = <ServicesView onOpenMoto={(id) => openMoto(id, "/services", "services")} />;
+      content = <ServicesView onOpenMoto={(id) => openMoto(id, "/services", "services")} notify={notify} />;
   } else if (currentPage === "settings") {
     content = <SettingsView notify={notify} />;
   } else {
-    content = <ReportsView />;
+     content = <ReportsView notify={notify} />;
   }
 
   return (
@@ -299,21 +312,23 @@ export function AppController() {
       {content}
       <ConfirmModal
         open={Boolean(confirmation)}
-        title={confirmation?.label ?? ""}
-        body={`Vas a ejecutar la acción: ${confirmation?.label?.toLowerCase()}. El historial conservará el registro para auditoría.`}
-        confirmLabel={confirmation?.label ?? "Confirmar"}
-        variant={confirmation?.label?.toLowerCase().includes("pago") ? "success" : "danger"}
+        title={confirmation?.title ?? ""}
+        body={confirmation?.body ?? ""}
+        confirmLabel={confirmation?.confirmLabel ?? "Confirmar"}
+        variant={confirmation?.variant ?? "danger"}
         onClose={() => setConfirmation(null)}
         onConfirm={() => {
-          const pendingAction = confirmation?.action;
-          const label = confirmation?.label;
+          const pendingConfirmation = confirmation;
           setConfirmation(null);
-          if (!pendingAction) return;
-          void Promise.resolve().then(pendingAction).then(
-            () => notify(`${label} realizada.`),
-            (reason) => notify(reason instanceof Error ? reason.message : "No fue posible completar la acción.", "error"),
-          );
-        }}
+          if (!pendingConfirmation) return;
+           return Promise.resolve()
+             .then(pendingConfirmation.action)
+             .then(() => notify(pendingConfirmation.successMessage))
+             .catch((reason) => {
+               notify(confirmationError(reason), "error");
+               throw reason;
+             });
+         }}
       />
       <IntakeView open={Boolean(route.intake)} onClose={() => navigate(route.returnTo || "/")} onOpenProfile={openMoto} notify={notify} />
       <Toast notification={toast} onClose={() => setToast(null)} />

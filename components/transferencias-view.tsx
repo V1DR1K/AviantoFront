@@ -32,14 +32,13 @@ function TransferDialog({ open, initialMotoId, onClose, onSaved, notify }: { ope
   const [observaciones, setObservaciones] = useState("");
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !initialMotoId || selectedMoto) return;
     void api<MotovehiculoResponse>(`/motovehiculos/${initialMotoId}`)
       .then((moto) => { setSelectedMoto(moto); setMotoQuery(moto.patente); })
-      .catch((reason) => setError(errorMessage(reason)));
-  }, [initialMotoId, open, selectedMoto]);
+       .catch((reason) => notify(errorMessage(reason), "error"));
+  }, [initialMotoId, open, selectedMoto, notify]);
 
   const reset = () => {
     setMotoQuery("");
@@ -49,17 +48,15 @@ function TransferDialog({ open, initialMotoId, onClose, onSaved, notify }: { ope
     setFechaTransferencia(todayInAr());
     setObservaciones("");
     setBusy(false);
-    setError(null);
   };
   const close = () => { if (!busy) { reset(); onClose(); } };
   const chooseMoto = async (item: AutocompleteResponse) => {
     setBusy(true);
-    setError(null);
     try {
       const moto = await api<MotovehiculoResponse>(`/motovehiculos/${item.id}`);
       setSelectedMoto(moto);
       setMotoQuery(moto.patente);
-    } catch (reason) { setError(errorMessage(reason)); } finally { setBusy(false); }
+    } catch (reason) { notify(errorMessage(reason), "error"); } finally { setBusy(false); }
   };
   const chooseClient = (item: AutocompleteResponse) => {
     setSelectedClient(item);
@@ -70,23 +67,20 @@ function TransferDialog({ open, initialMotoId, onClose, onSaved, notify }: { ope
       const client = await api<ClienteResponse>("/clientes", { method: "POST", body: JSON.stringify(values) });
       chooseClient({ id: client.id, label: client.nombre, secondary: client.documento ?? client.telefono });
       setNewClientOpen(false);
-      setError(null);
       notify("Cliente creado.");
     } catch (reason) {
       const message = errorMessage(reason);
-      setError(message);
       notify(message, "error");
     }
   };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!selectedMoto) return setError("Seleccioná la moto que querés transferir.");
-    if (selectedMoto.seccion !== "Venta" || !selectedMoto.ingresada || selectedMoto.estado !== "En venta") return setError("La moto debe estar ingresada en Ventas y marcada En venta.");
-    if (!selectedMoto.propietarioId || !selectedMoto.propietario) return setError("La moto no tiene un propietario actual.");
-    if (!selectedClient) return setError("Seleccioná el nuevo cliente.");
-    if (selectedClient.id === selectedMoto.propietarioId) return setError("El nuevo cliente debe ser diferente al actual.");
+    if (!selectedMoto) return notify("Seleccioná la moto que querés transferir.", "error");
+    if (selectedMoto.seccion !== "Venta" || !selectedMoto.ingresada || selectedMoto.estado !== "En venta") return notify("La moto debe estar ingresada en Ventas y marcada En venta.", "error");
+    if (!selectedMoto.propietarioId || !selectedMoto.propietario) return notify("La moto no tiene un propietario actual.", "error");
+    if (!selectedClient) return notify("Seleccioná el nuevo cliente.", "error");
+    if (selectedClient.id === selectedMoto.propietarioId) return notify("El nuevo cliente debe ser diferente al actual.", "error");
     setBusy(true);
-    setError(null);
     const payload: TransferRequest = { motoId: selectedMoto.id, clienteNuevoId: selectedClient.id, fechaTransferencia, observaciones: observaciones || undefined };
     try {
       await api<TransferResponse>("/transferencias", { method: "POST", body: JSON.stringify(payload) });
@@ -94,14 +88,13 @@ function TransferDialog({ open, initialMotoId, onClose, onSaved, notify }: { ope
       onClose();
        notify("Transferencia en curso. Completá la venta desde el perfil de la moto.");
       onSaved();
-    } catch (reason) { setError(errorMessage(reason)); } finally { setBusy(false); }
+    } catch (reason) { notify(errorMessage(reason), "error"); } finally { setBusy(false); }
   };
 
    const loadMotos = (query: string) => api<AutocompleteResponse[]>("/motovehiculos/autocomplete", {}, { q: query });
    const loadClients = (query: string) => api<AutocompleteResponse[]>("/clientes/autocomplete", {}, { q: query });
    return <Dialog open={open} title="Nueva transferencia" onClose={close} wide className="transfer-modal">
     <form className="transfer-form" onSubmit={(event) => void submit(event)}>
-      {error && <p className="login-pending" role="alert">{error}</p>}
       <section className="transfer-step">
         <div className="transfer-step-number">1</div>
         <div className="transfer-step-content">
@@ -154,14 +147,12 @@ function TransferEditDialog({ transfer, onClose, onSaved, notify }: { transfer: 
   const [fechaTransferencia, setFechaTransferencia] = useState(transfer?.fechaTransferencia ?? todayInAr());
   const [observaciones, setObservaciones] = useState(transfer?.observaciones ?? "");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   if (!transfer) return null;
   const close = () => { if (!busy) onClose(); };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!selectedClient) { setError("Seleccioná el nuevo cliente."); return; }
+    if (!selectedClient) { notify("Seleccioná el nuevo cliente.", "error"); return; }
     setBusy(true);
-    setError(null);
     const payload: TransferUpdateRequest = { clienteNuevoId: selectedClient.id, fechaTransferencia, observaciones: observaciones || undefined };
     try {
       await api<TransferResponse>(`/transferencias/${transfer.id}`, { method: "PUT", body: JSON.stringify(payload) });
@@ -169,7 +160,7 @@ function TransferEditDialog({ transfer, onClose, onSaved, notify }: { transfer: 
       onSaved();
       notify("Transferencia actualizada.");
     } catch (reason) {
-      setError(errorMessage(reason));
+      notify(errorMessage(reason), "error");
     } finally {
       setBusy(false);
     }
@@ -177,7 +168,6 @@ function TransferEditDialog({ transfer, onClose, onSaved, notify }: { transfer: 
   const loadClients = (query: string) => api<AutocompleteResponse[]>("/clientes/autocomplete", {}, { q: query });
   return <Dialog open title="Editar transferencia" onClose={close} wide className="transfer-modal">
     <form className="transfer-form" onSubmit={(event) => void submit(event)}>
-      {error && <p className="login-pending" role="alert">{error}</p>}
       <section className="transfer-step"><div className="transfer-step-number">1</div><div className="transfer-step-content"><h3>{transfer.patente}</h3><p>{transfer.moto} · Cliente anterior: {transfer.clienteAnterior}</p></div></section>
        <section className="transfer-step"><div className="transfer-step-number">2</div><div className="transfer-step-content"><h3>Asigná el nuevo cliente</h3><AutocompleteField value={clientQuery} onChange={(value) => { setClientQuery(value); setSelectedClient(null); }} onSelect={(item) => { setSelectedClient(item); setClientQuery(item.label); }} onClear={() => setSelectedClient(null)} selected={selectedClient} loadOptions={loadClients} placeholder="Buscar por nombre o documento" disabled={busy} />{selectedClient && <div className="transfer-selection"><span>Nuevo cliente</span><strong>{selectedClient.label}</strong><button type="button" className="icon-button" aria-label="Cambiar cliente" onClick={() => { setSelectedClient(null); setClientQuery(""); }}><X size={17} /></button></div>}</div></section>
       <section className="transfer-step"><div className="transfer-step-number">3</div><div className="transfer-step-content"><h3>Definí la vigencia</h3><div className="two-col transfer-fields"><label>Fecha de transferencia<input type="date" value={fechaTransferencia} max={todayInAr()} onChange={(event) => setFechaTransferencia(event.target.value)} required /></label><label>Observaciones <span className="field-optional">Opcional</span><textarea value={observaciones} onChange={(event) => setObservaciones(event.target.value)} /></label></div></div></section>
@@ -197,13 +187,12 @@ export function TransferenciasView({ canTransfer, initialMotoId, onOpenMoto, not
   const [editing, setEditing] = useState<TransferResponse | null>(null);
   const [deleting, setDeleting] = useState<TransferResponse | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [error, setError] = useState<string | null>(null);
   const params = { q: query || undefined, fechaDesde: desde || undefined, fechaHasta: hasta || undefined, sortBy: "fechaTransferencia", direction };
   useEffect(() => {
     void api<PageResponse<TransferResponse>>("/transferencias", {}, { q: query || undefined, fechaDesde: desde || undefined, fechaHasta: hasta || undefined, sortBy: "fechaTransferencia", direction, page: page - 1, size: 20 })
       .then(setResult)
-      .catch((reason) => setError(errorMessage(reason)));
-  }, [query, desde, hasta, direction, page, reloadKey]);
+      .catch((reason) => notify(errorMessage(reason), "error"));
+  }, [query, desde, hasta, direction, page, reloadKey, notify]);
   const removeTransfer = async () => {
     if (!deleting) return;
     const selected = deleting;
@@ -214,7 +203,6 @@ export function TransferenciasView({ canTransfer, initialMotoId, onOpenMoto, not
       notify("Transferencia eliminada y períodos recalculados.");
     } catch (reason) {
       const message = errorMessage(reason);
-      setError(message);
       notify(message, "error");
     }
   };
@@ -223,14 +211,13 @@ export function TransferenciasView({ canTransfer, initialMotoId, onOpenMoto, not
       <div><h1>Transferencias</h1><p>Historial de cambios de titularidad de las motos.</p></div>
       {canTransfer && <button className="button primary" onClick={() => setFlowOpen(true)}><Plus size={19} />Nueva transferencia</button>}
     </div>
-    {error && <p className="login-pending" role="alert">{error}</p>}
     <section className="panel table-panel">
       <div className="filter-bar">
         <SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Patente o cliente" />
         <label><Filter size={16} /><span className="date-label">Desde</span><input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); setPage(1); }} /></label>
         <label><Filter size={16} /><span className="date-label">Hasta</span><input type="date" value={hasta} onChange={(event) => { setHasta(event.target.value); setPage(1); }} /></label>
         <button className="button secondary" onClick={() => { setDirection((value) => value === "DESC" ? "ASC" : "DESC"); setPage(1); }} aria-label="Cambiar orden de transferencias"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
-         <button className="button secondary" onClick={() => void download("/transferencias/export.xlsx", "transferencias.xlsx", params).catch((reason) => setError(errorMessage(reason)))}><Download size={17} />Exportar Excel</button>
+          <button className="button secondary" onClick={() => void download("/transferencias/export.xlsx", "transferencias.xlsx", params).catch((reason) => notify(errorMessage(reason), "error"))}><Download size={17} />Exportar Excel</button>
       </div>
       {result?.content.length ? <table><thead><tr><th>Patente</th><th>Fecha</th><th>Cliente anterior</th><th>Cliente nuevo</th><th>Observaciones</th><th>Acciones</th></tr></thead><tbody>{result.content.map((transfer) => <tr key={transfer.id}><td data-label="Patente"><strong>{transfer.patente}</strong><small>{transfer.moto}</small></td><td data-label="Fecha">{date(transfer.fechaTransferencia)}</td><td data-label="Cliente anterior">{transfer.clienteAnterior}</td><td data-label="Cliente nuevo">{transfer.clienteNuevo}</td><td data-label="Observaciones">{transfer.observaciones || "—"}</td><td className="table-actions"><button onClick={() => onOpenMoto(transfer.motoId)} aria-label={`Ver moto ${transfer.patente}`}><Eye size={17} /></button>{canTransfer && <><button onClick={() => setEditing(transfer)} aria-label={`Editar transferencia de ${transfer.patente}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(transfer)} aria-label={`Eliminar transferencia de ${transfer.patente}`}><Trash2 size={17} /></button></>}</td></tr>)}</tbody></table> : result ? <EmptyState title="No hay transferencias" body="Probá ajustar los filtros o registrá una nueva transferencia." action={canTransfer ? <button className="button primary" onClick={() => setFlowOpen(true)}><Plus size={17} />Nueva transferencia</button> : undefined} /> : <div className="table-loading" role="status">Cargando transferencias...</div>}
       <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />

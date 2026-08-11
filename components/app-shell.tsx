@@ -46,10 +46,6 @@ export function AppShell({
     onPage(target);
     setMenuOpen(false);
   };
-  const back = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
-    else onPage("dashboard");
-  };
   const renderItem = (item: typeof home & { adminOnly?: boolean }) => {
     const Icon = item.icon;
     return (
@@ -125,49 +121,64 @@ export function AppShell({
         {children}
       </main>
       {menuOpen && (
-        <div
-          className="mobile-drawer"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Menú principal"
-        >
-          <button className="drawer-close" onClick={() => setMenuOpen(false)}>
-            Cerrar menú ×
-          </button>
-           {renderItem(home)}
-           {renderItem({ id: "profiles", label: "Perfiles", icon: ClipboardList })}
-           {navGroups.map((group) => (
-            <section className="mobile-nav-group" key={group.id}>
-              <p>{group.label}</p>
-               {group.items.filter((item) => !item.adminOnly || isAdmin).map(renderItem)}
-            </section>
-          ))}
-          {isAdmin && renderItem({ id: "audit", label: "Auditoría", icon: FileText })}
-          <button
-            className="button primary"
-            onClick={() => {
-              onNewOrder();
-              setMenuOpen(false);
-            }}
+        <>
+          <button className="mobile-drawer-backdrop" aria-label="Cerrar menú" onClick={() => setMenuOpen(false)} />
+          <div
+            className="mobile-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menú principal"
           >
-            + Nuevo perfil
-          </button>
-          <button className="settings mobile-logout" onClick={onLogout}>
-            <LogOut size={18} /> Cerrar sesión
-          </button>
-        </div>
+            <button className="drawer-close" onClick={() => setMenuOpen(false)}>
+              Cerrar menú ×
+            </button>
+             {renderItem(home)}
+             {renderItem({ id: "profiles", label: "Perfiles", icon: ClipboardList })}
+             {navGroups.map((group) => (
+              <section className="mobile-nav-group" key={group.id}>
+                <p>{group.label}</p>
+                 {group.items.filter((item) => !item.adminOnly || isAdmin).map(renderItem)}
+              </section>
+            ))}
+            {isAdmin && renderItem({ id: "audit", label: "Auditoría", icon: FileText })}
+            <button
+              className="button primary"
+              onClick={() => {
+                onNewOrder();
+                setMenuOpen(false);
+              }}
+            >
+              + Nuevo perfil
+            </button>
+            <button className="settings mobile-logout" onClick={onLogout}>
+              <LogOut size={18} /> Cerrar sesión
+            </button>
+          </div>
+        </>
       )}
       <nav className="mobile-nav">
         <button
-          className={page === "profiles" ? "active" : ""}
-          onClick={() => go("profiles")}
+          className={page === "dashboard" ? "active" : ""}
+          onClick={() => go("dashboard")}
         >
+          <LayoutDashboard size={20} />
+          <span>Inicio</span>
+        </button>
+        <button className={page === "profiles" ? "active" : ""} onClick={() => go("profiles")}>
           <ClipboardList size={20} />
           <span>Perfiles</span>
         </button>
-        <button onClick={back}>
-          <ChevronLeft size={20} />
-          <span>Volver</span>
+        <button className={page === "orders" ? "active" : ""} onClick={() => go("orders")}>
+          <FileText size={20} />
+          <span>Fichas</span>
+        </button>
+        <button className={page === "repuestos" ? "active" : ""} onClick={() => go("repuestos")}>
+          <Package size={20} />
+          <span>Repuestos</span>
+        </button>
+        <button onClick={() => setMenuOpen(true)}>
+          <Menu size={20} />
+          <span>Más</span>
         </button>
       </nav>
     </div>

@@ -38,19 +38,16 @@ export function AbmFormModal({
 }) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const initial = initialValues && typeof initialValues === "object" ? initialValues as Record<string, string | number | boolean | null | undefined> : {};
   const valueFor = (field: AbmField) => values[field.key] ?? (field.type === "currency" ? priceInput(initial[field.key]) : String(initial[field.key] ?? ""));
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (saving) return;
-    setError(null);
     setSaving(true);
     try {
       await onSubmit(Object.fromEntries(fields.map((field) => [field.key, valueFor(field)])));
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : "No fue posible guardar el registro.";
-      setError(message);
       onError?.(message);
     } finally {
       setSaving(false);
@@ -67,7 +64,6 @@ export function AbmFormModal({
         className="record-form"
         onSubmit={(event) => void submit(event)}
       >
-        {error && <p className="login-pending" role="alert">{error}</p>}
         {fields.map((field) => (
           <label
             key={field.key}
@@ -135,6 +131,7 @@ export function VehicleAbmModal({
   clients = [],
   onClose,
   onSubmit,
+  onError,
 }: {
   open: boolean;
   mode: "agregar" | "modificar";
@@ -145,6 +142,7 @@ export function VehicleAbmModal({
   clients?: ClienteResponse[];
   onClose: () => void;
   onSubmit: (values: Record<string, string>) => void;
+  onError?: (message: string) => void;
 }) {
   const lockedClient = Boolean(clientId);
   return (
@@ -158,6 +156,7 @@ export function VehicleAbmModal({
       }}
       onClose={onClose}
       onSubmit={onSubmit}
+      onError={onError}
       fields={[
         {
           key: "clienteId",

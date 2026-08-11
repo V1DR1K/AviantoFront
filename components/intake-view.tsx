@@ -17,7 +17,6 @@ export function IntakeView({ open, onClose, onOpenProfile, notify }: { open: boo
   const [section, setSection] = useState<"TALLER" | "VENTA">("TALLER");
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [brandsError, setBrandsError] = useState<string | null>(null);
   const [clientsError, setClientsError] = useState<string | null>(null);
 
@@ -26,41 +25,40 @@ export function IntakeView({ open, onClose, onOpenProfile, notify }: { open: boo
     let active = true;
     void api<MarcaMotoResponse[]>("/configuracion/marcas-moto")
       .then((nextBrands) => { if (active) { setBrands(nextBrands.filter((item) => item.activo)); setBrandsError(null); } })
-      .catch((reason) => { if (active) setBrandsError(reason instanceof Error ? reason.message : "No se pudieron cargar las marcas."); });
+      .catch((reason) => { if (active) { const message = reason instanceof Error ? reason.message : "No se pudieron cargar las marcas."; setBrandsError(message); notify(message, "error"); } });
     void api<PageResponse<ClienteResponse>>("/clientes", {}, { activo: true, size: 100 })
       .then((nextClients) => { if (active) { setClients(nextClients.content.filter((client) => client.activo)); setClientsError(null); } })
-      .catch((reason) => { if (active) setClientsError(reason instanceof Error ? reason.message : "No se pudieron cargar los clientes."); });
+      .catch((reason) => { if (active) { const message = reason instanceof Error ? reason.message : "No se pudieron cargar los clientes."; setClientsError(message); notify(message, "error"); } });
     return () => { active = false; };
-  }, [open]);
+  }, [open, notify]);
 
   const search = async () => {
     const normalized = plate.replace(/[^a-z0-9]/gi, "").toUpperCase();
-    if (!normalized) return setError("Ingresá el dominio de la moto.");
-    setBusy(true); setError(null); setSearched(true); setProfile(null);
+    if (!normalized) return notify("Ingresá el dominio de la moto.", "error");
+    setBusy(true); setSearched(true); setProfile(null);
     try {
       const result = await api<PageResponse<PerfilResponse>>("/perfiles", {}, { q: normalized, size: 100 });
       const existing = result.content.find((item) => item.patente.replace(/[^a-z0-9]/gi, "").toUpperCase() === normalized);
       if (existing) { setProfile(existing); setValues({ patente: existing.patente }); }
       else setValues((current) => ({ ...current, patente: normalized }));
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "No se pudo buscar el dominio."); }
+    } catch (reason) { notify(reason instanceof Error ? reason.message : "No se pudo buscar el dominio.", "error"); }
     finally { setBusy(false); }
   };
   const set = (key: string, value: string) => setValues((current) => ({ ...current, [key]: value }));
   const submit = async () => {
-    if (profile?.ingresada) return setError("La moto ya está ingresada.");
-    if (!profile && (!values.marcaId || !values.modelo || !values.clienteId)) return setError("Completá marca, modelo y cliente para crear el perfil.");
-    setBusy(true); setError(null);
+    if (profile?.ingresada) return notify("La moto ya está ingresada.", "error");
+    if (!profile && (!values.marcaId || !values.modelo || !values.clienteId)) return notify("Completá marca, modelo y cliente para crear el perfil.", "error");
+    setBusy(true);
     try {
       const current = profile ?? await api<PerfilResponse>("/perfiles", { method: "POST", body: JSON.stringify({ ...values, anio: values.anio ? Number(values.anio) : null, kilometraje: values.kilometraje ? Number(values.kilometraje) : null }) });
       const next = await api<PerfilResponse>(`/motovehiculos/${current.id}/ingreso`, { method: "POST", body: JSON.stringify({ seccion: section }) });
       notify(`Moto ingresada en ${section === "TALLER" ? "Taller" : "Ventas"}.`);
       onOpenProfile(next.id);
-    } catch (reason) { const message = reason instanceof Error ? reason.message : "No se pudo ingresar la moto."; setError(message); notify(message, "error"); }
+    } catch (reason) { notify(reason instanceof Error ? reason.message : "No se pudo ingresar la moto.", "error"); }
     finally { setBusy(false); }
   };
   const loadingBrands = open && !brands.length && !brandsError;
   const loadingClients = open && !clients.length && !clientsError;
-  const optionsError = [brandsError && `Marcas: ${brandsError}`, clientsError && `Clientes: ${clientsError}`].filter(Boolean).join(" ") || null;
   const brandOptions = brands.length
     ? brands.map((brand) => ({ value: brand.id, label: brand.nombre }))
     : [{ value: "__brands-empty", label: loadingBrands ? "Cargando marcas..." : "No hay marcas disponibles", disabled: true }];
@@ -69,8 +67,6 @@ export function IntakeView({ open, onClose, onOpenProfile, notify }: { open: boo
     : [{ value: "__clients-empty", label: loadingClients ? "Cargando clientes..." : "No hay clientes disponibles", disabled: true }];
   return <Dialog open={open} title="Ingresar una moto" onClose={onClose} wide className="intake-modal">
      <p>Buscá la moto y elegí el destino operativo antes de abrir su perfil.</p>
-     {error && <p className="login-pending" role="alert">{error}</p>}
-     {optionsError && <p className="login-pending" role="alert">{optionsError}</p>}
       <section className="panel intake-card">
         <div className="intake-field">
           <label htmlFor="intake-plate">Dominio</label>

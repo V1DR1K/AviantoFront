@@ -141,7 +141,9 @@ The system uses softly rounded technical documents: primary surfaces use the sur
 - **Primary:** Navy fill, white text, control radius, and 10px by 14px padding. Hover switches to pressed navy. Large primary actions span their available width with 13px padding.
 - **Secondary:** White background with a cool-gray outline and navy text; hover uses a pale blue-gray fill.
 - **Danger:** Solid red is for destructive confirmation; the outlined red treatment is used for logical deletion.
-- **Focus:** Keyboard focus uses a 3px light-blue outline offset by 2px on buttons, inputs, selects, and textareas.
+- **Focus:** Keyboard focus uses a 3px high-contrast outline offset by 2px on buttons, inputs, selects, and textareas; shell controls use a white outline on navy surfaces.
+- **Tertiary:** Transparent background with navy text; use for low-emphasis actions such as clearing filters or retrying a non-destructive read.
+- **Icon action:** Icon-only actions are limited to dense tables and must provide an accessible label, a 36px minimum target, and the shared hover/focus treatment.
 
 ### Cards / Containers
 
@@ -153,7 +155,23 @@ The system uses softly rounded technical documents: primary surfaces use the sur
 
 - **Style:** White fill, 1px cool-gray border, field radius, and 10px padding.
 - **Search:** Icon-leading control with a compact clear action.
-- **Focus:** The global light-blue focus outline remains visible; native field borders are otherwise quiet.
+- **Focus:** The shared high-contrast focus outline remains visible; native field borders are otherwise quiet.
+- **States:** Fields share the same border, hover, focus, disabled, and error tokens. `SelectField` is the visual select standard; native selects are not used as a second visual language.
+
+### Filters
+
+- **Bar:** Search, select, date range, sort, and export controls live in a single filter bar with a white surface and shared 40px control height.
+- **Order:** Search leads, narrowing controls follow, and export remains secondary. A clear-filters action is tertiary.
+- **Mobile:** Keep search visible, collapse secondary controls behind `Filtros`, show the active-filter count, and stack controls without shrinking touch targets.
+- **Relevant data:** Fichas use ficha state, payment state, date range, and sort; profiles use domain, motorcycle, client, state, and last modification; repuestos and transfers use their state/date/sort combinations; services use date and sort; audit uses user/module/action/date.
+
+### Dialogs, Confirmations, and Toasts
+
+- **Dialog:** Use for auxiliary forms and protected workflows such as service registration, configuration, transfers, intake, ABM forms, and partial payments.
+- **Confirmation:** Use `ConfirmModal` for logical deletion, cancellation, delivery approval, completing a sale, reversing a state, and changing payment state. The body must describe the concrete business consequence.
+- **Toast:** Every successful mutation announces the exact result after the API resolves. Validation and operation errors use the shared toast system; duplicate global/local API errors are suppressed.
+- **Copy:** Avoid generic messages such as “acción realizada”. Use concrete copy such as “Ficha cancelada”, “Venta completada”, or “Pago marcado como pagado”.
+- **Inline errors:** Loading, empty, retry, and persistent read-only notices use their own semantic patterns rather than impersonating a login state.
 
 ### Navigation
 

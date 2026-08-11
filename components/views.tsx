@@ -22,7 +22,7 @@ import type {
   VentaMotoResponse,
   TrabajoStatus,
 } from "../lib/types";
-import { Dialog, EmptyState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 
 const date = formatDateInAr;
 const errorMessage = (reason: unknown) =>
@@ -84,6 +84,7 @@ export function Dashboard({
   onOpenMoto,
   userName,
   initialSection = "taller",
+  notify,
 }: {
   onNewOrder: () => void;
   onIntake?: () => void;
@@ -91,6 +92,7 @@ export function Dashboard({
   onOpenMoto: (id: string) => void;
   userName?: string;
   initialSection?: "taller" | "ventas";
+  notify: Notify;
 }) {
   const [taller, setTaller] = useState<TallerResponse | null>(null);
   const [fichasAgrupadas, setFichasAgrupadas] = useState<DashboardFichasResponse | null>(null);
@@ -98,7 +100,6 @@ export function Dashboard({
   const [groupBy, setGroupBy] = useState<"moto" | "ficha">("moto");
   const [section, setSection] = useState<"taller" | "ventas">(initialSection);
   const [tab, setTab] = useState<string>(initialSection === "ventas" ? "Ingresada Venta" : "Ingresada Taller");
-  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     void Promise.all([
       api<TallerResponse>("/dashboard/taller"),
@@ -106,8 +107,8 @@ export function Dashboard({
       api<VentaResponse>("/dashboard/ventas"),
     ])
       .then(([nextTaller, nextFichas, nextVentas]) => { setTaller(nextTaller); setFichasAgrupadas(nextFichas); setVentas(nextVentas); })
-      .catch((reason) => setError(errorMessage(reason)));
-  }, []);
+      .catch((reason) => notify(errorMessage(reason), "error"));
+  }, [notify]);
   const talleres = taller?.estados ?? [];
   const ventasEstados = ventas?.estados ?? [];
   const motos = talleres.find((item) => item.estado === tab)?.motos ?? [];
@@ -131,7 +132,6 @@ export function Dashboard({
         </div>
         <div className="page-actions"><button className="button secondary" onClick={onIntake}><Plus size={19} />Ingresar moto</button><button className="button primary" onClick={onNewOrder}><Plus size={19} />Nuevo perfil</button></div>
       </div>
-      {error && <p className="login-pending">{error}</p>}
       {taller && fichasAgrupadas && (
         <>
           <nav className="tabs dashboard-section-tabs" aria-label="Sección del dashboard">
@@ -205,7 +205,7 @@ export function Dashboard({
                       <td data-label="Ingreso">{ficha.fechaIngreso ? date(ficha.fechaIngreso) : "—"}</td>
                       <td data-label="Total">{money(ficha.total)}</td>
                       <td data-label="Estado"><StatusBadge status={ficha.estado} /></td>
-                      <td data-label="Acción"><button className="row-action" onClick={() => void api<FichaResponse>(`/fichas/${ficha.id}`).then(onSelect).catch((reason) => setError(errorMessage(reason)))}>Ver ficha</button></td>
+                      <td data-label="Acción"><button className="row-action" onClick={() => void api<FichaResponse>(`/fichas/${ficha.id}`).then(onSelect).catch((reason) => notify(errorMessage(reason), "error"))}>Ver ficha</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -248,10 +248,16 @@ export function VentasView({
   const [hasta, setHasta] = useState(todayInAr());
   const [sortBy, setSortBy] = useState("fechaIngreso");
   const [direction, setDirection] = useState<"ASC" | "DESC">("DESC");
-  const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const load = () => void api<VentaResponse>("/dashboard/ventas").then(setResult).catch((reason) => setError(errorMessage(reason)));
-  useEffect(load, []);
+  const [confirmation, setConfirmation] = useState<{
+    title: string;
+    body: string;
+    confirmLabel: string;
+    successMessage: string;
+    action: () => Promise<void>;
+  } | null>(null);
+  const load = () => void api<VentaResponse>("/dashboard/ventas").then(setResult).catch((reason) => notify(errorMessage(reason), "error"));
+  useEffect(load, [notify]);
   const current = status === "Todos"
     ? result?.estados.flatMap((item) => item.motos) ?? []
     : result?.estados.find((item) => item.estado === status)?.motos ?? [];
@@ -269,12 +275,11 @@ export function VentasView({
     });
   const transition = async (moto: VentaMotoResponse, action: () => Promise<unknown>, message: string) => {
     setBusyId(moto.motoId);
-    try { await action(); notify(message); load(); } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); } finally { setBusyId(null); }
+    try { await action(); notify(message); load(); } catch (reason) { notify(errorMessage(reason), "error"); throw reason; } finally { setBusyId(null); }
   };
   const emptyLabel = status === "Todos" ? "para mostrar" : status.toLowerCase();
   return <div className="page">
     <div className="page-heading"><div><h1>Ventas</h1><p>Seguí cada moto desde su ingreso hasta la transferencia final.</p></div><div className="page-actions"><button className="button secondary" onClick={onIntake}><Plus size={18} />Ingresar moto</button></div></div>
-    {error && <p className="login-pending" role="alert">{error}</p>}
     <section className="panel table-panel">
       <div className="filter-bar">
         <SearchBox value={query} onChange={setQuery} placeholder="Patente, moto o cliente" />
@@ -286,10 +291,11 @@ export function VentasView({
       </div>
       {visible.length ? <table><thead><tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{visible.map((moto) => {
         const busy = busyId === moto.motoId;
-        return <tr key={moto.motoId}><td data-label="Moto"><strong>{moto.patente}</strong><small>{moto.moto}</small></td><td data-label="Cliente">{moto.cliente ?? "Sin propietario"}</td><td data-label="KM actual">{moto.kilometraje != null ? moto.kilometraje.toLocaleString("es-AR") : "—"}</td><td data-label="Estado"><StatusBadge status={moto.estado} /></td><td className="table-actions sales-actions"><button className="row-action" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button>{moto.estado === "Ingresada Venta" && <button className="button secondary compact" disabled={busy} onClick={() => void transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/estado`, { method: "PATCH", body: JSON.stringify({ estado: "En venta" }) }), "Moto marcada En venta.")}><Tag size={15} />En venta</button>}{moto.estado === "En venta" && <button className="button secondary compact" disabled={busy} onClick={() => onOpenTransfers(moto.motoId)}><ArrowRightLeft size={15} />Transferir</button>}{moto.estado === "Transferencia en curso" && canCompleteSale && <button className="button primary compact" disabled={busy} onClick={() => void transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/completar`, { method: "POST" }), "Venta completada.")}><LogOut size={15} />Completar</button>}</td></tr>;
-      })}</tbody></table> : result ? <EmptyState title={`Sin motos ${emptyLabel}`} body={query ? "Probá con otra búsqueda." : "No hay motos dentro de los filtros seleccionados."} /> : <div className="table-loading" role="status">Cargando ventas...</div>}
-    </section>
-  </div>;
+        return <tr key={moto.motoId}><td data-label="Moto"><strong>{moto.patente}</strong><small>{moto.moto}</small></td><td data-label="Cliente">{moto.cliente ?? "Sin propietario"}</td><td data-label="KM actual">{moto.kilometraje != null ? moto.kilometraje.toLocaleString("es-AR") : "—"}</td><td data-label="Estado"><StatusBadge status={moto.estado} /></td><td className="table-actions sales-actions"><button className="row-action" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button>{moto.estado === "Ingresada Venta" && <button className="button secondary compact" disabled={busy} onClick={() => setConfirmation({ title: "Marcar moto en venta", body: `${moto.patente} pasará al estado En venta.`, confirmLabel: "Marcar en venta", successMessage: "Moto marcada como En venta.", action: async () => { await transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/estado`, { method: "PATCH", body: JSON.stringify({ estado: "En venta" }) }), "Moto marcada como En venta."); } })}><Tag size={15} />En venta</button>}{moto.estado === "En venta" && <button className="button secondary compact" disabled={busy} onClick={() => onOpenTransfers(moto.motoId)}><ArrowRightLeft size={15} />Transferir</button>}{moto.estado === "Transferencia en curso" && canCompleteSale && <button className="button primary compact" disabled={busy} onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${moto.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: async () => { await transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/completar`, { method: "POST" }), "Venta completada."); } })}><LogOut size={15} />Completar</button>}</td></tr>;
+       })}</tbody></table> : result ? <EmptyState title={`Sin motos ${emptyLabel}`} body={query ? "Probá con otra búsqueda." : "No hay motos dentro de los filtros seleccionados."} /> : <div className="table-loading" role="status">Cargando ventas...</div>}
+     </section>
+     <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; setConfirmation(null); if (!request) return; return request.action().then(() => notify(request.successMessage)).catch((reason) => { notify(errorMessage(reason), "error"); throw reason; }); }} />
+   </div>;
 }
 
 export function FichasView({
@@ -297,11 +303,13 @@ export function FichasView({
   onSelect,
   onEdit,
   onDelete,
+  notify,
 }: {
   onNewOrder: () => void;
   onSelect: (ficha: FichaResponse) => void;
   onEdit: (ficha: FichaResponse) => void;
   onDelete: (ficha: FichaResponse) => void;
+  notify: Notify;
 }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"Todos" | FichaStatus>("Todos");
@@ -312,7 +320,6 @@ export function FichasView({
   const [direction, setDirection] = useState<"ASC" | "DESC">("DESC");
   const [result, setResult] = useState<PageResponse<FichaResponse> | null>(null);
   const [page, setPage] = useState(1);
-  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     void api<PageResponse<FichaResponse>>(
       "/fichas",
@@ -330,8 +337,8 @@ export function FichasView({
       },
     )
       .then(setResult)
-      .catch((reason) => setError(errorMessage(reason)));
-  }, [query, status, paymentStatus, desde, hasta, sortBy, direction, page]);
+      .catch((reason) => notify(errorMessage(reason), "error"));
+  }, [query, status, paymentStatus, desde, hasta, sortBy, direction, page, notify]);
   const params = {
     q: query || undefined,
     estado: status === "Todos" ? undefined : status,
@@ -353,7 +360,6 @@ export function FichasView({
           <Plus size={19} />Nueva ficha
         </button>
       </div>
-      {error && <p className="login-pending">{error}</p>}
       <section className="panel table-panel">
         <div className="filter-bar">
           <SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Número o cliente" />
@@ -372,7 +378,7 @@ export function FichasView({
             <ArrowDownUp size={16} />
             {direction === "DESC" ? "Más recientes" : "Más antiguos"}
           </button>
-           <button className="button secondary" onClick={() => void download("/fichas/export.xlsx", "fichas.xlsx", params).catch((reason) => setError(errorMessage(reason)))}>
+            <button className="button secondary" onClick={() => void download("/fichas/export.xlsx", "fichas.xlsx", params).catch((reason) => notify(errorMessage(reason), "error"))}>
             <Download size={17} />Exportar Excel
           </button>
         </div>
@@ -455,7 +461,7 @@ export function FichaDetail({
 }: {
   fichaKey: string;
   onBack: () => void;
-  onConfirm: (label: string, action: () => void | Promise<void>) => void;
+  onConfirm: (request: { title: string; body: string; confirmLabel: string; successMessage: string; variant?: "danger" | "success"; action: () => void | Promise<void> }) => void;
   onOpenMoto: (motoId: string) => void;
   notify: Notify;
 }) {
@@ -475,12 +481,11 @@ export function FichaDetail({
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [selectedPaidWorkIds, setSelectedPaidWorkIds] = useState<string[]>([]);
   const [paymentSaving, setPaymentSaving] = useState(false);
-  const [reverseOpen, setReverseOpen] = useState(false);
   const load = () =>
     void api<FichaResponse>(`/fichas/${fichaKey}`)
       .then(setFicha)
-      .catch((reason) => setError(errorMessage(reason)));
-  useEffect(load, [fichaKey]);
+      .catch((reason) => { setError(errorMessage(reason)); notify(errorMessage(reason), "error"); });
+  useEffect(load, [fichaKey, notify]);
   useEffect(() => {
     if (ficha?.estado === "Revisión")
       void api<RevisionResponse>(`/fichas/${fichaKey}/revision`)
@@ -493,22 +498,36 @@ export function FichaDetail({
       setPriorServices(services.filter((service) => !service.fichaId));
       setSelectedServiceIds([]);
       setCloseOpen(true);
-    }).catch((reason) => setError(errorMessage(reason)));
+    }).catch((reason) => { setError(errorMessage(reason)); notify(errorMessage(reason), "error"); });
   };
-  const aprobarRevision = () => {
+  const aprobarRevision = async () => {
     if (pending || !ficha) return;
     setPending("aprobar-revision");
-    void api(`/fichas/${fichaKey}/revision/aprobar`, {
-      method: "POST",
-      body: JSON.stringify({ forzada: false, serviceIds: selectedServiceIds }),
-    })
-      .then(() => {
-        setRevision(null);
-        notify("Revisión aprobada y ficha entregada.");
-        onOpenMoto(ficha.motoId);
-      })
-      .catch((reason) => setError(errorMessage(reason)))
-      .finally(() => setPending(null));
+    try {
+      await api(`/fichas/${fichaKey}/revision/aprobar`, {
+        method: "POST",
+        body: JSON.stringify({ forzada: false, serviceIds: selectedServiceIds }),
+      });
+      setRevision(null);
+      onOpenMoto(ficha.motoId);
+    } catch (reason) {
+      setError(errorMessage(reason));
+      notify(errorMessage(reason), "error");
+      throw reason;
+    } finally {
+      setPending(null);
+    }
+  };
+  const confirmDelivery = () => {
+    if (!ficha) return;
+    setCloseOpen(false);
+    onConfirm({
+      title: "Aprobar revisión y entregar",
+      body: "La ficha pasará a Entregada y la revisión quedará registrada en el historial.",
+      confirmLabel: "Aprobar y entregar",
+      successMessage: "Revisión aprobada y ficha entregada.",
+      action: aprobarRevision,
+    });
   };
   const updateControl = (controlId: string, body: Record<string, string>) =>
     void api<RevisionResponse>(`/fichas/${fichaKey}/revision/controles/${controlId}`, {
@@ -516,10 +535,10 @@ export function FichaDetail({
       body: JSON.stringify(body),
     })
       .then((next) => { setRevision(next); notify("Control de revisión actualizado."); })
-      .catch((reason) => setError(errorMessage(reason)));
+      .catch((reason) => { setError(errorMessage(reason)); notify(errorMessage(reason), "error"); });
   const openPartialPayment = () => {
     if (!ficha) return;
-    setSelectedPaidWorkIds(ficha.trabajos.filter((item) => item.estadoTrabajo === "Realizado" && item.pagado).map((item) => item.id));
+    setSelectedPaidWorkIds(ficha.trabajos.filter((item) => item.estadoTrabajo === "Realizado").map((item) => item.id));
     setPaymentOpen(true);
   };
   const savePartialPayment = async () => {
@@ -527,15 +546,27 @@ export function FichaDetail({
     setPaymentSaving(true);
     try {
       const next = await api<FichaResponse>(`/fichas/${ficha.id}/pago`, { method: "PATCH", body: JSON.stringify({ estadoPago: selectedPaidWorkIds.length ? "Parcial" : "No pagado", itemIds: selectedPaidWorkIds }) });
-      setFicha(next); setPaymentOpen(false); notify(`Pago: ${next.estadoPago}.`);
-    } catch (reason) { setError(errorMessage(reason)); }
+      setFicha(next); setPaymentOpen(false);
+    } catch (reason) { setError(errorMessage(reason)); throw reason; }
     finally { setPaymentSaving(false); }
+  };
+  const confirmPartialPayment = () => {
+    const nextStatus = selectedPaidWorkIds.length ? "Parcial" : "No pagado";
+    setPaymentOpen(false);
+    onConfirm({
+      title: "Guardar pago parcial",
+      body: `La ficha quedará con el estado de pago ${nextStatus}. El cambio se registrará en auditoría.`,
+      confirmLabel: "Guardar pago",
+      successMessage: `Pago actualizado a ${nextStatus}.`,
+      variant: "success",
+      action: savePartialPayment,
+    });
   };
   if (!ficha)
     return (
       <div className="page">
         <button className="back" onClick={onBack}>← Volver a fichas</button>
-        {error ? <p className="login-pending">{error}</p> : <p>Cargando ficha…</p>}
+        {error ? <EmptyState title="No se pudo cargar la ficha" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={load}>Reintentar</button>} /> : <div className="table-loading" role="status">Cargando ficha...</div>}
       </div>
     );
   const update = async (path: string, body: Record<string, string>, id: string, successMessage?: string) => {
@@ -547,13 +578,15 @@ export function FichaDetail({
       if (successMessage) notify(successMessage);
     } catch (reason) {
       setError(errorMessage(reason));
+      notify(errorMessage(reason), "error");
+      throw reason;
     } finally {
       setPending(null);
     }
   };
   const current = ficha.estado;
   const saveService = async () => {
-    if (!serviceKm) return setError("Ingresá el kilometraje del service.");
+    if (!serviceKm) return notify("Ingresá el kilometraje del service.", "error");
     if (serviceSaving) return;
     setServiceSaving(true);
     try {
@@ -574,6 +607,7 @@ export function FichaDetail({
       notify("Service registrado.");
     } catch (reason) {
       setError(errorMessage(reason));
+      notify(errorMessage(reason), "error");
     } finally {
       setServiceSaving(false);
     }
@@ -591,20 +625,19 @@ export function FichaDetail({
     bottomActions.push({ key: "aprobar", label: "Aprobar revisión y entregar", className: "primary", onClick: openDelivery });
    else if (current === "Entregada")
     bottomActions.push({ key: "service", label: "Registrar service", className: "primary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setReturnToMotoAfterService(false); setServiceOpen(true); } });
-   if (ficha.estadoPago === "Pagado")
-      bottomActions.push({ key: "pago-no", label: "Marcar como no pagada", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/pago`, { estadoPago: "No pagado" }, "pago-no", "Pago marcado como no pagado.") });
-   else {
-      bottomActions.push({ key: "pago", label: "Marcar como pagada", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/pago`, { estadoPago: "Pagado" }, "pago-pagado", "Pago marcado como completado.") });
-      bottomActions.push({ key: "pago-parcial", label: ficha.estadoPago === "Parcial" ? "Editar pago parcial" : "Pago parcial", className: "secondary", onClick: openPartialPayment });
+    if (ficha.estadoPago === "Pagado")
+       bottomActions.push({ key: "pago-no", label: "Marcar como no pagada", className: "secondary", onClick: () => onConfirm({ title: "Revertir pago", body: "La ficha volverá al estado No pagado. Esta acción quedará registrada en auditoría.", confirmLabel: "Marcar como no pagada", successMessage: "Pago marcado como no pagado.", variant: "success", action: () => update(`/fichas/${ficha.id}/pago`, { estadoPago: "No pagado" }, "pago-no", "Pago marcado como no pagado.") }) });
+    else {
+       bottomActions.push({ key: "pago", label: "Marcar como pagada", className: "secondary", onClick: () => onConfirm({ title: "Confirmar pago", body: "La ficha se marcará como Pagado y el cambio quedará registrado en auditoría.", confirmLabel: "Marcar como pagada", successMessage: "Pago marcado como pagado.", variant: "success", action: () => update(`/fichas/${ficha.id}/pago`, { estadoPago: "Pagado" }, "pago-pagado", "Pago marcado como completado.") }) });
+       bottomActions.push({ key: "pago-parcial", label: ficha.estadoPago === "Parcial" ? "Editar pago parcial" : "Pago parcial", className: "secondary", onClick: openPartialPayment });
    }
    if (current === "En proceso" || current === "Revisión")
-      bottomActions.push({ key: "retroceder", label: "Volver un paso atrás", className: "secondary", onClick: () => setReverseOpen(true) });
+       bottomActions.push({ key: "retroceder", label: "Volver un paso atrás", className: "secondary", onClick: () => onConfirm({ title: "Volver un paso atrás", body: `La ficha volverá de ${current} a ${current === "Revisión" ? "En proceso" : "Cargada"}. El cambio quedará registrado en auditoría.`, confirmLabel: "Volver un paso atrás", successMessage: "Ficha retrocedida un paso.", action: () => update(`/fichas/${ficha.id}/estado`, { estado: current === "Revisión" ? "En proceso" : "Cargada" }, "retroceder", "Ficha retrocedida un paso.") }) });
   if (current !== "Entregada" && current !== "Cancelada")
-     bottomActions.push({ key: "cancelar", label: "Cancelar ficha", className: "danger", onClick: () => onConfirm("Cancelar ficha", () => api<FichaResponse>(`/fichas/${ficha.id}/estado`, { method: "PATCH", body: JSON.stringify({ estado: "Cancelada" }) }).then(setFicha)) });
+      bottomActions.push({ key: "cancelar", label: "Cancelar ficha", className: "danger", onClick: () => onConfirm({ title: "Cancelar ficha", body: "La ficha quedará cancelada. El historial conservará el registro para auditoría.", confirmLabel: "Cancelar ficha", successMessage: "Ficha cancelada.", action: () => api<FichaResponse>(`/fichas/${ficha.id}/estado`, { method: "PATCH", body: JSON.stringify({ estado: "Cancelada" }) }).then(setFicha) }) });
   return (
     <div className="page">
       <button className="back" onClick={onBack}>← Volver a fichas</button>
-      {error && <p className="login-pending">{error}</p>}
       <div className="detail-title">
         <div>
           <p>{ficha.numero}</p>
@@ -647,7 +680,7 @@ export function FichaDetail({
           <section className="panel">
             <div className="panel-head">
               <h2>Detalle de reparación</h2>
-              <button className="button secondary" onClick={() => void download(`/fichas/${ficha.id}/pdf`, `${ficha.numero}.pdf`).catch((reason) => setError(errorMessage(reason)))}>
+              <button className="button secondary" onClick={() => void download(`/fichas/${ficha.id}/pdf`, `${ficha.numero}.pdf`).catch((reason) => notify(errorMessage(reason), "error"))}>
                 <FileDown size={17} />PDF
               </button>
             </div>
@@ -659,7 +692,7 @@ export function FichaDetail({
                   item={item}
                   locked={locked}
                   canDelete={current === "En proceso"}
-                   onDelete={() => onConfirm("Eliminar trabajo", () => api(`/fichas/${ficha.id}/trabajos/${item.id}`, { method: "DELETE" }).then(load))}
+                   onDelete={() => onConfirm({ title: "Eliminar trabajo", body: "El trabajo se quitará de la ficha y la acción quedará registrada en auditoría.", confirmLabel: "Eliminar trabajo", successMessage: "Trabajo eliminado de la ficha.", action: () => api(`/fichas/${ficha.id}/trabajos/${item.id}`, { method: "DELETE" }).then(load) })}
                    onState={(estado) => void update(`/fichas/${ficha.id}/trabajos/${item.id}/estado`, { estado }, `item-${item.id}`, "Trabajo actualizado.")}
                 />
               ))}
@@ -679,7 +712,7 @@ export function FichaDetail({
                           <strong>{control.control}</strong>
                           <span>{control.categorias}{control.obligatorio ? " · Obligatorio" : ""}</span>
                         </div>
-                         <label className="detail-line-check">Estado del control<select value={control.estado} onChange={(event) => void updateControl(control.id, { estado: event.target.value })}><option value="Pendiente">Pendiente</option><option value="Revisado">Revisado</option><option value="No aplica">No aplica</option></select></label>
+                          <div className="detail-line-check"><span>Estado del control</span><SelectField value={control.estado} onChange={(value) => void updateControl(control.id, { estado: value })} options={[{ value: "Pendiente", label: "Pendiente" }, { value: "Revisado", label: "Revisado" }, { value: "No aplica", label: "No aplica" }]} ariaLabel={`Estado del control ${control.control}`} /></div>
                         {control.estado === "Revisado" && (
                           <input
                             type="text"
@@ -717,29 +750,25 @@ export function FichaDetail({
         </form>
       </Dialog>
       <Dialog open={closeOpen} title="Aprobar revisión y entregar" onClose={() => setCloseOpen(false)} className="delivery-modal">
-        <p>¿Está seguro que desea entregar esta ficha?</p>
+         <p>Seleccioná los services previos que quieras asociar a la ficha antes de continuar.</p>
         {priorServices.length > 0 && <section className="line-items-list"><h3>Services previos sin ficha</h3>{priorServices.map((service) => <label key={service.id} className="line-check"><input type="checkbox" checked={selectedServiceIds.includes(service.id)} onChange={(event) => setSelectedServiceIds((ids) => event.target.checked ? [...ids, service.id] : ids.filter((id) => id !== service.id))} />{date(service.fecha)} · {service.kilometraje} km{service.observaciones ? ` · ${service.observaciones}` : ""}</label>)}</section>}
         {!priorServices.length && <p>No hay services previos para asociar.</p>}
         <div className="modal-actions">
           <button type="button" className="button secondary" onClick={() => setCloseOpen(false)}>Cancelar</button>
-          <button type="button" className="button primary" disabled={Boolean(pending)} onClick={() => { setCloseOpen(false); void aprobarRevision(); }}>Aprobar y entregar</button>
+          <button type="button" className="button primary" disabled={Boolean(pending)} onClick={confirmDelivery}>Aprobar y entregar</button>
         </div>
       </Dialog>
       <Dialog open={paymentOpen} title="Registrar pago parcial" onClose={() => setPaymentOpen(false)}>
         <p>Seleccioná los trabajos realizados que fueron pagados.</p>
         <div className="line-items-list">{ficha.trabajos.filter((item) => item.estadoTrabajo === "Realizado").map((item) => <label key={item.id} className="line-check"><input type="checkbox" checked={selectedPaidWorkIds.includes(item.id)} onChange={(event) => setSelectedPaidWorkIds((ids) => event.target.checked ? [...ids, item.id] : ids.filter((id) => id !== item.id))} />{item.descripcion}<strong>{money(item.subtotal)}</strong></label>)}</div>
         {!ficha.trabajos.some((item) => item.estadoTrabajo === "Realizado") && <p>No hay trabajos realizados para seleccionar.</p>}
-        <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setSelectedPaidWorkIds([])}>No pagar ninguno</button><button type="button" className="button secondary" onClick={() => setPaymentOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={paymentSaving} onClick={() => void savePartialPayment()}>{paymentSaving ? "Guardando..." : "Guardar pago"}</button></div>
-      </Dialog>
-      <Dialog open={reverseOpen} title="Volver un paso atrás" onClose={() => setReverseOpen(false)}>
-        <p>¿Está seguro que desea volver un paso atrás?</p>
-        <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setReverseOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={Boolean(pending)} onClick={() => { setReverseOpen(false); void update(`/fichas/${ficha.id}/estado`, { estado: current === "Revisión" ? "En proceso" : "Cargada" }, "retroceder", "Ficha retrocedida un paso."); }}>Confirmar</button></div>
+        <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setSelectedPaidWorkIds([])}>No pagar ninguno</button><button type="button" className="button secondary" onClick={() => setPaymentOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={paymentSaving} onClick={confirmPartialPayment}>{paymentSaving ? "Guardando..." : "Guardar pago"}</button></div>
       </Dialog>
     </div>
   );
 }
 
-export function ReportsView() {
+export function ReportsView({ notify }: { notify: Notify }) {
   const [rows, setRows] = useState<{ etiqueta: string; valor: number }[]>([]);
   const [clients, setClients] = useState<ClienteResponse[]>([]);
   useEffect(() => {
@@ -748,8 +777,8 @@ export function ReportsView() {
       api<PageResponse<ClienteResponse>>("/clientes", {}, { size: 20 }),
     ])
       .then(([nextSummary, page]) => { setRows(nextSummary); setClients(page.content); })
-      .catch(() => undefined);
-  }, []);
+      .catch((reason) => notify(errorMessage(reason), "error"));
+  }, [notify]);
   return (
     <div className="page">
       <div className="page-heading"><div><h1>Reportes</h1><p>Indicadores actuales del taller.</p></div></div>
@@ -763,12 +792,11 @@ export function ReportsView() {
   );
 }
 
-export function ServicesView({ onOpenMoto }: { onOpenMoto: (id: string) => void }) {
+export function ServicesView({ onOpenMoto, notify }: { onOpenMoto: (id: string) => void; notify: Notify }) {
   const [rows, setRows] = useState<NextServiceResponse[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    void api<NextServiceResponse[]>("/services/proximos").then(setRows).catch((reason) => setError(errorMessage(reason)));
-  }, []);
+    void api<NextServiceResponse[]>("/services/proximos").then(setRows).catch((reason) => notify(errorMessage(reason), "error"));
+  }, [notify]);
   const overdue = rows?.filter((row) => row.atrasadoKm || row.atrasadoFecha) ?? [];
   const withoutRef = rows?.filter((row) => row.sinReferencia && !row.atrasadoKm && !row.atrasadoFecha) ?? [];
   const upcoming = rows?.filter((row) => !row.sinReferencia && !row.atrasadoKm && !row.atrasadoFecha) ?? [];
@@ -780,7 +808,6 @@ export function ServicesView({ onOpenMoto }: { onOpenMoto: (id: string) => void 
           <p>Seguimiento del próximo service por motovehículo.</p>
         </div>
       </div>
-      {error && <p className="login-pending">{error}</p>}
       {rows && (
         <div className="metrics">
           <Metric label="Atrasados" value={String(overdue.length)} tone="danger" />

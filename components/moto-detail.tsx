@@ -16,7 +16,7 @@ import type {
   ServiceResponse,
   TransferResponse,
 } from "../lib/types";
-import { Dialog, EmptyState, Pagination, SelectField, StatusBadge, type Notify } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, Pagination, SelectField, StatusBadge, type Notify } from "./ui";
 
 const date = (value?: string | null) => (value ? new Intl.DateTimeFormat("es-AR").format(new Date(value.includes("T") ? value : `${value}T12:00:00`)) : "—");
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
@@ -84,27 +84,34 @@ export function MotoDetail({
   const [configSaving, setConfigSaving] = useState(false);
   const [intakeOpen, setIntakeOpen] = useState(false);
   const [intakeSection, setIntakeSection] = useState<"TALLER" | "VENTA">("TALLER");
+  const [confirmation, setConfirmation] = useState<{
+    title: string;
+    body: string;
+    confirmLabel: string;
+    successMessage: string;
+    action: () => Promise<void>;
+  } | null>(null);
 
   const load = () =>
     void api<MotovehiculoResponse>(`/motovehiculos/${id}`)
       .then((next) => { setMoto(next); if (next.propietarioId) void api<ClienteResponse>(`/clientes/${next.propietarioId}`).then(setClient).catch(() => setClient(null)); })
-      .catch((reason) => setError(errorMessage(reason)));
+       .catch((reason) => { setError(errorMessage(reason)); notify(errorMessage(reason), "error"); });
   const panelError = (key: string, reason: unknown) => setPanelErrors((current) => ({ ...current, [key]: errorMessage(reason) }));
   const loadServices = () => void api<PageResponse<ServiceResponse>>(`/motovehiculos/${id}/services/historial`, {}, { fechaDesde: serviceDesde || undefined, fechaHasta: serviceHasta || undefined, page: servicePage - 1, size: 10, sortBy: serviceSort, direction: serviceDirection }).then((value) => { setServices(value); setPanelErrors((current) => ({ ...current, services: "" })); }).catch((reason) => panelError("services", reason));
   const loadFichas = () => void api<PageResponse<FichaResponse>>("/fichas", {}, { motoId: id, fechaDesde: fichaDesde || undefined, fechaHasta: fichaHasta || undefined, estado: fichaEstado || undefined, estadoPago: fichaPago || undefined, page: fichaPage - 1, size: 10, sortBy: fichaSort, direction: fichaDirection }).then((value) => { setFichas(value); setPanelErrors((current) => ({ ...current, fichas: "" })); }).catch((reason) => panelError("fichas", reason));
   const loadRepuestos = () => void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { motoId: id, fechaDesde: repuestoDesde || undefined, fechaHasta: repuestoHasta || undefined, estado: repuestoEstado || undefined, estadoPago: repuestoPago || undefined, page: repuestoPage - 1, size: 10, sortBy: repuestoSort, direction: repuestoDirection }).then((value) => { setRepuestos(value); setPanelErrors((current) => ({ ...current, repuestos: "" })); }).catch((reason) => panelError("repuestos", reason));
   const loadNext = () => void api<NextServiceResponse[]>("/services/proximos").then((list) => { setNextService(list.find((next) => next.motoId === id) ?? null); setPanelErrors((current) => ({ ...current, next: "" })); }).catch((reason) => panelError("next", reason));
-  useEffect(load, [id]);
-  useEffect(() => { loadServices(); }, [id, serviceDesde, serviceHasta, serviceSort, serviceDirection, servicePage]);
-  useEffect(() => { loadFichas(); }, [id, fichaDesde, fichaHasta, fichaEstado, fichaPago, fichaSort, fichaDirection, fichaPage]);
-  useEffect(() => { loadRepuestos(); }, [id, repuestoDesde, repuestoHasta, repuestoEstado, repuestoPago, repuestoSort, repuestoDirection, repuestoPage]);
+  useEffect(load, [id, notify]);
+  useEffect(() => { loadServices(); }, [id, serviceDesde, serviceHasta, serviceSort, serviceDirection, servicePage, notify]);
+  useEffect(() => { loadFichas(); }, [id, fichaDesde, fichaHasta, fichaEstado, fichaPago, fichaSort, fichaDirection, fichaPage, notify]);
+  useEffect(() => { loadRepuestos(); }, [id, repuestoDesde, repuestoHasta, repuestoEstado, repuestoPago, repuestoSort, repuestoDirection, repuestoPage, notify]);
   useEffect(() => {
     loadNext();
     void api<TransferResponse[]>(`/motovehiculos/${id}/transferencias`).then(setTransfers).catch(() => undefined);
-  }, [id]);
+  }, [id, notify]);
 
   const addService = async () => {
-    if (!serviceKm) return setError("Ingresá el kilometraje del service.");
+    if (!serviceKm) return notify("Ingresá el kilometraje del service.", "error");
     if (serviceSaving) return;
     setServiceSaving(true);
     try {
@@ -120,7 +127,7 @@ export function MotoDetail({
       setServiceDate("");
       setServiceNotes("");
       notify("Service registrado.");
-    } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); } finally { setServiceSaving(false); }
+    } catch (reason) { notify(errorMessage(reason), "error"); } finally { setServiceSaving(false); }
   };
 
   const saveConfig = async () => {
@@ -139,7 +146,7 @@ export function MotoDetail({
       loadNext();
       setConfigOpen(false);
       notify("Configuración de service guardada.");
-    } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); } finally { setConfigSaving(false); }
+    } catch (reason) { notify(errorMessage(reason), "error"); } finally { setConfigSaving(false); }
   };
 
   const openConfig = () => {
@@ -149,12 +156,12 @@ export function MotoDetail({
     setConfigOpen(true);
   };
   const runMotoAction = async (path: string, options: RequestInit = {}) => {
-    try { const next = await api<MotovehiculoResponse>(path, options); setMoto(next); setIntakeOpen(false); notify("Estado de la moto actualizado."); }
-    catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); }
+    try { const next = await api<MotovehiculoResponse>(path, options); setMoto(next); setIntakeOpen(false); }
+    catch (reason) { notify(errorMessage(reason), "error"); throw reason; }
   };
 
-  if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><p className="login-pending">{error}</p></div>;
-  if (!moto) return <div className="page">Cargando…</div>;
+  if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><EmptyState title="No se pudo cargar la moto" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={load}>Reintentar</button>} /></div>;
+  if (!moto) return <div className="page"><div className="table-loading" role="status">Cargando moto...</div></div>;
 
   const tabs: { id: typeof tab; label: string }[] = [
     { id: "general", label: "Datos" },
@@ -174,7 +181,7 @@ export function MotoDetail({
         </div>
         <div className="detail-stack">
           <StatusBadge status={moto.estado} />
-          {moto.estado === "Vendida" ? <span className="detail-note">Venta completada</span> : !moto.ingresada ? <button className="button secondary" onClick={() => setIntakeOpen(true)}><LogIn size={17} />Ingresar</button> : moto.seccion === "Venta" && moto.estado === "Ingresada Venta" ? <button className="button secondary" onClick={() => void runMotoAction(`/motovehiculos/${moto.id}/venta/estado`, { method: "PATCH", body: JSON.stringify({ estado: "En venta" }) })}><Tag size={17} />Marcar en venta</button> : moto.seccion === "Venta" && moto.estado === "Transferencia en curso" ? <button className="button primary" onClick={() => void runMotoAction(`/motovehiculos/${moto.id}/venta/completar`, { method: "POST" })}><LogOut size={17} />Completar venta</button> : <span className="detail-note">La entrega se completa desde la revisión</span>}
+           {moto.estado === "Vendida" ? <span className="detail-note">Venta completada</span> : !moto.ingresada ? <button className="button secondary" onClick={() => setIntakeOpen(true)}><LogIn size={17} />Ingresar</button> : moto.seccion === "Venta" && moto.estado === "Ingresada Venta" ? <button className="button secondary" onClick={() => setConfirmation({ title: "Marcar moto en venta", body: `${moto.patente} pasará al estado En venta.`, confirmLabel: "Marcar en venta", successMessage: "Moto marcada como En venta.", action: () => runMotoAction(`/motovehiculos/${moto.id}/venta/estado`, { method: "PATCH", body: JSON.stringify({ estado: "En venta" }) }) })}><Tag size={17} />Marcar en venta</button> : moto.seccion === "Venta" && moto.estado === "Transferencia en curso" ? <button className="button primary" onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${moto.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: () => runMotoAction(`/motovehiculos/${moto.id}/venta/completar`, { method: "POST" }) })}><LogOut size={17} />Completar venta</button> : <span className="detail-note">La entrega se completa desde la revisión</span>}
           <strong>{moto.anio ?? "—"}</strong>
         </div>
       </div>
@@ -289,7 +296,8 @@ export function MotoDetail({
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setConfigOpen(false)}>Cancelar</button><button className="button primary" disabled={configSaving}>{configSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>
       </Dialog>
-      <Dialog open={intakeOpen} title="Ingresar moto" onClose={() => setIntakeOpen(false)}><p>Elegí el destino operativo para esta moto.</p><div className="intake-options"><button className={intakeSection === "TALLER" ? "selected" : ""} onClick={() => setIntakeSection("TALLER")}>Taller</button><button className={intakeSection === "VENTA" ? "selected" : ""} onClick={() => setIntakeSection("VENTA")}>Ventas</button></div><div className="modal-actions"><button className="button secondary" onClick={() => setIntakeOpen(false)}>Cancelar</button><button className="button primary" onClick={() => void runMotoAction(`/motovehiculos/${moto.id}/ingreso`, { method: "POST", body: JSON.stringify({ seccion: intakeSection }) })}>Ingresar</button></div></Dialog>
+       <Dialog open={intakeOpen} title="Ingresar moto" onClose={() => setIntakeOpen(false)}><p>Elegí el destino operativo para esta moto.</p><div className="intake-options"><button className={intakeSection === "TALLER" ? "selected" : ""} onClick={() => setIntakeSection("TALLER")}>Taller</button><button className={intakeSection === "VENTA" ? "selected" : ""} onClick={() => setIntakeSection("VENTA")}>Ventas</button></div><div className="modal-actions"><button className="button secondary" onClick={() => setIntakeOpen(false)}>Cancelar</button><button className="button primary" onClick={() => { void runMotoAction(`/motovehiculos/${moto.id}/ingreso`, { method: "POST", body: JSON.stringify({ seccion: intakeSection }) }).then(() => notify(`Moto ingresada en ${intakeSection === "TALLER" ? "Taller" : "Ventas"}.`), () => undefined); }}>Ingresar</button></div></Dialog>
+      <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; setConfirmation(null); if (!request) return; return request.action().then(() => notify(request.successMessage)).catch((reason) => { notify(errorMessage(reason), "error"); throw reason; }); }} />
     </div>
   );
 }

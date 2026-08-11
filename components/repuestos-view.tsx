@@ -42,15 +42,14 @@ export function RepuestosView({
   const [direction, setDirection] = useState<"ASC" | "DESC">("DESC");
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<PageResponse<RepuestoResponse> | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(startCreate);
   const [editing, setEditing] = useState<RepuestoResponse | null>(null);
   const [deleting, setDeleting] = useState<RepuestoResponse | null>(null);
   const [clients, setClients] = useState<ClienteResponse[]>([]);
   const repuestoParams = () => ({ estado: estado === "Todos" ? undefined : estado, q: query || undefined, fechaDesde: desde || undefined, fechaHasta: hasta || undefined, sortBy, direction });
-  useEffect(() => { void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { ...repuestoParams(), page: page - 1, size: 20 }).then(setResult).catch((err) => setError(errorMessage(err))); }, [query, estado, desde, hasta, sortBy, direction, page]);
+  useEffect(() => { void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { ...repuestoParams(), page: page - 1, size: 20 }).then(setResult).catch((err) => notify(errorMessage(err), "error")); }, [query, estado, desde, hasta, sortBy, direction, page, notify]);
   const loadClients = () => void api<PageResponse<ClienteResponse>>("/clientes", {}, { size: 100, activo: true }).then((r) => setClients(r.content)).catch(() => undefined);
-  const refresh = () => void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { ...repuestoParams(), page: page - 1, size: 20 }).then(setResult).catch((err) => setError(errorMessage(err)));
+  const refresh = () => void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { ...repuestoParams(), page: page - 1, size: 20 }).then(setResult).catch((err) => notify(errorMessage(err), "error"));
   const toggleDirection = () => setDirection((d) => (d === "ASC" ? "DESC" : "ASC"));
   useEffect(() => { if (createPrefill) loadClients(); }, [createPrefill]);
   return (
@@ -59,7 +58,6 @@ export function RepuestosView({
         <div><h1>Pedidos de repuestos</h1><p>Control de compras, recepción y pago de repuestos y accesorios.</p></div>
         <button className="button primary" onClick={() => { setCreateOpen(true); loadClients(); }}><Plus size={19} />Nuevo pedido</button>
       </div>
-      {error && <p className="login-pending">{error}</p>}
       <section className="panel table-panel">
         <div className="filter-bar">
           <SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Número, cliente o patente" />
@@ -77,7 +75,7 @@ export function RepuestosView({
             <ArrowDownUp size={16} />
             {direction === "DESC" ? "Más recientes" : "Más antiguos"}
           </button>
-          <button className="button secondary" onClick={() => void download("/repuestos/export.xlsx", "repuestos.xlsx", repuestoParams()).catch((reason) => setError(errorMessage(reason)))}><Download size={17} />Exportar Excel</button>
+          <button className="button secondary" onClick={() => void download("/repuestos/export.xlsx", "repuestos.xlsx", repuestoParams()).catch((reason) => notify(errorMessage(reason), "error"))}><Download size={17} />Exportar Excel</button>
         </div>
         {result?.content.length ? (
           <table>
@@ -108,7 +106,7 @@ export function RepuestosView({
          onLoadVehicles={async (clienteId) => { const r = await api<PageResponse<MotovehiculoResponse>>("/motovehiculos", {}, { clienteId, size: 100, activo: true }); return r.content.filter((moto) => moto.ingresada && moto.seccion === "Taller"); }}
         onClose={() => { setCreateOpen(false); setEditing(null); onPrefillHandled?.(); }}
         onSaved={(repuesto) => { setCreateOpen(false); setEditing(null); onPrefillHandled?.(); refresh(); onOpen(repuesto); }}
-        onError={setError}
+          onError={(message) => notify(message, "error")}
       />
       <ConfirmModal
         open={Boolean(deleting)}
@@ -116,7 +114,7 @@ export function RepuestosView({
         body={`Vas a eliminar el pedido ${deleting?.numero ?? ""}. El historial conservará el registro para auditoría.`}
         confirmLabel="Eliminar pedido"
         onClose={() => setDeleting(null)}
-        onConfirm={() => { const sel = deleting; if (!sel) return; setDeleting(null); void api(`/repuestos/${sel.id}`, { method: "DELETE" }).then(() => { refresh(); notify(`Pedido ${sel.numero} eliminado.`); }).catch((reason) => setError(errorMessage(reason))); }}
+        onConfirm={async () => { const sel = deleting; if (!sel) return; setDeleting(null); try { await api(`/repuestos/${sel.id}`, { method: "DELETE" }); refresh(); notify(`Pedido ${sel.numero} eliminado correctamente.`); } catch (reason) { notify(errorMessage(reason), "error"); } }}
       />
     </div>
   );
@@ -211,7 +209,7 @@ function CreateRepuestoDialog({
           });
       notify(`Pedido ${repuesto.numero} ${initial ? "actualizado" : "creado"}.`);
       onSaved(repuesto);
-    } catch (reason) { const message = errorMessage(reason); onError(message); notify(message, "error"); } finally { setSaving(false); }
+    } catch (reason) { onError(errorMessage(reason)); } finally { setSaving(false); }
   };
   const setRow = (key: string, changes: Partial<typeof rows[number]>) => setRows((all) => all.map((row) => row.key === key ? { ...row, ...changes } : row));
   return (
@@ -260,23 +258,41 @@ export function RepuestoDetail({
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [selectedPaidItemIds, setSelectedPaidItemIds] = useState<string[]>([]);
   const [paymentSaving, setPaymentSaving] = useState(false);
-  const load = () => void api<RepuestoResponse>(`/repuestos/${repuestoId}`).then(setRepuesto).catch((reason) => setError(errorMessage(reason)));
-  useEffect(load, [repuestoId]);
-  if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><p className="login-pending">{error}</p></div>;
+  const [confirmation, setConfirmation] = useState<{
+    title: string;
+    body: string;
+    confirmLabel: string;
+    successMessage: string;
+    action: () => Promise<unknown>;
+  } | null>(null);
+  const load = () => void api<RepuestoResponse>(`/repuestos/${repuestoId}`).then(setRepuesto).catch((reason) => { setError(errorMessage(reason)); notify(errorMessage(reason), "error"); });
+  useEffect(load, [repuestoId, notify]);
+  if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><EmptyState title="No se pudo cargar el pedido" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={load}>Reintentar</button>} /></div>;
   if (!repuesto) return <div className="page">Cargando…</div>;
   const locked = repuesto.estado === "Cancelado" || repuesto.estado === "Completado";
   const nextItemStates = (state: RepuestoItemState) => state === "Pendiente de pedir" ? ["Pedido", "Cancelado"] : state === "Pedido" ? ["Recibido", "Cancelado"] : state === "Recibido" ? ["Entregado", "Cancelado"] : [];
-  const setItemState = async (itemId: string, estado: RepuestoItemState) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/items/${itemId}/estado`, { method: "PATCH", body: JSON.stringify({ estado }) }); setRepuesto(next); notify(`Ítem marcado como ${estado}.`); } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); } finally { setPending(false); } };
-  const patch = async (path: string, body: Record<string, string>) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(path, { method: "PATCH", body: JSON.stringify(body) }); setRepuesto(next); return next; } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); return null; } finally { setPending(false); } };
+  const setItemState = async (itemId: string, estado: RepuestoItemState) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/items/${itemId}/estado`, { method: "PATCH", body: JSON.stringify({ estado }) }); setRepuesto(next); notify(`Ítem marcado como ${estado}.`); } catch (reason) { notify(errorMessage(reason), "error"); } finally { setPending(false); } };
+  const patch = async (path: string, body: Record<string, string>) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(path, { method: "PATCH", body: JSON.stringify(body) }); setRepuesto(next); return next; } catch (reason) { notify(errorMessage(reason), "error"); throw reason; } finally { setPending(false); } };
   const openPartialPayment = () => { setSelectedPaidItemIds(repuesto.items.filter((item) => item.estado !== "Cancelado" && item.pagado).map((item) => item.id)); setPaymentOpen(true); };
   const savePartialPayment = async () => {
     if (paymentSaving) return;
     setPaymentSaving(true);
     try {
       const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/pago`, { method: "PATCH", body: JSON.stringify({ estadoPago: selectedPaidItemIds.length ? "Parcial" : "No pagado", itemIds: selectedPaidItemIds }) });
-      setRepuesto(next); setPaymentOpen(false); notify(`Pago: ${next.estadoPago}.`);
-    } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); }
+      setRepuesto(next); setPaymentOpen(false);
+    } catch (reason) { notify(errorMessage(reason), "error"); throw reason; }
     finally { setPaymentSaving(false); }
+  };
+  const confirmPartialPayment = () => {
+    const nextStatus = selectedPaidItemIds.length ? "Parcial" : "No pagado";
+    setPaymentOpen(false);
+    setConfirmation({
+      title: "Guardar pago parcial",
+      body: `El pedido quedará con el estado de pago ${nextStatus}. El cambio se registrará en auditoría.`,
+      confirmLabel: "Guardar pago",
+      successMessage: `Pago actualizado a ${nextStatus}.`,
+      action: savePartialPayment,
+    });
   };
   return (
     <div className="page">
@@ -316,14 +332,14 @@ export function RepuestoDetail({
             <h4>Estado del pedido</h4>
             <div className="summary-actions">
               {repuestoStates.filter((option) => option !== repuesto.estado && !(option === "Cancelado" && repuesto.estado === "Completado") && !(option === "Completado" && repuesto.estado === "Cancelado")).map((option) => (
-                <button key={option} className="button secondary large" disabled={pending} onClick={() => { void patch(`/repuestos/${repuesto.id}/estado`, { estado: option }).then((next) => next && notify(`Pedido: ${option}`)); }}>Marcar {option}</button>
+                <button key={option} className="button secondary large" disabled={pending} onClick={() => setConfirmation({ title: `Marcar pedido como ${option}`, body: `El pedido ${repuesto.numero} pasará al estado ${option}.`, confirmLabel: `Marcar como ${option}`, successMessage: `Pedido marcado como ${option}.`, action: async () => { const next = await patch(`/repuestos/${repuesto.id}/estado`, { estado: option }); if (!next) throw new Error("No se pudo actualizar el estado del pedido."); } })}>Marcar {option}</button>
               ))}
             </div>
           </div>
           <div className="summary-group">
             <h4>Pago</h4>
             <div className="summary-actions">
-              {repuesto.estadoPago === "Pagado" ? <button className="button secondary large" disabled={pending} onClick={() => { void patch(`/repuestos/${repuesto.id}/pago`, { estadoPago: "No pagado" }).then((next) => next && notify("Pago: No pagado")); }}>Pago: No pagado</button> : <><button className="button primary large" disabled={pending} onClick={() => { void patch(`/repuestos/${repuesto.id}/pago`, { estadoPago: "Pagado" }).then((next) => next && notify("Pago: Pagado")); }}>Pago: Pagado</button><button className="button secondary large" disabled={pending} onClick={openPartialPayment}>Pago: {repuesto.estadoPago === "Parcial" ? "Editar parcial" : "Parcial"}</button></>}
+              {repuesto.estadoPago === "Pagado" ? <button className="button secondary large" disabled={pending} onClick={() => setConfirmation({ title: "Revertir pago", body: `El pedido ${repuesto.numero} volverá a No pagado.`, confirmLabel: "Marcar como no pagado", successMessage: "Pago marcado como no pagado.", action: async () => { const next = await patch(`/repuestos/${repuesto.id}/pago`, { estadoPago: "No pagado" }); if (!next) throw new Error("No se pudo actualizar el pago."); } })}>Pago: No pagado</button> : <><button className="button primary large" disabled={pending} onClick={() => setConfirmation({ title: "Confirmar pago", body: `El pedido ${repuesto.numero} se marcará como Pagado.`, confirmLabel: "Marcar como pagado", successMessage: "Pago marcado como pagado.", action: async () => { const next = await patch(`/repuestos/${repuesto.id}/pago`, { estadoPago: "Pagado" }); if (!next) throw new Error("No se pudo actualizar el pago."); } })}>Pago: Pagado</button><button className="button secondary large" disabled={pending} onClick={openPartialPayment}>Pago: {repuesto.estadoPago === "Parcial" ? "Editar parcial" : "Parcial"}</button></>}
             </div>
           </div>
         </aside>
@@ -331,8 +347,9 @@ export function RepuestoDetail({
       <Dialog open={paymentOpen} title="Registrar pago parcial" onClose={() => setPaymentOpen(false)}>
         <p>Seleccioná los ítems no cancelados que fueron pagados.</p>
         <div className="line-items-list">{repuesto.items.filter((item) => item.estado !== "Cancelado").map((item) => <label key={item.id} className="line-check"><input type="checkbox" checked={selectedPaidItemIds.includes(item.id)} onChange={(event) => setSelectedPaidItemIds((ids) => event.target.checked ? [...ids, item.id] : ids.filter((id) => id !== item.id))} />{item.descripcion}<strong>{money(item.subtotal)}</strong></label>)}</div>
-        <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setSelectedPaidItemIds([])}>No pagar ninguno</button><button type="button" className="button secondary" onClick={() => setPaymentOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={paymentSaving} onClick={() => void savePartialPayment()}>{paymentSaving ? "Guardando..." : "Guardar pago"}</button></div>
+        <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setSelectedPaidItemIds([])}>No pagar ninguno</button><button type="button" className="button secondary" onClick={() => setPaymentOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={paymentSaving} onClick={confirmPartialPayment}>{paymentSaving ? "Guardando..." : "Guardar pago"}</button></div>
       </Dialog>
+      <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; setConfirmation(null); if (!request) return; return request.action().then(() => notify(request.successMessage)).catch((reason) => { notify(errorMessage(reason), "error"); throw reason; }); }} />
     </div>
   );
 }

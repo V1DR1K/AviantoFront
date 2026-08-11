@@ -14,7 +14,7 @@ import type {
   PhotoResponse,
   TrabajoCatalogoResponse,
 } from "../lib/types";
-import { AutocompleteField, ConfirmModal, SelectField } from "./ui";
+import { AutocompleteField, ConfirmModal, SelectField, type Notify } from "./ui";
 
 type Line = {
   key: string;
@@ -84,12 +84,14 @@ export function FichaForm({
   fichaKey,
   initialClientId,
   initialMotoId,
+  notify,
 }: {
   onClose: () => void;
   onSave: (ficha: FichaResponse) => void;
   fichaKey?: string | null;
   initialClientId?: string | null;
   initialMotoId?: string | null;
+  notify: Notify;
 }) {
   const editing = Boolean(fichaKey);
   const [loadedEstado, setLoadedEstado] = useState<string | null>(null);
@@ -115,7 +117,6 @@ export function FichaForm({
   const [descuentoGlobal, setDescuentoGlobal] = useState(0);
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
   const [existing, setExisting] = useState<PhotoResponse[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [closeConfirmation, setCloseConfirmation] = useState(false);
   const plateLocked = Boolean(initialMotoId);
@@ -140,7 +141,6 @@ export function FichaForm({
     const client = clients.find((item) => item.id === id);
     setClientId(id);
     setClientQuery(client ? clientLabel(client) : "");
-    setClientOpen(false);
   };
   useEffect(() => {
     void api<PageResponse<ClienteResponse>>(
@@ -150,13 +150,14 @@ export function FichaForm({
     )
       .then((page) => setClients(page.content))
       .catch((reason) =>
-        setError(
+        notify(
           reason instanceof Error
             ? reason.message
             : "No se pudieron cargar los datos.",
+          "error",
         ),
       );
-  }, []);
+  }, [notify]);
   useEffect(() => {
     let active = true;
     void api<TrabajoCatalogoResponse[]>("/configuracion/trabajos/autocomplete", {}, { q: workQuery })
@@ -171,7 +172,6 @@ export function FichaForm({
     const plate = patenteQuery.trim().toUpperCase();
     if (!plate) return;
     setPatenteBusy(true);
-    setError(null);
     try {
       const page = await api<PageResponse<MotovehiculoResponse>>(
         "/motovehiculos",
@@ -179,8 +179,9 @@ export function FichaForm({
         { q: plate, activo: true, size: 20 },
       );
       if (!page.content.length) {
-        setError(
+        notify(
           `No se encontró la moto "${plate}". Verificá la patente o creala con el botón "Agregar moto".`,
+          "error",
         );
         setVehicles([]);
         setVehicleId("");
@@ -194,8 +195,9 @@ export function FichaForm({
       if (owner) chooseClient(owner);
       setVehicleId(available[0]?.id ?? "");
     } catch (reason) {
-      setError(
+      notify(
         reason instanceof Error ? reason.message : "No se pudo buscar la moto.",
+        "error",
       );
     } finally {
       setPatenteBusy(false);
@@ -244,13 +246,14 @@ export function FichaForm({
         })();
       })
       .catch((reason) =>
-        setError(
+        notify(
           reason instanceof Error
             ? reason.message
             : "No se pudieron cargar las motos.",
+          "error",
         ),
       );
-  }, [clientId, reloadKey]);
+  }, [clientId, reloadKey, notify]);
   useEffect(() => {
     if (!fichaKey) return;
     void api<FichaResponse>(`/fichas/${fichaKey}`)
@@ -285,13 +288,14 @@ export function FichaForm({
         setReloadKey((key) => key + 1);
       })
       .catch((reason) =>
-        setError(
+        notify(
           reason instanceof Error
             ? reason.message
             : "No se pudo cargar la ficha.",
+          "error",
         ),
       );
-  }, [fichaKey]);
+  }, [fichaKey, notify]);
 
   const currentVehicle = vehicles.find((vehicle) => vehicle.id === vehicleId);
   const selectedClient = clients.find((client) => client.id === clientId);
@@ -344,10 +348,11 @@ export function FichaForm({
         }),
       ]);
     } catch (reason) {
-      setError(
+      notify(
         reason instanceof Error
           ? reason.message
           : "No se pudieron preparar las fotos.",
+        "error",
       );
     }
   };
@@ -358,18 +363,18 @@ export function FichaForm({
   };
   const save = async () => {
     if (!clientId || !vehicleId)
-      return setError("Seleccioná un cliente y una moto.");
+      return notify("Seleccioná un cliente y una moto.", "error");
     if (!trabajos.length)
-      return setError("Cargá al menos un trabajo a realizar.");
+      return notify("Cargá al menos un trabajo a realizar.", "error");
     const validWork = trabajos.filter((trabajo) => trabajo.descripcion.trim());
     if (!validWork.length)
-      return setError("Cada trabajo necesita una descripción.");
+      return notify("Cada trabajo necesita una descripción.", "error");
     if (!editable)
-      return setError(
+      return notify(
         `La ficha ya está en "${loadedEstado}" y no puede editarse desde el formulario.`,
+        "error",
       );
     setSaving(true);
-    setError(null);
     try {
       const request: FichaRequest = {
         clienteId: clientId,
@@ -418,10 +423,11 @@ export function FichaForm({
       }
       onSave(ficha);
     } catch (reason) {
-      setError(
+      notify(
         reason instanceof Error
           ? reason.message
           : "No fue posible guardar la ficha.",
+        "error",
       );
     } finally {
       setSaving(false);
@@ -450,13 +456,8 @@ export function FichaForm({
           Cerrar
         </button>
       </div>
-      {error && (
-        <p className="login-pending" role="alert">
-          {error}
-        </p>
-      )}
       {editing && !editable && (
-        <p className="login-pending" role="alert">
+        <p className="form-notice" role="status">
           Esta ficha ya está en &quot;{loadedEstado}&quot;. Solo se pueden
           editar fichas en &quot;Cargada&quot; o &quot;En proceso&quot;.
         </p>

@@ -17,36 +17,34 @@ export function ProfileForm({ onClose, onOpenProfile, onCreated, notify }: { onC
   const [values, setValues] = useState<Record<string, string>>({});
   const [clientQuery, setClientQuery] = useState("");
   const [newClientOpen, setNewClientOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { void api<MarcaMotoResponse[]>("/configuracion/marcas-moto").then((items) => setBrands(items.filter((item) => item.activo))).catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudieron cargar las marcas.")); }, []);
-  useEffect(() => { void api<PageResponse<ClienteResponse>>("/clientes", {}, { activo: true, size: 100 }).then((page) => setClients(page.content)).catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudieron cargar los clientes.")); }, []);
+  useEffect(() => { void api<MarcaMotoResponse[]>("/configuracion/marcas-moto").then((items) => setBrands(items.filter((item) => item.activo))).catch((reason) => notify(reason instanceof Error ? reason.message : "No se pudieron cargar las marcas.", "error")); }, [notify]);
+  useEffect(() => { void api<PageResponse<ClienteResponse>>("/clientes", {}, { activo: true, size: 100 }).then((page) => setClients(page.content)).catch((reason) => notify(reason instanceof Error ? reason.message : "No se pudieron cargar los clientes.", "error")); }, [notify]);
   const search = async () => {
     const patent = normalizedPlate(plate);
-    if (!patent) return setError("Ingresá el dominio de la moto.");
-    setBusy(true); setError(null);
+    if (!patent) return notify("Ingresá el dominio de la moto.", "error");
+    setBusy(true);
     try {
       const result = await api<PageResponse<PerfilResponse>>("/perfiles", {}, { q: patent, size: 100 });
       const existing = result.content.find((item) => normalizedPlate(item.patente) === patent);
       if (existing) return onOpenProfile(existing.id);
       setValues((current) => ({ ...current, patente: patent }));
       setSearched(true);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "No se pudo buscar el dominio."); } finally { setBusy(false); }
+    } catch (reason) { notify(reason instanceof Error ? reason.message : "No se pudo buscar el dominio.", "error"); } finally { setBusy(false); }
   };
   const set = (key: string, value: string) => setValues((current) => ({ ...current, [key]: value }));
   const selectedClient = clients.find((client) => client.id === values.clienteId);
   const chooseClient = (client: ClienteResponse) => { set("clienteId", client.id); setClientQuery(client.nombre); };
   const submit = async () => {
-    if (!values.marcaId || !values.modelo || !values.clienteId || !values.patente) return setError("Completá los datos de la moto y seleccioná un cliente.");
-    setBusy(true); setError(null);
+    if (!values.marcaId || !values.modelo || !values.clienteId || !values.patente) return notify("Completá los datos de la moto y seleccioná un cliente.", "error");
+    setBusy(true);
     try {
       const profile = await api<PerfilResponse>("/perfiles", { method: "POST", body: JSON.stringify({ ...values, anio: values.anio ? Number(values.anio) : null, kilometraje: values.kilometraje ? Number(values.kilometraje) : null }) });
       onCreated(profile.id);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "No se pudo crear el perfil."); } finally { setBusy(false); }
+    } catch (reason) { notify(reason instanceof Error ? reason.message : "No se pudo crear el perfil.", "error"); } finally { setBusy(false); }
   };
   return <section className="order-form">
     <div className="page-heading"><div><h1>Nuevo perfil</h1><p>Buscá la moto por dominio. Si ya existe, se abrirá su Perfil.</p></div><button className="button secondary form-close" onClick={onClose}><X size={18} />Cerrar</button></div>
-    {error && <p className="login-pending" role="alert">{error}</p>}
     <section className="form-section">
       <h2>Dominio</h2>
       <div className="plate-search"><input value={plate} onChange={(event) => { setPlate(event.target.value); setSearched(false); }} placeholder="Ej.: AB 123 CD" onKeyDown={(event) => { if (event.key === "Enter") void search(); }} /><button type="button" className="button secondary" disabled={busy} onClick={() => void search()}><Search size={17} />{busy ? "Buscando..." : "Buscar"}</button></div>

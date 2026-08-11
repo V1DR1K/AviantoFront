@@ -6,7 +6,6 @@ import { login, type AuthSession } from "../lib/auth";
 import type { Notify } from "./ui";
 
 export function LoginView({ onAuthenticated, notify }: { onAuthenticated: (session: AuthSession) => void; notify: Notify }) {
-  const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   return (
     <main className="login-page">
@@ -26,13 +25,11 @@ export function LoginView({ onAuthenticated, notify }: { onAuthenticated: (sessi
             event.preventDefault();
             const data = new FormData(event.currentTarget);
             setPending(true);
-            setError(null);
             try {
               onAuthenticated(await login(String(data.get("username") ?? ""), String(data.get("password") ?? "")));
               notify("Sesión iniciada.");
             } catch (reason) {
               const message = reason instanceof Error ? reason.message : "No fue posible iniciar sesión.";
-              setError(message);
               notify(message, "error");
             } finally {
               setPending(false);
@@ -57,7 +54,6 @@ export function LoginView({ onAuthenticated, notify }: { onAuthenticated: (sessi
             {pending ? "Ingresando..." : "Ingresar"}
           </button>
         </form>
-        {error && <p className="login-pending" role="alert">{error}</p>}
       </section>
     </main>
   );
