@@ -252,11 +252,8 @@ export function VentasView({
   return <div className="page">
     <div className="page-heading"><div><h1>Ventas</h1><p>Seguí cada moto desde su ingreso hasta la transferencia final.</p></div><div className="page-actions"><button className="button secondary" onClick={onIntake}><Plus size={18} />Ingresar moto</button></div></div>
     {error && <p className="login-pending" role="alert">{error}</p>}
-    <div className="metrics dashboard-metrics sales-metrics">
-      {salesStatuses.map((status) => <Metric key={status} label={status} value={String(result?.estados.find((item) => item.estado === status)?.motos.length ?? 0)} tone={tabKey(status)} />)}
-    </div>
     <section className="panel table-panel">
-      <div className="filter-bar"><SearchBox value={query} onChange={setQuery} placeholder="Patente, moto o cliente" /><SelectField value={tab} onChange={(value) => setTab(value as typeof tab)} options={salesStatuses.map((status) => ({ value: status, label: status }))} ariaLabel="Filtrar ventas por estado" /></div>
+      <div className="filter-bar"><SearchBox value={query} onChange={setQuery} placeholder="Patente, moto o cliente" /><SelectField value={tab} onChange={(value) => setTab(value as typeof tab)} options={salesStatuses.map((status) => ({ value: status, label: status }))} icon={Filter} ariaLabel="Filtrar ventas por estado" /></div>
       <nav className="tabs taller-tabs" aria-label="Estado de las ventas">{salesStatuses.map((status) => <button key={status} className={`${tab === status ? "active" : ""} tab-${tabKey(status)}`} onClick={() => setTab(status)}>{status}<span className="tab-count">{result?.estados.find((item) => item.estado === status)?.motos.length ?? 0}</span></button>)}</nav>
       {visible.length ? <table><thead><tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{visible.map((moto) => {
         const busy = busyId === moto.motoId;

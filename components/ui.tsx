@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { AlertTriangle, CheckCircle2, Clock3, Info, Search, X, type LucideIcon } from "lucide-react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, Clock3, Info, Search, X, type LucideIcon } from "lucide-react";
+import { createPortal } from "react-dom";
 import type { AutocompleteResponse } from "../lib/types";
 
 export type ToastTone = "success" | "error" | "warning" | "info";
@@ -35,7 +36,7 @@ function useModalFocus(open: boolean, onClose: () => void) {
     const frame = requestAnimationFrame(() =>
       ref.current
         ?.querySelector<HTMLElement>(
-          "button, input, select, textarea, [tabindex]:not([tabindex='-1'])",
+          "button, input, select:not(.select-native), textarea, [tabindex]:not([tabindex='-1'])",
         )
         ?.focus(),
     );
@@ -53,7 +54,7 @@ function useModalFocus(open: boolean, onClose: () => void) {
     if (event.key !== "Tab") return;
     const focusable = [
       ...(ref.current?.querySelectorAll<HTMLElement>(
-        "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])",
+        "button:not([disabled]), input:not([disabled]), select:not(.select-native):not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])",
       ) ?? []),
     ];
     if (!focusable.length) return;
@@ -132,15 +133,146 @@ export function SelectField({
   className?: string;
   ariaLabel?: string;
 }) {
+  const controlRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const [menuPosition, setMenuPosition] = useState<CSSProperties | null>(null);
+  const fieldId = useId();
+  const menuId = `${fieldId}-options`;
+  const selectedOption = options.find((option) => option.value === value);
+  const firstEnabledIndex = options.findIndex((option) => !option.disabled);
+  const selectedIndex = options.findIndex((option) => option.value === value && !option.disabled);
+  const optionId = (index: number) => `${menuId}-${index}`;
+  const moveHighlight = (direction: 1 | -1) => {
+    if (!options.length) return;
+    let next = highlightedIndex;
+    for (let step = 0; step < options.length; step += 1) {
+      next = (next + direction + options.length) % options.length;
+      if (!options[next].disabled) {
+        setHighlightedIndex(next);
+        return;
+      }
+    }
+  };
+  const openMenu = () => {
+    if (disabled || !options.length) return;
+    setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : firstEnabledIndex >= 0 ? firstEnabledIndex : 0);
+    setOpen(true);
+  };
+  const closeMenu = (restoreFocus = false) => {
+    setOpen(false);
+    if (restoreFocus) requestAnimationFrame(() => triggerRef.current?.focus());
+  };
+  const choose = (index: number) => {
+    const option = options[index];
+    if (!option || option.disabled) return;
+    onChange(option.value);
+    closeMenu(true);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const updateMenuPosition = () => {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const estimatedHeight = Math.min(280, options.length * 42 + 10);
+      const openAbove = window.innerHeight - rect.bottom < estimatedHeight && rect.top > estimatedHeight;
+      setMenuPosition({
+        position: "fixed",
+        left: rect.left,
+        width: Math.max(rect.width, 190),
+        top: openAbove ? "auto" : rect.bottom + 7,
+        bottom: openAbove ? window.innerHeight - rect.top + 7 : "auto",
+      });
+    };
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+      setMenuPosition(null);
+    };
+  }, [open, options.length]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!controlRef.current?.contains(target) && !menuRef.current?.contains(target)) closeMenu();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    menuRef.current?.querySelector<HTMLElement>(`[data-option-index="${highlightedIndex}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [highlightedIndex, open]);
+
+  const onTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!open) return openMenu();
+      moveHighlight(event.key === "ArrowDown" ? 1 : -1);
+    } else if (event.key === "Home" && open) {
+      event.preventDefault();
+      if (firstEnabledIndex >= 0) setHighlightedIndex(firstEnabledIndex);
+    } else if (event.key === "End" && open) {
+      event.preventDefault();
+      const lastEnabledIndex = options.findLastIndex((option) => !option.disabled);
+      if (lastEnabledIndex >= 0) setHighlightedIndex(lastEnabledIndex);
+    } else if ((event.key === "Enter" || event.key === " ") && !open) {
+      event.preventDefault();
+      openMenu();
+    } else if ((event.key === "Enter" || event.key === " ") && open) {
+      event.preventDefault();
+      choose(highlightedIndex);
+    } else if (event.key === "Escape" && open) {
+      event.preventDefault();
+      closeMenu(true);
+    } else if (event.key === "Tab") {
+      closeMenu();
+    }
+  };
+
   const control = (
-    <span className="select-control">
+    <div ref={controlRef} className={`select-control${open ? " is-open" : ""}${disabled ? " is-disabled" : ""}`}>
       {Icon && <Icon size={16} aria-hidden="true" />}
+      <button
+        ref={triggerRef}
+        type="button"
+        className="select-trigger"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+        aria-haspopup="listbox"
+        aria-label={ariaLabel}
+        aria-activedescendant={open ? optionId(highlightedIndex) : undefined}
+        aria-required={required}
+        disabled={disabled}
+        onClick={() => open ? closeMenu() : openMenu()}
+        onKeyDown={onTriggerKeyDown}
+      >
+        <span className={!selectedOption ? "select-placeholder" : undefined}>{selectedOption?.label ?? placeholder ?? "Seleccionar"}</span>
+        <ChevronDown size={16} aria-hidden="true" />
+      </button>
       <select
+        className="select-native"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
         required={required}
-        aria-label={ariaLabel}
+        tabIndex={-1}
+        aria-hidden="true"
+        onInvalid={(event) => {
+          event.preventDefault();
+          triggerRef.current?.focus();
+          setOpen(true);
+        }}
       >
         {placeholder !== undefined && <option value="">{placeholder}</option>}
         {options.map((option) => (
@@ -149,7 +281,30 @@ export function SelectField({
           </option>
         ))}
       </select>
-    </span>
+      {open && menuPosition && typeof document !== "undefined" && createPortal(
+        <div ref={menuRef} id={menuId} className="select-menu suggestions" style={menuPosition} role="listbox" aria-label={ariaLabel}>
+          {options.map((option, index) => (
+            <button
+              key={option.value}
+              type="button"
+              role="option"
+              tabIndex={-1}
+              data-option-index={index}
+              id={optionId(index)}
+              aria-selected={option.value === value}
+              disabled={option.disabled}
+              className={`${option.value === value ? "selected" : ""}${index === highlightedIndex ? " highlighted" : ""}`}
+              onMouseEnter={() => setHighlightedIndex(index)}
+              onClick={() => choose(index)}
+            >
+              <span>{option.label}</span>
+              {option.value === value && <Check size={16} aria-hidden="true" />}
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </div>
   );
   return label ? <label className={`select-field ${className}`}>{label}{control}</label> : control;
 }
@@ -259,6 +414,7 @@ export function ConfirmModal({
 }) {
   const [modalRef, onModalKeyDown] = useModalFocus(open, onClose);
   const [pending, setPending] = useState(false);
+  const titleId = useId();
   if (!open) return null;
   const run = () => {
     if (pending) return;
@@ -273,24 +429,28 @@ export function ConfirmModal({
       <section
         ref={modalRef}
         onKeyDownCapture={onModalKeyDown}
-        className="modal"
+        className="modal confirm-modal"
         role="dialog"
         tabIndex={-1}
         aria-modal="true"
-        aria-labelledby="confirm-title"
+        aria-labelledby={titleId}
       >
-        <button className="dialog-close" onClick={onClose} aria-label="Cerrar" disabled={pending}>
-          <X size={20} />
-        </button>
-        <h2 id="confirm-title">{title}</h2>
-        <p>{body}</p>
-        <div className="modal-actions">
-          <button className="button secondary" onClick={onClose} disabled={pending}>
-            Cancelar
+        <header className="modal-header">
+          <h2 id={titleId}>{title}</h2>
+          <button className="dialog-close" onClick={onClose} aria-label="Cerrar" disabled={pending}>
+            <X size={19} />
           </button>
-          <button className={`button ${variant}`} onClick={run} disabled={pending}>
-            {pending ? "Esperando..." : confirmLabel}
-          </button>
+        </header>
+        <div className="modal-content">
+          <p>{body}</p>
+          <div className="modal-actions">
+            <button className="button secondary" onClick={onClose} disabled={pending}>
+              Cancelar
+            </button>
+            <button className={`button ${variant}`} onClick={run} disabled={pending}>
+              {pending ? "Esperando..." : confirmLabel}
+            </button>
+          </div>
         </div>
       </section>
     </div>
@@ -312,6 +472,7 @@ export function Dialog({
   className?: string;
 }) {
   const [modalRef, onModalKeyDown] = useModalFocus(open, onClose);
+  const titleId = useId();
   if (!open) return null;
   return (
     <div className="modal-backdrop">
@@ -322,13 +483,15 @@ export function Dialog({
         role="dialog"
         tabIndex={-1}
         aria-modal="true"
-        aria-labelledby="dialog-title"
+        aria-labelledby={titleId}
       >
-        <button className="dialog-close" onClick={onClose} aria-label="Cerrar">
-          <X size={20} />
-        </button>
-        <h2 id="dialog-title">{title}</h2>
-        {children}
+        <header className="modal-header">
+          <h2 id={titleId}>{title}</h2>
+          <button className="dialog-close" onClick={onClose} aria-label="Cerrar">
+            <X size={19} />
+          </button>
+        </header>
+        <div className="modal-content">{children}</div>
       </section>
     </div>
   );
