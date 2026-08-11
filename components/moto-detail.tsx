@@ -26,6 +26,7 @@ const repuestoStates: RepuestoState[] = ["En curso", "Completado", "Cancelado"];
 
 export function MotoDetail({
   id,
+  initialTab,
   onBack,
   onOpenFicha,
   onOpenRepuesto,
@@ -34,6 +35,7 @@ export function MotoDetail({
   notify,
 }: {
   id: string;
+  initialTab?: "general" | "client" | "services" | "fichas" | "repuestos";
   onBack: () => void;
   onOpenFicha: (ficha: FichaResponse) => void;
   onOpenRepuesto: (repuesto: RepuestoResponse) => void;
@@ -41,7 +43,7 @@ export function MotoDetail({
   onNewRepuesto: (prefill: { motoId: string; clienteId?: string | null }) => void;
   notify: Notify;
 }) {
-  const [tab, setTab] = useState<"general" | "client" | "services" | "fichas" | "repuestos">("general");
+  const [tab, setTab] = useState<"general" | "client" | "services" | "fichas" | "repuestos">(initialTab ?? "general");
   const [moto, setMoto] = useState<MotovehiculoResponse | null>(null);
   const [client, setClient] = useState<ClienteResponse | null>(null);
   const [transfers, setTransfers] = useState<TransferResponse[]>([]);

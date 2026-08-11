@@ -1,4 +1,4 @@
-export type FichaStatus = "Cargada" | "En proceso" | "Revisión" | "Entregada" | "Cancelada";
+export type FichaStatus = "Carga" | "Cargada" | "En proceso" | "Revisión" | "Entregada" | "Cancelada";
 export type MotoSection = "Taller" | "Venta";
 export type MotoStatus = "Fuera del taller" | "Ingresada Taller" | "Cargada" | "En proceso" | "En revisión" | "Entregada" | "Ingresada Venta" | "En venta" | "Transferencia en curso" | "Vendida";
 export type PagoStatus = "No pagado" | "Parcial" | "Pagado";
@@ -83,6 +83,7 @@ export interface MotovehiculoResponse {
   activo: boolean;
   createdAt: string;
   updatedAt: string;
+  ultimaModificacion?: string;
 }
 export interface PerfilRequest {
   marcaId: string;
@@ -127,6 +128,7 @@ export interface FichaTrabajoResponse {
   observacionTrabajo?: string | null;
   completadoAt?: string | null;
   completadoPor?: string | null;
+  pagado: boolean;
 }
 export interface PhotoResponse {
   id: string;
@@ -161,6 +163,7 @@ export interface FichaResponse {
   fechaEntregaReal?: string | null;
   kilometrajeIngreso?: number | null;
   observaciones?: string | null;
+  pagado: boolean;
   descuentoGlobal: number;
   iva: boolean;
   estado: FichaStatus;

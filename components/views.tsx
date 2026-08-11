@@ -320,7 +320,7 @@ export function FichasView({
             </thead>
             <tbody>
               {result.content.map((ficha) => {
-                 const editable = ficha.estado === "Cargada" || ficha.estado === "En proceso";
+                 const editable = ficha.estado === "Carga" || ficha.estado === "Cargada" || ficha.estado === "En proceso";
                 return (
                   <tr key={ficha.id}>
                     <td data-label="Ficha">{ficha.numero}</td>
@@ -409,6 +409,10 @@ export function FichaDetail({
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [returnToMotoAfterService, setReturnToMotoAfterService] = useState(false);
   const [revision, setRevision] = useState<RevisionResponse | null>(null);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [selectedPaidWorkIds, setSelectedPaidWorkIds] = useState<string[]>([]);
+  const [paymentSaving, setPaymentSaving] = useState(false);
+  const [reverseOpen, setReverseOpen] = useState(false);
   const load = () =>
     void api<FichaResponse>(`/fichas/${fichaKey}`)
       .then(setFicha)
@@ -450,6 +454,20 @@ export function FichaDetail({
     })
       .then((next) => { setRevision(next); notify("Control de revisión actualizado."); })
       .catch((reason) => setError(errorMessage(reason)));
+  const openPartialPayment = () => {
+    if (!ficha) return;
+    setSelectedPaidWorkIds(ficha.trabajos.filter((item) => item.estadoTrabajo === "Realizado" && item.pagado).map((item) => item.id));
+    setPaymentOpen(true);
+  };
+  const savePartialPayment = async () => {
+    if (!ficha || paymentSaving) return;
+    setPaymentSaving(true);
+    try {
+      const next = await api<FichaResponse>(`/fichas/${ficha.id}/pago`, { method: "PATCH", body: JSON.stringify({ estadoPago: selectedPaidWorkIds.length ? "Parcial" : "No pagado", itemIds: selectedPaidWorkIds }) });
+      setFicha(next); setPaymentOpen(false); notify(`Pago: ${next.estadoPago}.`);
+    } catch (reason) { setError(errorMessage(reason)); }
+    finally { setPaymentSaving(false); }
+  };
   if (!ficha)
     return (
       <div className="page">
@@ -508,10 +526,16 @@ export function FichaDetail({
      bottomActions.push({ key: "revision", label: "Enviar a revisión", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Revisión" }, "estado-revision", "Ficha enviada a revisión.") });
   else if (current === "Revisión")
     bottomActions.push({ key: "aprobar", label: "Aprobar revisión y entregar", className: "primary", onClick: openDelivery });
-  else if (current === "Entregada")
+   else if (current === "Entregada")
     bottomActions.push({ key: "service", label: "Registrar service", className: "primary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setReturnToMotoAfterService(false); setServiceOpen(true); } });
-  if (ficha.estadoPago !== "Pagado")
-     bottomActions.push({ key: "pago", label: ficha.estadoPago === "Parcial" ? "Completar pago" : "Marcar como pagada", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/pago`, { estadoPago: "Pagado" }, "pago-pagado", "Pago marcado como completado.") });
+   if (ficha.estadoPago === "Pagado")
+      bottomActions.push({ key: "pago-no", label: "Marcar como no pagada", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/pago`, { estadoPago: "No pagado" }, "pago-no", "Pago marcado como no pagado.") });
+   else {
+      bottomActions.push({ key: "pago", label: "Marcar como pagada", className: "secondary", onClick: () => void update(`/fichas/${ficha.id}/pago`, { estadoPago: "Pagado" }, "pago-pagado", "Pago marcado como completado.") });
+      bottomActions.push({ key: "pago-parcial", label: ficha.estadoPago === "Parcial" ? "Editar pago parcial" : "Pago parcial", className: "secondary", onClick: openPartialPayment });
+   }
+   if (current === "En proceso" || current === "Revisión")
+      bottomActions.push({ key: "retroceder", label: "Volver un paso atrás", className: "secondary", onClick: () => setReverseOpen(true) });
   if (current !== "Entregada" && current !== "Cancelada")
      bottomActions.push({ key: "cancelar", label: "Cancelar ficha", className: "danger", onClick: () => onConfirm("Cancelar ficha", () => api<FichaResponse>(`/fichas/${ficha.id}/estado`, { method: "PATCH", body: JSON.stringify({ estado: "Cancelada" }) }).then(setFicha)) });
   return (
@@ -569,7 +593,7 @@ export function FichaDetail({
             </div>
             <p className="observation">{ficha.observaciones || "Sin observaciones."}</p>
             <div className="line-items-list">
-              {ficha.trabajos.filter((item) => ficha.estado !== "Revisión" || item.estadoTrabajo !== "Realizado").map((item) => (
+               {ficha.trabajos.map((item) => (
                 <ItemRow
                   key={item.id}
                   item={item}
@@ -589,7 +613,7 @@ export function FichaDetail({
                 </div>
                 {revision.estado !== "APROBADA" && (
                   <div className="line-items-list">
-                    {pendingControls.map((control) => (
+                     {revision.controles.map((control) => (
                       <div key={control.id} className="line-item revision-control">
                         <div>
                           <strong>{control.control}</strong>
@@ -611,7 +635,7 @@ export function FichaDetail({
                     ))}
                   </div>
                 )}
-                {revision.estado !== "APROBADA" && !pendingControls.length && <p>Todos los controles fueron revisados.</p>}
+                 {revision.estado !== "APROBADA" && !pendingControls.length && <p>Todos los controles fueron revisados.</p>}
               </section>
             )}
           </section>
@@ -643,6 +667,16 @@ export function FichaDetail({
           <button type="button" className="button secondary" onClick={() => setCloseOpen(false)}>Cancelar</button>
           <button type="button" className="button primary" disabled={Boolean(pending)} onClick={() => { setCloseOpen(false); void aprobarRevision(); }}>Aprobar y entregar</button>
         </div>
+      </Dialog>
+      <Dialog open={paymentOpen} title="Registrar pago parcial" onClose={() => setPaymentOpen(false)}>
+        <p>Seleccioná los trabajos realizados que fueron pagados.</p>
+        <div className="line-items-list">{ficha.trabajos.filter((item) => item.estadoTrabajo === "Realizado").map((item) => <label key={item.id} className="line-check"><input type="checkbox" checked={selectedPaidWorkIds.includes(item.id)} onChange={(event) => setSelectedPaidWorkIds((ids) => event.target.checked ? [...ids, item.id] : ids.filter((id) => id !== item.id))} />{item.descripcion}<strong>{money(item.subtotal)}</strong></label>)}</div>
+        {!ficha.trabajos.some((item) => item.estadoTrabajo === "Realizado") && <p>No hay trabajos realizados para seleccionar.</p>}
+        <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setSelectedPaidWorkIds([])}>No pagar ninguno</button><button type="button" className="button secondary" onClick={() => setPaymentOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={paymentSaving} onClick={() => void savePartialPayment()}>{paymentSaving ? "Guardando..." : "Guardar pago"}</button></div>
+      </Dialog>
+      <Dialog open={reverseOpen} title="Volver un paso atrás" onClose={() => setReverseOpen(false)}>
+        <p>¿Está seguro que desea volver un paso atrás?</p>
+        <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setReverseOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={Boolean(pending)} onClick={() => { setReverseOpen(false); void update(`/fichas/${ficha.id}/estado`, { estado: current === "Revisión" ? "En proceso" : "Carga" }, "retroceder", "Ficha retrocedida un paso."); }}>Confirmar</button></div>
       </Dialog>
     </div>
   );

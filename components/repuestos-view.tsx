@@ -10,7 +10,6 @@ import type {
   FichaResponse,
   MotovehiculoResponse,
   PageResponse,
-  PagoStatus,
   RepuestoItemState,
   RepuestoResponse,
   RepuestoState,
@@ -21,7 +20,6 @@ const date = (value: string) => new Intl.DateTimeFormat("es-AR").format(new Date
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
 
 const repuestoStates: RepuestoState[] = ["En curso", "Completado", "Cancelado"];
-const pagoStates: PagoStatus[] = ["No pagado", "Parcial", "Pagado"];
 const itemStates: RepuestoItemState[] = ["Pendiente de pedir", "Pedido", "Recibido", "Entregado", "Cancelado"];
 
 export function RepuestosView({
@@ -267,6 +265,9 @@ export function RepuestoDetail({
   const [repuesto, setRepuesto] = useState<RepuestoResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [selectedPaidItemIds, setSelectedPaidItemIds] = useState<string[]>([]);
+  const [paymentSaving, setPaymentSaving] = useState(false);
   const load = () => void api<RepuestoResponse>(`/repuestos/${repuestoId}`).then(setRepuesto).catch((reason) => setError(errorMessage(reason)));
   useEffect(load, [repuestoId]);
   if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><p className="login-pending">{error}</p></div>;
@@ -274,6 +275,16 @@ export function RepuestoDetail({
   const locked = repuesto.estado === "Cancelado";
   const setItemState = async (itemId: string, estado: RepuestoItemState) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/items/${itemId}/estado`, { method: "PATCH", body: JSON.stringify({ estado }) }); setRepuesto(next); notify(`Ítem marcado como ${estado}.`); } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); } finally { setPending(false); } };
   const patch = async (path: string, body: Record<string, string>) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(path, { method: "PATCH", body: JSON.stringify(body) }); setRepuesto(next); return next; } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); return null; } finally { setPending(false); } };
+  const openPartialPayment = () => { setSelectedPaidItemIds(repuesto.items.filter((item) => item.estado !== "Cancelado" && item.pagado).map((item) => item.id)); setPaymentOpen(true); };
+  const savePartialPayment = async () => {
+    if (paymentSaving) return;
+    setPaymentSaving(true);
+    try {
+      const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/pago`, { method: "PATCH", body: JSON.stringify({ estadoPago: selectedPaidItemIds.length ? "Parcial" : "No pagado", itemIds: selectedPaidItemIds }) });
+      setRepuesto(next); setPaymentOpen(false); notify(`Pago: ${next.estadoPago}.`);
+    } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); }
+    finally { setPaymentSaving(false); }
+  };
   return (
     <div className="page">
       <button className="back" onClick={onBack}>← Volver a repuestos</button>
@@ -322,13 +333,16 @@ export function RepuestoDetail({
           <div className="summary-group">
             <h4>Pago</h4>
             <div className="summary-actions">
-              {pagoStates.filter((option) => option !== repuesto.estadoPago).map((option) => (
-                <button key={option} className="button primary large" disabled={pending} onClick={() => { void patch(`/repuestos/${repuesto.id}/pago`, { estadoPago: option }).then((next) => next && notify(`Pago: ${option}`)); }}>Pago: {option}</button>
-              ))}
+              {repuesto.estadoPago === "Pagado" ? <button className="button secondary large" disabled={pending} onClick={() => { void patch(`/repuestos/${repuesto.id}/pago`, { estadoPago: "No pagado" }).then((next) => next && notify("Pago: No pagado")); }}>Pago: No pagado</button> : <><button className="button primary large" disabled={pending} onClick={() => { void patch(`/repuestos/${repuesto.id}/pago`, { estadoPago: "Pagado" }).then((next) => next && notify("Pago: Pagado")); }}>Pago: Pagado</button><button className="button secondary large" disabled={pending} onClick={openPartialPayment}>Pago: {repuesto.estadoPago === "Parcial" ? "Editar parcial" : "Parcial"}</button></>}
             </div>
           </div>
         </aside>
       </section>
+      <Dialog open={paymentOpen} title="Registrar pago parcial" onClose={() => setPaymentOpen(false)}>
+        <p>Seleccioná los ítems no cancelados que fueron pagados.</p>
+        <div className="line-items-list">{repuesto.items.filter((item) => item.estado !== "Cancelado").map((item) => <label key={item.id} className="line-check"><input type="checkbox" checked={selectedPaidItemIds.includes(item.id)} onChange={(event) => setSelectedPaidItemIds((ids) => event.target.checked ? [...ids, item.id] : ids.filter((id) => id !== item.id))} />{item.descripcion}<strong>{money(item.subtotal)}</strong></label>)}</div>
+        <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setSelectedPaidItemIds([])}>No pagar ninguno</button><button type="button" className="button secondary" onClick={() => setPaymentOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={paymentSaving} onClick={() => void savePartialPayment()}>{paymentSaving ? "Guardando..." : "Guardar pago"}</button></div>
+      </Dialog>
     </div>
   );
 }

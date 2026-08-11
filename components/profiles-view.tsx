@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Edit3, Eye, LogIn, LogOut, Plus, Tag, Trash2 } from "lucide-react";
+import { ArrowDownUp, Edit3, Eye, Filter, LogIn, LogOut, Plus, Tag, Trash2 } from "lucide-react";
 import { api } from "../lib/api";
 import type { MarcaMotoResponse, PageResponse, PerfilResponse } from "../lib/types";
 import { AbmFormModal, type AbmField } from "./modal/abm-form-modal";
 import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, StatusBadge, type Notify } from "./ui";
 
+const profileStates = ["Fuera del taller", "Ingresada Taller", "Cargada", "En proceso", "En revisión", "Entregada", "Ingresada Venta", "En venta", "Transferencia en curso", "Vendida"];
+const lastModified = (value: string) => new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
+
 export function ProfilesView({ onNew, onOpen, notify }: { onNew: () => void; onOpen: (id: string) => void; notify: Notify }) {
-  const [query, setQuery] = useState("");
+  const [dominio, setDominio] = useState("");
+  const [motoQuery, setMotoQuery] = useState("");
+  const [clienteQuery, setClienteQuery] = useState("");
+  const [estado, setEstado] = useState("");
+  const [sortBy, setSortBy] = useState("patente");
+  const [direction, setDirection] = useState<"ASC" | "DESC">("ASC");
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<PageResponse<PerfilResponse> | null>(null);
   const [brands, setBrands] = useState<MarcaMotoResponse[]>([]);
@@ -18,16 +26,16 @@ export function ProfilesView({ onNew, onOpen, notify }: { onNew: () => void; onO
   const [intakeSection, setIntakeSection] = useState<"TALLER" | "VENTA">("TALLER");
   const [reloadKey, setReloadKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    void api<PageResponse<PerfilResponse>>("/perfiles", {}, { q: query || undefined, page: page - 1, size: 20 })
+    void api<PageResponse<PerfilResponse>>("/perfiles", {}, { dominio: dominio || undefined, moto: motoQuery || undefined, cliente: clienteQuery || undefined, estado: estado || undefined, sortBy, direction, page: page - 1, size: 20 })
       .then(setResult)
       .catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudieron cargar los perfiles."));
-  }, [query, page, reloadKey]);
+  }, [dominio, motoQuery, clienteQuery, estado, sortBy, direction, page, reloadKey]);
   useEffect(() => {
-    void api<MarcaMotoResponse[]>("/configuracion/marcas-moto").then((nextBrands) => {
-      setBrands(nextBrands.filter((brand) => brand.activo));
-    }).catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudieron cargar los datos de edición."));
+    void api<MarcaMotoResponse[]>("/configuracion/marcas-moto").then((nextBrands) => setBrands(nextBrands.filter((brand) => brand.activo))).catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudieron cargar los datos de edición."));
   }, []);
+
   const profileFields: AbmField[] = [
     { key: "marcaId", label: "Marca", type: "select", options: brands.map((brand) => ({ value: brand.id, label: brand.nombre })), required: true },
     { key: "modelo", label: "Modelo", required: true },
@@ -40,29 +48,16 @@ export function ProfilesView({ onNew, onOpen, notify }: { onNew: () => void; onO
     if (!editing) return;
     try {
       await api(`/motovehiculos/${editing.id}`, { method: "PUT", body: JSON.stringify({ ...values, anio: values.anio ? Number(values.anio) : null, kilometraje: values.kilometraje ? Number(values.kilometraje) : null }) });
-      setEditing(null);
-      setReloadKey((key) => key + 1);
-      notify("Perfil actualizado.");
-    } catch (reason) {
-      const message = reason instanceof Error ? reason.message : "No se pudo actualizar el perfil.";
-      setError(message);
-      notify(message, "error");
-    }
+      setEditing(null); setReloadKey((key) => key + 1); notify("Perfil actualizado.");
+    } catch (reason) { const message = reason instanceof Error ? reason.message : "No se pudo actualizar el perfil."; setError(message); notify(message, "error"); }
   };
   const removeProfile = async () => {
     if (!deleting) return;
     const selected = deleting;
     try {
       await api(`/motovehiculos/${selected.id}`, { method: "DELETE" });
-      setDeleting(null);
-      setReloadKey((key) => key + 1);
-      notify(`Perfil ${selected.patente} eliminado.`);
-    } catch (reason) {
-      setDeleting(null);
-      const message = reason instanceof Error ? reason.message : "No se pudo eliminar el perfil.";
-      setError(message);
-      notify(message, "error");
-    }
+      setDeleting(null); setReloadKey((key) => key + 1); notify(`Perfil ${selected.patente} eliminado.`);
+    } catch (reason) { setDeleting(null); const message = reason instanceof Error ? reason.message : "No se pudo eliminar el perfil."; setError(message); notify(message, "error"); }
   };
   const runIntake = async () => {
     if (!intaking) return;
@@ -81,12 +76,17 @@ export function ProfilesView({ onNew, onOpen, notify }: { onNew: () => void; onO
     try { await api(`/motovehiculos/${profile.id}/venta/completar`, { method: "POST" }); setReloadKey((key) => key + 1); notify("Venta completada."); }
     catch (reason) { const message = reason instanceof Error ? reason.message : "No se pudo completar la venta."; setError(message); notify(message, "error"); }
   };
+
   return <div className="page">
     <div className="page-heading"><div><h1>Perfiles</h1><p>Información integral e historial de cada moto.</p></div><button className="button primary" onClick={onNew}><Plus size={19} />Nuevo perfil</button></div>
     {error && <p className="login-pending" role="alert">{error}</p>}
-     <section className="panel table-panel"><div className="filter-bar"><SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Dominio, moto o cliente" /></div>{result?.content.length ? <table><thead><tr><th>Dominio</th><th>Moto</th><th>Cliente</th><th>Sección</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{result.content.map((profile) => <tr key={profile.id}><td data-label="Dominio"><strong>{profile.patente}</strong></td><td data-label="Moto">{profile.marca} {profile.modelo}</td><td data-label="Cliente">{profile.propietario ?? "Sin propietario"}</td><td data-label="Sección">{profile.seccion ?? "—"}</td><td data-label="Estado"><StatusBadge status={profile.estado} /></td><td className="table-actions"><button onClick={() => onOpen(profile.id)} aria-label={`Ver perfil ${profile.patente}`}><Eye size={17} /></button>{!profile.ingresada ? <button onClick={() => { setIntaking(profile); setIntakeSection("TALLER"); }} aria-label={`Ingresar moto ${profile.patente}`}><LogIn size={17} /></button> : profile.seccion === "Venta" && profile.estado === "Transferencia en curso" ? <button onClick={() => void completeSale(profile)} aria-label={`Completar venta ${profile.patente}`}><LogOut size={17} /></button> : profile.seccion === "Venta" && profile.estado === "Ingresada Venta" ? <button onClick={() => void markForSale(profile)} aria-label={`Marcar en venta ${profile.patente}`}><Tag size={17} /></button> : <button onClick={() => void deliver(profile)} aria-label={`Entregar moto ${profile.patente}`}><LogOut size={17} /></button>}<button onClick={() => setEditing(profile)} aria-label={`Editar perfil ${profile.patente}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(profile)} aria-label={`Eliminar perfil ${profile.patente}`}><Trash2 size={17} /></button></td></tr>)}</tbody></table> : <EmptyState title="No hay perfiles" body="Creá el primer Perfil de una moto." action={<button className="button primary" onClick={onNew}>Nuevo perfil</button>} />}<Pagination page={page} total={result?.totalPages || 1} onPage={setPage} /></section>
-     <AbmFormModal key={String(editing?.id ?? "new")} open={editing !== null} resource="perfil" mode="modificar" initialValues={editing ?? {}} fields={profileFields} onClose={() => setEditing(null)} onSubmit={saveProfile} />
-     <Dialog open={intaking !== null} title="Ingresar moto" onClose={() => setIntaking(null)}><p>Elegí el destino operativo para {intaking?.patente ?? "la moto"}.</p><div className="intake-options"><button className={intakeSection === "TALLER" ? "selected" : ""} onClick={() => setIntakeSection("TALLER")}>Taller</button><button className={intakeSection === "VENTA" ? "selected" : ""} onClick={() => setIntakeSection("VENTA")}>Ventas</button></div><div className="modal-actions"><button className="button secondary" onClick={() => setIntaking(null)}>Cancelar</button><button className="button primary" onClick={() => void runIntake()}>Ingresar</button></div></Dialog>
+    <section className="panel table-panel">
+      <div className="filter-bar"><SearchBox value={dominio} onChange={(value) => { setDominio(value); setPage(1); }} placeholder="Dominio" /><SearchBox value={motoQuery} onChange={(value) => { setMotoQuery(value); setPage(1); }} placeholder="Marca o modelo" /><SearchBox value={clienteQuery} onChange={(value) => { setClienteQuery(value); setPage(1); }} placeholder="Cliente" /><label><Filter size={16} /><select value={estado} onChange={(event) => { setEstado(event.target.value); setPage(1); }}><option value="">Todos los estados</option>{profileStates.map((option) => <option key={option}>{option}</option>)}</select></label><label><Filter size={16} /><select value={sortBy} onChange={(event) => { setSortBy(event.target.value); setPage(1); }}><option value="patente">Dominio</option><option value="modelo">Moto</option><option value="estado">Estado</option><option value="updatedAt">Última modificación</option></select></label><button className="button secondary" onClick={() => { setDirection((value) => value === "ASC" ? "DESC" : "ASC"); setPage(1); }} aria-label="Cambiar orden de perfiles"><ArrowDownUp size={16} />{direction === "ASC" ? "Ascendente" : "Descendente"}</button></div>
+      {result?.content.length ? <table><thead><tr><th>Dominio</th><th>Moto</th><th>Cliente</th><th>Sección</th><th>Estado</th><th>Última modificación</th><th>Acciones</th></tr></thead><tbody>{result.content.map((profile) => <tr key={profile.id}><td data-label="Dominio"><strong>{profile.patente}</strong></td><td data-label="Moto">{profile.marca} {profile.modelo}</td><td data-label="Cliente">{profile.propietario ?? "Sin propietario"}</td><td data-label="Sección">{profile.seccion ?? "—"}</td><td data-label="Estado"><StatusBadge status={profile.estado} /></td><td data-label="Última modificación">{lastModified(profile.ultimaModificacion ?? profile.updatedAt)}</td><td className="table-actions"><button onClick={() => onOpen(profile.id)} aria-label={`Ver perfil ${profile.patente}`}><Eye size={17} /></button>{!profile.ingresada ? <button onClick={() => { setIntaking(profile); setIntakeSection("TALLER"); }} aria-label={`Ingresar moto ${profile.patente}`}><LogIn size={17} /></button> : profile.seccion === "Venta" && profile.estado === "Transferencia en curso" ? <button onClick={() => void completeSale(profile)} aria-label={`Completar venta ${profile.patente}`}><LogOut size={17} /></button> : profile.seccion === "Venta" && profile.estado === "Ingresada Venta" ? <button onClick={() => void markForSale(profile)} aria-label={`Marcar en venta ${profile.patente}`}><Tag size={17} /></button> : <button onClick={() => void deliver(profile)} aria-label={`Entregar moto ${profile.patente}`}><LogOut size={17} /></button>}<button onClick={() => setEditing(profile)} aria-label={`Editar perfil ${profile.patente}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(profile)} aria-label={`Eliminar perfil ${profile.patente}`}><Trash2 size={17} /></button></td></tr>)}</tbody></table> : <EmptyState title="No hay perfiles" body="Creá el primer Perfil de una moto." action={<button className="button primary" onClick={onNew}>Nuevo perfil</button>} />}
+      <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
+    </section>
+    <AbmFormModal key={String(editing?.id ?? "new")} open={editing !== null} resource="perfil" mode="modificar" initialValues={editing ?? {}} fields={profileFields} onClose={() => setEditing(null)} onSubmit={saveProfile} />
+    <Dialog open={intaking !== null} title="Ingresar moto" onClose={() => setIntaking(null)}><p>Elegí el destino operativo para {intaking?.patente ?? "la moto"}.</p><div className="intake-options"><button className={intakeSection === "TALLER" ? "selected" : ""} onClick={() => setIntakeSection("TALLER")}>Taller</button><button className={intakeSection === "VENTA" ? "selected" : ""} onClick={() => setIntakeSection("VENTA")}>Ventas</button></div><div className="modal-actions"><button className="button secondary" onClick={() => setIntaking(null)}>Cancelar</button><button className="button primary" onClick={() => void runIntake()}>Ingresar</button></div></Dialog>
     <ConfirmModal open={deleting !== null} title="Eliminar perfil" body={`Vas a dar de baja la moto ${deleting?.patente ?? "seleccionada"}. El historial se conservará y no se eliminará de la base de datos.`} confirmLabel="Eliminar perfil" onClose={() => setDeleting(null)} onConfirm={removeProfile} />
   </div>;
 }
