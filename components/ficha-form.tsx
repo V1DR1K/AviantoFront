@@ -14,7 +14,7 @@ import type {
   PhotoResponse,
   TrabajoCatalogoResponse,
 } from "../lib/types";
-import { ConfirmModal } from "./ui";
+import { AutocompleteField, ConfirmModal, SelectField } from "./ui";
 
 type Line = {
   key: string;
@@ -101,7 +101,6 @@ export function FichaForm({
   const [patenteBusy, setPatenteBusy] = useState(false);
   const [clientId, setClientId] = useState(initialClientId ?? "");
   const [clientQuery, setClientQuery] = useState("");
-  const [clientOpen, setClientOpen] = useState(false);
   const [vehicleId, setVehicleId] = useState("");
   const [fechaIngreso, setFechaIngreso] = useState(today());
   const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState("");
@@ -125,7 +124,6 @@ export function FichaForm({
   );
   const [reloadKey, setReloadKey] = useState(0);
   const photoInput = useRef<HTMLInputElement>(null);
-  const clientPicker = useRef<HTMLDivElement>(null);
   const photoUrls = useRef(new Set<string>());
   const existingUrls = useRef<Record<string, string>>({});
 
@@ -144,18 +142,6 @@ export function FichaForm({
     setClientQuery(client ? clientLabel(client) : "");
     setClientOpen(false);
   };
-  const clientMatches = useMemo(() => {
-    const query = clientQuery.trim().toLowerCase();
-    return clients
-      .filter(
-        (client) =>
-          !query ||
-          [client.nombre, client.telefono, client.documento, client.email].some(
-            (value) => value?.toLowerCase().includes(query),
-          ),
-      )
-      .slice(0, 10);
-  }, [clientQuery, clients]);
   useEffect(() => {
     void api<PageResponse<ClienteResponse>>(
       "/clientes",
@@ -181,14 +167,6 @@ export function FichaForm({
   useEffect(() => {
     if (initialMotoId) void api<MotovehiculoResponse>(`/motovehiculos/${initialMotoId}`).then((moto) => setPatenteQuery(moto.patente)).catch(() => undefined);
   }, [initialMotoId]);
-  useEffect(() => {
-    const close = (event: MouseEvent) => {
-      if (!clientPicker.current?.contains(event.target as Node))
-        setClientOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, []);
   const searchByPlate = async () => {
     const plate = patenteQuery.trim().toUpperCase();
     if (!plate) return;
@@ -510,63 +488,16 @@ export function FichaForm({
             <div className="two-col">
               <div className="client-picker">
                 <span>Cliente (propietario)</span>
-                <div className="autocomplete-field" ref={clientPicker}>
-                  <input
-                    value={
-                      selectedClient ? clientLabel(selectedClient) : clientQuery
-                    }
-                    onFocus={() => setClientOpen(true)}
-                    onChange={(event) => {
-                      setClientQuery(event.target.value);
-                      setClientOpen(true);
-                      if (clientId) {
-                        setClientId("");
-                        setVehicleId("");
-                        setVehicles([]);
-                      }
-                    }}
-                    placeholder="Buscar cliente por nombre, teléfono o documento"
-                    autoComplete="off"
-                  />
-                  {clientOpen && (
-                    <div className="suggestions">
-                      {clientMatches.length ? (
-                        clientMatches.map((client) => (
-                          <button
-                            type="button"
-                            key={client.id}
-                            onClick={() => chooseClient(client.id)}
-                          >
-                            <span>{client.nombre}</span>
-                            <small>
-                              {client.telefono ||
-                                client.documento ||
-                                "Sin contacto"}
-                            </small>
-                          </button>
-                        ))
-                      ) : (
-                        <p>Sin clientes coincidentes.</p>
-                      )}
-                    </div>
-                  )}
-                </div>
+                 <AutocompleteField value={selectedClient ? clientLabel(selectedClient) : clientQuery} onChange={(value) => { setClientQuery(value); if (clientId) { setClientId(""); setVehicleId(""); setVehicles([]); } }} onSelect={(item) => chooseClient(item.id)} onClear={() => { setClientId(""); setVehicleId(""); setVehicles([]); }} selected={selectedClient ? { id: selectedClient.id, label: selectedClient.nombre, secondary: selectedClient.telefono || selectedClient.documento || "Sin contacto" } : null} options={clients.map((client) => ({ id: client.id, label: client.nombre, secondary: client.telefono || client.documento || "Sin contacto" }))} placeholder="Buscar cliente por nombre, teléfono o documento" minChars={1} />
               </div>
-              <label>
-                Moto
-                <select
-                  value={vehicleId}
-                  onChange={(event) => setVehicleId(event.target.value)}
-                  disabled={!clientId}
-                >
-                  <option value="">Seleccionar</option>
-                  {vehicles.map((vehicle) => (
-                    <option value={vehicle.id} key={vehicle.id}>
-                      {vehicle.marca} {vehicle.modelo} · {vehicle.patente}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <SelectField
+                label="Moto"
+                value={vehicleId}
+                onChange={setVehicleId}
+                disabled={!clientId}
+                placeholder="Seleccionar"
+                options={vehicles.map((vehicle) => ({ value: vehicle.id, label: `${vehicle.marca} ${vehicle.modelo} · ${vehicle.patente}` }))}
+              />
               <label>
                 Fecha ingreso
                 <input

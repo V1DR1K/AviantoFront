@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Dialog } from "../ui";
+import { Dialog, SelectField, type SelectOption } from "../ui";
 import { priceInput } from "../../lib/format";
 import type { ClienteResponse, MarcaMotoResponse } from "../../lib/types";
-
-export type SelectOption = { value: string; label: string };
 
 export type AbmField = {
   key: string;
@@ -81,19 +79,14 @@ export function AbmFormModal({
           >
             {field.label}
             {field.type === "select" || field.options ? (
-              <select
+              <SelectField
                 value={valueFor(field)}
+                onChange={(value) => setValues({ ...values, [field.key]: value })}
                 disabled={field.readOnly}
                 required={field.required}
-                onChange={(event) =>
-                  setValues({ ...values, [field.key]: event.target.value })
-                }
-              >
-                <option value="">Seleccionar</option>
-                {field.options?.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
+                placeholder="Seleccionar"
+                options={[...(field.options ?? [])]}
+              />
             ) : field.type === "textarea" ? (
               <textarea
                 value={valueFor(field)}

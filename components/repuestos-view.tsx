@@ -14,7 +14,7 @@ import type {
   RepuestoResponse,
   RepuestoState,
 } from "../lib/types";
-import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, StatusBadge, type Notify } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 
 const date = formatDateInAr;
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
@@ -63,7 +63,7 @@ export function RepuestosView({
       <section className="panel table-panel">
         <div className="filter-bar">
           <SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Número, cliente o patente" />
-          <label><Filter size={16} /><select value={estado} onChange={(event) => { setEstado(event.target.value as typeof estado); setPage(1); }}><option>Todos</option>{repuestoStates.map((option) => <option key={option}>{option}</option>)}</select></label>
+          <SelectField value={estado} onChange={(value) => { setEstado(value as typeof estado); setPage(1); }} options={repuestoStates.map((option) => ({ value: option, label: option }))} placeholder="Todos" icon={Filter} ariaLabel="Filtrar pedidos por estado" />
           <label>
             <span className="date-label">Desde</span>
             <input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); setPage(1); }} />
@@ -72,14 +72,7 @@ export function RepuestosView({
             <span className="date-label">Hasta</span>
             <input type="date" value={hasta} onChange={(event) => { setHasta(event.target.value); setPage(1); }} />
           </label>
-          <label>
-            <Filter size={16} />
-            <select value={sortBy} onChange={(event) => { setSortBy(event.target.value); setPage(1); }}>
-              <option value="fecha">Fecha</option>
-              <option value="total">Total</option>
-              <option value="estado">Estado</option>
-            </select>
-          </label>
+          <SelectField value={sortBy} onChange={(value) => { setSortBy(value); setPage(1); }} options={[{ value: "fecha", label: "Fecha" }, { value: "total", label: "Total" }, { value: "estado", label: "Estado" }]} icon={Filter} ariaLabel="Ordenar pedidos por" />
           <button className="button secondary" onClick={() => { toggleDirection(); setPage(1); }} aria-label="Cambiar orden">
             <ArrowDownUp size={16} />
             {direction === "DESC" ? "Más recientes" : "Más antiguos"}
@@ -225,9 +218,9 @@ function CreateRepuestoDialog({
     <Dialog open={open} title={initial ? "Editar pedido de repuesto" : "Nuevo pedido de repuesto"} onClose={onClose} wide>
       <form className="record-form repuesto-form" onSubmit={(event) => { event.preventDefault(); void save(); }}>
         <div className="repuesto-pick">
-          <label>Cliente<select value={clientId} onChange={(event) => changeClient(event.target.value)} required><option value="">Seleccionar</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.nombre}</option>)}</select></label>
-           <label>Moto<select value={motoId} onChange={(event) => changeMoto(event.target.value)} required disabled={!clientId}><option value="">Seleccionar</option>{motoOptions.map((moto) => <option key={moto.id} value={moto.id}>{moto.marca} {moto.modelo} · {moto.patente}</option>)}</select></label>
-          <label>Ficha (opcional)<select value={fichaId} onChange={(event) => changeFicha(event.target.value)} disabled={!motoId}><option value="">Sin ficha</option>{fichas.map((ficha) => <option key={ficha.id} value={ficha.id}>{ficha.numero} · {ficha.estado} · {date(ficha.fechaIngreso)}</option>)}</select></label>
+          <SelectField label="Cliente" value={clientId} onChange={changeClient} required placeholder="Seleccionar" options={clients.map((client) => ({ value: client.id, label: client.nombre }))} />
+          <SelectField label="Moto" value={motoId} onChange={changeMoto} required disabled={!clientId} placeholder="Seleccionar" options={motoOptions.map((moto) => ({ value: moto.id, label: `${moto.marca} ${moto.modelo} · ${moto.patente}` }))} />
+          <SelectField label="Ficha (opcional)" value={fichaId} onChange={changeFicha} disabled={!motoId} placeholder="Sin ficha" options={fichas.map((ficha) => ({ value: ficha.id, label: `${ficha.numero} · ${ficha.estado} · ${date(ficha.fechaIngreso)}` }))} />
           <label>Proveedor<input value={proveedor} onChange={(event) => setProveedor(event.target.value)} /></label>
         </div>
         <div className="repuesto-items">
@@ -235,8 +228,8 @@ function CreateRepuestoDialog({
           {rows.map((row) => (
             <div className="repuesto-item" key={row.key}>
               <input placeholder="Ej.: cubierta 110/90" value={row.descripcion} onChange={(event) => setRow(row.key, { descripcion: event.target.value })} />
-              <select value={row.tipo} onChange={(event) => setRow(row.key, { tipo: event.target.value })} aria-label="Tipo"><option>Repuesto</option><option>Accesorio</option></select>
-              <select value={row.fichaTrabajoId ?? ""} onChange={(event) => setRow(row.key, { fichaTrabajoId: event.target.value || undefined })} aria-label="Trabajo" disabled={!fichaId}><option value="">Sin trabajo</option>{fichaTrabajos.map((trabajo) => <option key={trabajo.id} value={trabajo.id}>{trabajo.descripcion}</option>)}</select>
+              <SelectField value={row.tipo} onChange={(value) => setRow(row.key, { tipo: value as typeof row.tipo })} ariaLabel="Tipo" options={[{ value: "Repuesto", label: "Repuesto" }, { value: "Accesorio", label: "Accesorio" }]} />
+              <SelectField value={row.fichaTrabajoId ?? ""} onChange={(value) => setRow(row.key, { fichaTrabajoId: value || undefined })} ariaLabel="Trabajo" disabled={!fichaId} placeholder="Sin trabajo" options={fichaTrabajos.map((trabajo) => ({ value: trabajo.id, label: trabajo.descripcion }))} />
               <input type="number" min="1" value={row.cantidad} onChange={(event) => setRow(row.key, { cantidad: String(event.target.value) })} aria-label="Cantidad" />
               <input inputMode="decimal" value={priceInput(row.precio)} onChange={(event) => setRow(row.key, { precio: event.target.value })} placeholder="Precio" aria-label="Precio" />
               <strong>{money(Number(row.cantidad) * parsePrice(row.precio))}</strong>
@@ -303,10 +296,7 @@ export function RepuestoDetail({
                   <td data-label="Ítem">{item.descripcion}</td><td data-label="Tipo">{item.tipo}</td><td data-label="Cant.">{Number(item.cantidad)}</td><td data-label="Precio">{money(item.precio)}</td><td data-label="Subtotal">{money(item.subtotal)}</td>
                   <td data-label="Estado"><StatusBadge status={item.estado} /></td>
                   {!locked && <td data-label="Cambiar">
-                    <select value="" disabled={pending} onChange={(event) => event.target.value && void setItemState(item.id, event.target.value as RepuestoItemState)}>
-                      <option value="">Cambiar…</option>
-                       {nextItemStates(item.estado).map((option) => <option key={option} value={option}>{option}</option>)}
-                    </select>
+                    <SelectField value="" disabled={pending} onChange={(value) => value && void setItemState(item.id, value as RepuestoItemState)} ariaLabel={`Cambiar estado de ${item.descripcion}`} placeholder="Cambiar…" options={nextItemStates(item.estado).map((option) => ({ value: option, label: option }))} />
                   </td>}
                 </tr>
               ))}</tbody>

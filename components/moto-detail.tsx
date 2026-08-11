@@ -16,7 +16,7 @@ import type {
   ServiceResponse,
   TransferResponse,
 } from "../lib/types";
-import { Dialog, EmptyState, Pagination, StatusBadge, type Notify } from "./ui";
+import { Dialog, EmptyState, Pagination, SelectField, StatusBadge, type Notify } from "./ui";
 
 const date = (value?: string | null) => (value ? new Intl.DateTimeFormat("es-AR").format(new Date(value.includes("T") ? value : `${value}T12:00:00`)) : "—");
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
@@ -221,7 +221,7 @@ export function MotoDetail({
           <div className="filter-bar">
             <label><span className="date-label">Desde</span><input type="date" value={serviceDesde} onChange={(event) => { setServiceDesde(event.target.value); setServicePage(1); }} /></label>
             <label><span className="date-label">Hasta</span><input type="date" value={serviceHasta} onChange={(event) => { setServiceHasta(event.target.value); setServicePage(1); }} /></label>
-            <label><Filter size={16} /><select value={serviceSort} onChange={(event) => { setServiceSort(event.target.value); setServicePage(1); }}><option value="fecha">Fecha</option><option value="kilometraje">Kilometraje</option></select></label>
+             <SelectField value={serviceSort} onChange={(value) => { setServiceSort(value); setServicePage(1); }} options={[{ value: "fecha", label: "Fecha" }, { value: "kilometraje", label: "Kilometraje" }]} icon={Filter} ariaLabel="Ordenar services por" />
             <button className="button secondary" onClick={() => { setServiceDirection((value) => value === "ASC" ? "DESC" : "ASC"); setServicePage(1); }} aria-label="Cambiar orden de services"><ArrowDownUp size={16} />{serviceDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
           </div>
            {panelErrors.services ? <EmptyState title="No se pudo cargar el historial" body={panelErrors.services} action={<button className="button secondary" onClick={loadServices}>Reintentar</button>} /> : services?.content.length ? (
@@ -239,9 +239,9 @@ export function MotoDetail({
           <div className="filter-bar">
             <label><span className="date-label">Desde</span><input type="date" value={fichaDesde} onChange={(event) => { setFichaDesde(event.target.value); setFichaPage(1); }} /></label>
             <label><span className="date-label">Hasta</span><input type="date" value={fichaHasta} onChange={(event) => { setFichaHasta(event.target.value); setFichaPage(1); }} /></label>
-            <label><Filter size={16} /><select value={fichaEstado} onChange={(event) => { setFichaEstado(event.target.value); setFichaPage(1); }}><option value="">Todos los estados</option>{fichaStates.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
-            <label><Filter size={16} /><select value={fichaPago} onChange={(event) => { setFichaPago(event.target.value); setFichaPage(1); }}><option value="">Todos los pagos</option>{pagoStates.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
-            <label><Filter size={16} /><select value={fichaSort} onChange={(event) => { setFichaSort(event.target.value); setFichaPage(1); }}><option value="fechaIngreso">Fecha</option><option value="estado">Estado</option><option value="estadoPago">Pago</option></select></label>
+             <SelectField value={fichaEstado} onChange={(value) => { setFichaEstado(value); setFichaPage(1); }} options={fichaStates.map((option) => ({ value: option, label: option }))} placeholder="Todos los estados" icon={Filter} ariaLabel="Filtrar fichas por estado" />
+             <SelectField value={fichaPago} onChange={(value) => { setFichaPago(value); setFichaPage(1); }} options={pagoStates.map((option) => ({ value: option, label: option }))} placeholder="Todos los pagos" icon={Filter} ariaLabel="Filtrar fichas por pago" />
+             <SelectField value={fichaSort} onChange={(value) => { setFichaSort(value); setFichaPage(1); }} options={[{ value: "fechaIngreso", label: "Fecha" }, { value: "estado", label: "Estado" }, { value: "estadoPago", label: "Pago" }]} icon={Filter} ariaLabel="Ordenar fichas por" />
             <button className="button secondary" onClick={() => { setFichaDirection((value) => value === "ASC" ? "DESC" : "ASC"); setFichaPage(1); }} aria-label="Cambiar orden de fichas"><ArrowDownUp size={16} />{fichaDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
           </div>
            {panelErrors.fichas ? <EmptyState title="No se pudieron cargar las fichas" body={panelErrors.fichas} action={<button className="button secondary" onClick={loadFichas}>Reintentar</button>} /> : fichas?.content.length ? (
@@ -259,9 +259,9 @@ export function MotoDetail({
           <div className="filter-bar">
             <label><span className="date-label">Desde</span><input type="date" value={repuestoDesde} onChange={(event) => { setRepuestoDesde(event.target.value); setRepuestoPage(1); }} /></label>
             <label><span className="date-label">Hasta</span><input type="date" value={repuestoHasta} onChange={(event) => { setRepuestoHasta(event.target.value); setRepuestoPage(1); }} /></label>
-            <label><Filter size={16} /><select value={repuestoEstado} onChange={(event) => { setRepuestoEstado(event.target.value); setRepuestoPage(1); }}><option value="">Todos los estados</option>{repuestoStates.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
-            <label><Filter size={16} /><select value={repuestoPago} onChange={(event) => { setRepuestoPago(event.target.value); setRepuestoPage(1); }}><option value="">Todos los pagos</option>{pagoStates.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
-            <label><Filter size={16} /><select value={repuestoSort} onChange={(event) => { setRepuestoSort(event.target.value); setRepuestoPage(1); }}><option value="fecha">Fecha</option><option value="estado">Estado</option><option value="estadoPago">Pago</option></select></label>
+             <SelectField value={repuestoEstado} onChange={(value) => { setRepuestoEstado(value); setRepuestoPage(1); }} options={repuestoStates.map((option) => ({ value: option, label: option }))} placeholder="Todos los estados" icon={Filter} ariaLabel="Filtrar pedidos por estado" />
+             <SelectField value={repuestoPago} onChange={(value) => { setRepuestoPago(value); setRepuestoPage(1); }} options={pagoStates.map((option) => ({ value: option, label: option }))} placeholder="Todos los pagos" icon={Filter} ariaLabel="Filtrar pedidos por pago" />
+             <SelectField value={repuestoSort} onChange={(value) => { setRepuestoSort(value); setRepuestoPage(1); }} options={[{ value: "fecha", label: "Fecha" }, { value: "estado", label: "Estado" }, { value: "estadoPago", label: "Pago" }]} icon={Filter} ariaLabel="Ordenar pedidos por" />
             <button className="button secondary" onClick={() => { setRepuestoDirection((value) => value === "ASC" ? "DESC" : "ASC"); setRepuestoPage(1); }} aria-label="Cambiar orden de pedidos"><ArrowDownUp size={16} />{repuestoDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
           </div>
            {panelErrors.repuestos ? <EmptyState title="No se pudieron cargar los pedidos" body={panelErrors.repuestos} action={<button className="button secondary" onClick={loadRepuestos}>Reintentar</button>} /> : repuestos?.content.length ? (

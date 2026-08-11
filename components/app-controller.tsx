@@ -12,6 +12,7 @@ import {
   FichasView,
   ReportsView,
   ServicesView,
+  VentasView,
 } from "./views";
 import { MotoDetail } from "./moto-detail";
 import { RepuestoDetail, RepuestosView } from "./repuestos-view";
@@ -39,6 +40,7 @@ type RouteState = {
   repuestoId?: string;
   initialClientId?: string;
   initialMotoId?: string;
+  intake?: boolean;
   returnTo?: string;
   tab?: "general" | "client" | "services" | "fichas" | "repuestos";
   invalid?: boolean;
@@ -51,6 +53,7 @@ function routeState(pathname: string, search: string): RouteState {
   const segments = pathname.split("/").filter(Boolean).map(decodeURIComponent);
   const query = new URLSearchParams(search);
   const returnTo = safeReturnTo(query.get("returnTo"));
+  const base = query.get("base");
   const requestedTab = query.get("tab");
   const tab = ["general", "client", "services", "fichas", "repuestos"].includes(requestedTab ?? "") ? requestedTab as RouteState["tab"] : undefined;
   const initialClientId = query.get("clienteId") || undefined;
@@ -60,7 +63,7 @@ function routeState(pathname: string, search: string): RouteState {
   if (segments[0] === "perfiles" && segments[1] === "nuevo" && segments.length === 2) {
     return { page: "new-profile" };
   }
-  if (segments[0] === "ingresar" && segments.length === 1) return { page: "intake" };
+  if (segments[0] === "ingresar" && segments.length === 1) return { page: base === "sales" ? "sales" : base === "taller" ? "taller-dashboard" : "dashboard", intake: true, returnTo };
   if (segments[0] === "perfiles" && segments.length === 1) return { page: "profiles" };
   if (segments[0] === "motos" && segments.length === 2) return { page: "profile", motoId: segments[1], returnTo, tab };
   if (segments[0] === "fichas" && segments[1] === "nueva" && segments.length === 2) {
@@ -88,7 +91,7 @@ function routeState(pathname: string, search: string): RouteState {
     services: "services",
     reportes: "reports",
     taller: "taller-dashboard",
-    ventas: "ventas-dashboard",
+    ventas: "sales",
   };
   const page = segments.length === 1 ? pages[segments[0]] : undefined;
   return page ? { page } : { page: "dashboard", invalid: true };
@@ -108,6 +111,7 @@ const pathForPage = (page: string) => ({
   services: "/services",
     reports: "/reportes",
     intake: "/ingresar",
+    sales: "/ventas",
     "taller-dashboard": "/taller",
     "ventas-dashboard": "/ventas",
   "new-profile": "/perfiles/nuevo",
@@ -117,6 +121,7 @@ const pathForPage = (page: string) => ({
 const shellPage = (page: string) => {
   if (page === "new-profile" || page === "profile") return "profiles";
   if (page === "intake") return "dashboard";
+  if (page === "sales") return "sales";
   if (page === "taller-dashboard") return "taller-dashboard";
   if (page === "ventas-dashboard") return "ventas-dashboard";
   if (page === "repuesto-create" || page === "repuesto") return "repuestos";
@@ -240,18 +245,16 @@ export function AppController() {
   let content: ReactNode;
   if (currentPage === "new-profile") {
     content = <ProfileForm onClose={() => navigate("/perfiles")} onOpenProfile={openMoto} onCreated={(id) => { notify("Perfil creado."); openMoto(id); }} notify={notify} />;
-  } else if (currentPage === "intake") {
-    content = <IntakeView onClose={() => navigate("/")} onOpenProfile={openMoto} notify={notify} />;
   } else if (currentPage === "create") {
      content = <FichaForm key={`${pathname}?${urlSearch}`} initialClientId={route.initialClientId} initialMotoId={route.initialMotoId} onClose={() => navigate(route.returnTo || "/perfiles")} onSave={(ficha) => { notify("Ficha creada."); setRefreshKey((key) => key + 1); openFicha(ficha, route.returnTo); }} />;
   } else if (currentPage === "edit" && route.fichaId) {
      content = <FichaForm key={route.fichaId} fichaKey={route.fichaId} onClose={() => navigate(route.returnTo || "/fichas")} onSave={() => { notify("Ficha actualizada."); setRefreshKey((key) => key + 1); navigate(route.returnTo || "/fichas"); }} />;
   } else if (currentPage === "dashboard") {
-     content = <Dashboard onNewOrder={() => navigate("/perfiles/nuevo")} onIntake={() => navigate("/ingresar")} onSelect={(ficha) => openFicha(ficha, "/")} onOpenMoto={(id) => openMoto(id, "/")} userName={session.user.nombre} />;
+     content = <Dashboard onNewOrder={() => navigate("/perfiles/nuevo")} onIntake={() => navigate("/ingresar?returnTo=%2F")} onSelect={(ficha) => openFicha(ficha, "/")} onOpenMoto={(id) => openMoto(id, "/")} userName={session.user.nombre} />;
   } else if (currentPage === "taller-dashboard") {
-     content = <Dashboard initialSection="taller" onNewOrder={() => navigate("/perfiles/nuevo")} onIntake={() => navigate("/ingresar")} onSelect={(ficha) => openFicha(ficha, "/taller")} onOpenMoto={(id) => openMoto(id, "/taller")} userName={session.user.nombre} />;
-  } else if (currentPage === "ventas-dashboard") {
-     content = <Dashboard initialSection="ventas" onNewOrder={() => navigate("/perfiles/nuevo")} onIntake={() => navigate("/ingresar")} onSelect={(ficha) => openFicha(ficha, "/ventas")} onOpenMoto={(id) => openMoto(id, "/ventas")} userName={session.user.nombre} />;
+      content = <Dashboard initialSection="taller" onNewOrder={() => navigate("/perfiles/nuevo")} onIntake={() => navigate("/ingresar?returnTo=%2Ftaller&base=taller")} onSelect={(ficha) => openFicha(ficha, "/taller")} onOpenMoto={(id) => openMoto(id, "/taller")} userName={session.user.nombre} />;
+  } else if (currentPage === "sales") {
+      content = <VentasView onIntake={() => navigate("/ingresar?returnTo=%2Fventas&base=sales")} onOpenMoto={(id) => openMoto(id, "/ventas")} onOpenTransfers={(id) => navigate(`/transferencias?motoId=${encodeURIComponent(id)}`)} notify={notify} canCompleteSale={session.user.rol === "ADMINISTRACION"} />;
   } else if (currentPage === "profiles") {
     content = <ProfilesView onNew={() => navigate("/perfiles/nuevo")} onOpen={openMoto} notify={notify} />;
   } else if (currentPage === "orders") {
@@ -261,7 +264,7 @@ export function AppController() {
   } else if (currentPage === "profile" && route.motoId) {
      content = <MotoDetail key={`${pathname}?${urlSearch}`} id={route.motoId} initialTab={route.tab} onBack={() => navigate(route.returnTo || "/perfiles")} onOpenFicha={(ficha) => openFicha(ficha, `/motos/${route.motoId}?tab=fichas`)} onOpenRepuesto={(repuesto) => openRepuesto(repuesto, `/motos/${route.motoId}?tab=repuestos`)} onNewFicha={createFichaForMoto} onNewRepuesto={createRepuestoForMoto} notify={notify} />;
   } else if (currentPage === "transfers") {
-     content = <TransferenciasView canTransfer={session.user.rol === "ADMINISTRACION"} onOpenMoto={(id) => openMoto(id, "/transferencias", "client")} notify={notify} />;
+      content = <TransferenciasView canTransfer={session.user.rol === "ADMINISTRACION"} initialMotoId={route.initialMotoId} onOpenMoto={(id) => openMoto(id, "/transferencias", "client")} notify={notify} />;
   } else if (currentPage === "repuestos") {
      content = <RepuestosView onOpen={(repuesto) => openRepuesto(repuesto, "/repuestos")} notify={notify} />;
   } else if (currentPage === "repuesto-create") {
@@ -312,6 +315,7 @@ export function AppController() {
           );
         }}
       />
+      <IntakeView open={Boolean(route.intake)} onClose={() => navigate(route.returnTo || "/")} onOpenProfile={openMoto} notify={notify} />
       <Toast notification={toast} onClose={() => setToast(null)} />
     </AppShell>
   );

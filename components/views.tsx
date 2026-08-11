@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDownUp, Download, Edit3, Eye, FileDown, Filter, Plus, Trash2 } from "lucide-react";
+import { ArrowDownUp, ArrowRightLeft, Download, Edit3, Eye, FileDown, Filter, LogOut, Plus, Tag, Trash2 } from "lucide-react";
 import { api, download, objectUrl } from "../lib/api";
 import { money } from "../lib/format";
 import { daysAgoInAr, formatDateInAr, todayInAr } from "../lib/dates";
@@ -12,15 +12,17 @@ import type {
   FichaStatus,
   FichaTrabajoResponse,
   NextServiceResponse,
+  PagoStatus,
   PageResponse,
   PhotoResponse,
   RevisionResponse,
   ServiceResponse,
   TallerResponse,
   VentaResponse,
+  VentaMotoResponse,
   TrabajoStatus,
 } from "../lib/types";
-import { Dialog, EmptyState, Pagination, SearchBox, StatusBadge, type Notify } from "./ui";
+import { Dialog, EmptyState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 
 const date = formatDateInAr;
 const errorMessage = (reason: unknown) =>
@@ -73,6 +75,7 @@ function OrderPhotos({ photos, onChange }: { photos: PhotoResponse[]; onChange: 
 }
 
 const fichaStatuses: FichaStatus[] = ["Cargada", "En proceso", "Revisión", "Entregada", "Cancelada"];
+const fichaPaymentStatuses: PagoStatus[] = ["No pagado", "Parcial", "Pagado"];
 
 export function Dashboard({
   onNewOrder,
@@ -218,6 +221,51 @@ export function Dashboard({
   );
 }
 
+const salesStatuses: VentaMotoResponse["estado"][] = ["Ingresada Venta", "En venta", "Transferencia en curso", "Vendida"];
+
+export function VentasView({
+  onIntake,
+  onOpenMoto,
+  onOpenTransfers,
+  notify,
+  canCompleteSale,
+}: {
+  onIntake: () => void;
+  onOpenMoto: (id: string) => void;
+  onOpenTransfers: (id: string) => void;
+  notify: Notify;
+  canCompleteSale: boolean;
+}) {
+  const [result, setResult] = useState<VentaResponse | null>(null);
+  const [tab, setTab] = useState<VentaMotoResponse["estado"]>("Ingresada Venta");
+  const [query, setQuery] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const load = () => void api<VentaResponse>("/dashboard/ventas").then(setResult).catch((reason) => setError(errorMessage(reason)));
+  useEffect(load, []);
+  const current = result?.estados.find((item) => item.estado === tab)?.motos ?? [];
+  const visible = current.filter((moto) => `${moto.patente} ${moto.moto} ${moto.cliente ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()));
+  const transition = async (moto: VentaMotoResponse, action: () => Promise<unknown>, message: string) => {
+    setBusyId(moto.motoId);
+    try { await action(); notify(message); load(); } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); } finally { setBusyId(null); }
+  };
+  return <div className="page">
+    <div className="page-heading"><div><h1>Ventas</h1><p>Seguí cada moto desde su ingreso hasta la transferencia final.</p></div><div className="page-actions"><button className="button secondary" onClick={onIntake}><Plus size={18} />Ingresar moto</button></div></div>
+    {error && <p className="login-pending" role="alert">{error}</p>}
+    <div className="metrics dashboard-metrics sales-metrics">
+      {salesStatuses.map((status) => <Metric key={status} label={status} value={String(result?.estados.find((item) => item.estado === status)?.motos.length ?? 0)} tone={tabKey(status)} />)}
+    </div>
+    <section className="panel table-panel">
+      <div className="filter-bar"><SearchBox value={query} onChange={setQuery} placeholder="Patente, moto o cliente" /><SelectField value={tab} onChange={(value) => setTab(value as typeof tab)} options={salesStatuses.map((status) => ({ value: status, label: status }))} ariaLabel="Filtrar ventas por estado" /></div>
+      <nav className="tabs taller-tabs" aria-label="Estado de las ventas">{salesStatuses.map((status) => <button key={status} className={`${tab === status ? "active" : ""} tab-${tabKey(status)}`} onClick={() => setTab(status)}>{status}<span className="tab-count">{result?.estados.find((item) => item.estado === status)?.motos.length ?? 0}</span></button>)}</nav>
+      {visible.length ? <table><thead><tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{visible.map((moto) => {
+        const busy = busyId === moto.motoId;
+        return <tr key={moto.motoId}><td data-label="Moto"><strong>{moto.patente}</strong><small>{moto.moto}</small></td><td data-label="Cliente">{moto.cliente ?? "Sin propietario"}</td><td data-label="KM actual">{moto.kilometraje != null ? moto.kilometraje.toLocaleString("es-AR") : "—"}</td><td data-label="Estado"><StatusBadge status={moto.estado} /></td><td className="table-actions sales-actions"><button className="row-action" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button>{moto.estado === "Ingresada Venta" && <button className="button secondary compact" disabled={busy} onClick={() => void transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/estado`, { method: "PATCH", body: JSON.stringify({ estado: "En venta" }) }), "Moto marcada En venta.")}><Tag size={15} />En venta</button>}{moto.estado === "En venta" && <button className="button secondary compact" disabled={busy} onClick={() => onOpenTransfers(moto.motoId)}><ArrowRightLeft size={15} />Transferir</button>}{moto.estado === "Transferencia en curso" && canCompleteSale && <button className="button primary compact" disabled={busy} onClick={() => void transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/completar`, { method: "POST" }), "Venta completada.")}><LogOut size={15} />Completar</button>}</td></tr>;
+      })}</tbody></table> : result ? <EmptyState title={`Sin motos ${tab.toLowerCase()}`} body={query ? "Probá con otra búsqueda." : "No hay motos en este estado por el momento."} /> : <div className="table-loading" role="status">Cargando ventas...</div>}
+    </section>
+  </div>;
+}
+
 export function FichasView({
   onNewOrder,
   onSelect,
@@ -231,6 +279,7 @@ export function FichasView({
 }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"Todos" | FichaStatus>("Todos");
+  const [paymentStatus, setPaymentStatus] = useState<"Todos" | PagoStatus>("Todos");
   const [desde, setDesde] = useState(daysAgoInAr(30));
   const [hasta, setHasta] = useState(todayInAr());
   const [sortBy, setSortBy] = useState("fechaIngreso");
@@ -245,6 +294,7 @@ export function FichasView({
       {
         q: query || undefined,
         estado: status === "Todos" ? undefined : status,
+        estadoPago: paymentStatus === "Todos" ? undefined : paymentStatus,
         fechaDesde: desde || undefined,
         fechaHasta: hasta || undefined,
         sortBy: sortBy || undefined,
@@ -255,10 +305,11 @@ export function FichasView({
     )
       .then(setResult)
       .catch((reason) => setError(errorMessage(reason)));
-  }, [query, status, desde, hasta, sortBy, direction, page]);
+  }, [query, status, paymentStatus, desde, hasta, sortBy, direction, page]);
   const params = {
     q: query || undefined,
     estado: status === "Todos" ? undefined : status,
+    estadoPago: paymentStatus === "Todos" ? undefined : paymentStatus,
     fechaDesde: desde || undefined,
     fechaHasta: hasta || undefined,
     sortBy: sortBy || undefined,
@@ -280,13 +331,8 @@ export function FichasView({
       <section className="panel table-panel">
         <div className="filter-bar">
           <SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Número o cliente" />
-          <label>
-            <Filter size={16} />
-            <select value={status} onChange={(event) => { setStatus(event.target.value as typeof status); setPage(1); }}>
-              <option>Todos</option>
-              {fichaStatuses.map((option) => <option key={option}>{option}</option>)}
-            </select>
-          </label>
+          <SelectField value={status} onChange={(value) => { setStatus(value as typeof status); setPage(1); }} options={fichaStatuses.map((option) => ({ value: option, label: option }))} placeholder="Todos los estados" icon={Filter} ariaLabel="Filtrar fichas por estado" />
+          <SelectField value={paymentStatus} onChange={(value) => { setPaymentStatus(value as typeof paymentStatus); setPage(1); }} options={fichaPaymentStatuses.map((option) => ({ value: option, label: option }))} placeholder="Todos los pagos" icon={Filter} ariaLabel="Filtrar fichas por pago" />
           <label>
             <span className="date-label">Desde</span>
             <input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); setPage(1); }} />
@@ -295,15 +341,7 @@ export function FichasView({
             <span className="date-label">Hasta</span>
             <input type="date" value={hasta} onChange={(event) => { setHasta(event.target.value); setPage(1); }} />
           </label>
-          <label>
-            <Filter size={16} />
-            <select value={sortBy} onChange={(event) => { setSortBy(event.target.value); setPage(1); }}>
-              <option value="fechaIngreso">Fecha de ingreso</option>
-              <option value="numero">Número</option>
-              <option value="total">Total</option>
-              <option value="estado">Estado</option>
-            </select>
-          </label>
+          <SelectField value={sortBy} onChange={(value) => { setSortBy(value); setPage(1); }} options={[{ value: "fechaIngreso", label: "Fecha de ingreso" }, { value: "numero", label: "Número" }, { value: "total", label: "Total" }, { value: "estado", label: "Estado" }]} icon={Filter} ariaLabel="Ordenar fichas por" />
           <button className="button secondary" onClick={() => { toggleDirection(); setPage(1); }} aria-label="Cambiar orden">
             <ArrowDownUp size={16} />
             {direction === "DESC" ? "Más recientes" : "Más antiguos"}

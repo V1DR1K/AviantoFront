@@ -6,7 +6,7 @@ import { api } from "../lib/api";
 import { money, parsePrice } from "../lib/format";
 import type { TrabajoCatalogoResponse } from "../lib/types";
 import { AbmFormModal } from "./modal/abm-form-modal";
-import { ConfirmModal, Dialog, EmptyState, SearchBox, type Notify } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, SearchBox, SelectField, type Notify } from "./ui";
 
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar los trabajos.";
 
@@ -45,7 +45,7 @@ export function TrabajosCatalogoView({ notify }: { notify: Notify }) {
     <section className="panel table-panel">
       <div className="filter-bar">
         <SearchBox value={query} onChange={setQuery} placeholder="Buscar por descripción" />
-        <label><Filter size={16} /><select value={filter} onChange={(event) => setFilter(event.target.value)}><option>Todos</option><option>Activo</option><option>Inactivo</option></select></label>
+         <SelectField value={filter} onChange={setFilter} options={[{ value: "Activo", label: "Activo" }, { value: "Inactivo", label: "Inactivo" }]} placeholder="Todos" icon={Filter} ariaLabel="Filtrar trabajos por estado" />
       </div>
       {rows.length ? <table><thead><tr><th>Descripción</th><th>Precio sugerido</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
         {rows.map((row) => <tr key={row.id}><td data-label="Descripción"><strong>{row.descripcion}</strong></td><td data-label="Precio sugerido">{money(row.precioBase)}</td><td data-label="Estado"><span className={`record-state ${row.activo ? "active" : "inactive"}`}>{row.activo ? "Activo" : "Inactivo"}</span></td><td className="table-actions"><button onClick={() => setDetail(row)} aria-label={`Ver trabajo ${row.descripcion}`}><Eye size={17} /></button><button onClick={() => setEditing(row)} aria-label={`Editar trabajo ${row.descripcion}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(row)} aria-label={`Eliminar trabajo ${row.descripcion}`}><Trash2 size={17} /></button></td></tr>)}

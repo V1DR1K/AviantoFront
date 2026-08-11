@@ -19,8 +19,8 @@ import {
 import type { AuthSession } from "../lib/auth";
 const home = { id: "dashboard", label: "Inicio", icon: LayoutDashboard };
 const navGroups = [
-  { id: "taller", label: "Taller", items: [{ id: "taller-dashboard", label: "Dashboard Taller", icon: LayoutDashboard }, { id: "profiles", label: "Perfiles", icon: ClipboardList }, { id: "repuestos", label: "Pedidos", icon: Package }] },
-  { id: "ventas", label: "Ventas", items: [{ id: "ventas-dashboard", label: "Dashboard Ventas", icon: LayoutDashboard }, { id: "transfers", label: "Transferencias", icon: ArrowRightLeft }] },
+  { id: "taller", label: "Taller", items: [{ id: "orders", label: "Fichas", icon: FileText }, { id: "repuestos", label: "Pedidos", icon: Package }] },
+  { id: "ventas", label: "Ventas", items: [{ id: "sales", label: "Ventas", icon: LayoutDashboard }, { id: "transfers", label: "Transferencias", icon: ArrowRightLeft }] },
   { id: "records", label: "Registros", items: [{ id: "clients", label: "Clientes", icon: Users }, { id: "catalog", label: "Controles", icon: Package }, { id: "trabajos", label: "Trabajos", icon: Wrench, adminOnly: true }] },
 ];
 export function AppShell({
@@ -74,6 +74,7 @@ export function AppShell({
         </button>
         <nav>
           {renderItem(home)}
+          {renderItem({ id: "profiles", label: "Perfiles", icon: ClipboardList })}
           {navGroups.map((group) => {
             const expanded = openGroup === group.id || group.items.some((item) => item.id === page);
             return (
@@ -133,8 +134,9 @@ export function AppShell({
           <button className="drawer-close" onClick={() => setMenuOpen(false)}>
             Cerrar menú ×
           </button>
-          {renderItem(home)}
-          {navGroups.map((group) => (
+           {renderItem(home)}
+           {renderItem({ id: "profiles", label: "Perfiles", icon: ClipboardList })}
+           {navGroups.map((group) => (
             <section className="mobile-nav-group" key={group.id}>
               <p>{group.label}</p>
                {group.items.filter((item) => !item.adminOnly || isAdmin).map(renderItem)}

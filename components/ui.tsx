@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { AlertTriangle, CheckCircle2, Clock3, Info, Search, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, Info, Search, X, type LucideIcon } from "lucide-react";
+import type { AutocompleteResponse } from "../lib/types";
 
 export type ToastTone = "success" | "error" | "warning" | "info";
 export type ToastState = { message: string; tone: ToastTone };
@@ -103,6 +104,140 @@ export function SearchBox({
         </button>
       )}
     </label>
+  );
+}
+
+export type SelectOption = { value: string; label: string; disabled?: boolean };
+
+export function SelectField({
+  value,
+  onChange,
+  options,
+  placeholder,
+  label,
+  icon: Icon,
+  disabled = false,
+  required = false,
+  className = "",
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+  placeholder?: string;
+  label?: ReactNode;
+  icon?: LucideIcon;
+  disabled?: boolean;
+  required?: boolean;
+  className?: string;
+  ariaLabel?: string;
+}) {
+  const control = (
+    <span className="select-control">
+      {Icon && <Icon size={16} aria-hidden="true" />}
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
+        required={required}
+        aria-label={ariaLabel}
+      >
+        {placeholder !== undefined && <option value="">{placeholder}</option>}
+        {options.map((option) => (
+          <option key={option.value} value={option.value} disabled={option.disabled}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </span>
+  );
+  return label ? <label className={`select-field ${className}`}>{label}{control}</label> : control;
+}
+
+export function AutocompleteField({
+  value,
+  onChange,
+  onSelect,
+  onClear,
+  options,
+  loadOptions,
+  selected = null,
+  placeholder = "Buscar...",
+  minChars = 2,
+  disabled = false,
+  emptyText = "Sin coincidencias.",
+  loadingText = "Buscando...",
+  className = "",
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onSelect: (option: AutocompleteResponse) => void;
+  onClear?: () => void;
+  options?: AutocompleteResponse[];
+  loadOptions?: (query: string) => Promise<AutocompleteResponse[]>;
+  selected?: AutocompleteResponse | null;
+  placeholder?: string;
+  minChars?: number;
+  disabled?: boolean;
+  emptyText?: string;
+  loadingText?: string;
+  className?: string;
+  ariaLabel?: string;
+}) {
+  const [suggestions, setSuggestions] = useState<AutocompleteResponse[]>([]);
+  const [loading, setLoading] = useState(false);
+  const query = value.trim();
+  const localSuggestions = !selected && !loadOptions && query.length >= minChars
+    ? (options ?? []).filter((item) => `${item.label} ${item.secondary ?? ""}`.toLowerCase().includes(query.toLowerCase())).slice(0, 10)
+    : [];
+  const visibleSuggestions = loadOptions ? suggestions : localSuggestions;
+
+  useEffect(() => {
+    if (selected || query.length < minChars || !loadOptions) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      void loadOptions(query)
+        .then((items) => { if (active) setSuggestions(items); })
+        .catch(() => { if (active) setSuggestions([]); })
+        .finally(() => { if (active) setLoading(false); });
+    }, 180);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [loadOptions, minChars, query, selected]);
+
+  const clear = () => {
+    onClear?.();
+    onChange("");
+    setSuggestions([]);
+  };
+  return (
+    <div className={`autocomplete-field ${className}`}>
+      <Search size={17} aria-hidden="true" />
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        autoComplete="off"
+        disabled={disabled}
+        aria-label={ariaLabel}
+        aria-autocomplete="list"
+      />
+      {value && <button type="button" className="icon-button" aria-label="Limpiar selección" onClick={clear}><X size={16} /></button>}
+      {!selected && query.length >= minChars && (loading || visibleSuggestions.length > 0 || Boolean(options && !loadOptions)) && (
+        <div className="suggestions" role="listbox">
+          {loading ? <p className="suggestions-empty">{loadingText}</p> : visibleSuggestions.length ? visibleSuggestions.map((item) => (
+            <button type="button" key={item.id} role="option" aria-selected="false" onClick={() => { onSelect(item); setSuggestions([]); }}>
+              <span>{item.label}</span>
+              <small>{item.secondary ?? ""}</small>
+            </button>
+          )) : <p className="suggestions-empty">{emptyText}</p>}
+        </div>
+      )}
+    </div>
   );
 }
 export function ConfirmModal({

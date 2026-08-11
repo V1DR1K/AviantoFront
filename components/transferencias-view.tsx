@@ -6,7 +6,7 @@ import { api, download } from "../lib/api";
 import { todayInAr } from "../lib/dates";
 import type { AutocompleteResponse, ClienteResponse, MotovehiculoResponse, PageResponse, TransferRequest, TransferResponse, TransferUpdateRequest } from "../lib/types";
 import { AbmFormModal } from "./modal/abm-form-modal";
-import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, type Notify } from "./ui";
+import { AutocompleteField, ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, type Notify } from "./ui";
 
 const date = (value?: string | null) => {
   if (!value) return "—";
@@ -23,19 +23,10 @@ const clientFields = [
   { key: "observaciones", label: "Observaciones", type: "textarea" as const, wide: true },
 ];
 
-function AutocompleteList({ items, onChoose }: { items: AutocompleteResponse[]; onChoose: (item: AutocompleteResponse) => void }) {
-  if (!items.length) return <p className="suggestions-empty">Sin coincidencias.</p>;
-  return <div className="suggestions" role="listbox">
-    {items.map((item) => <button type="button" key={item.id} role="option" aria-selected="false" onClick={() => onChoose(item)}><span>{item.label}</span><small>{item.secondary || ""}</small></button>)}
-  </div>;
-}
-
-function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onClose: () => void; onSaved: () => void; notify: Notify }) {
+function TransferDialog({ open, initialMotoId, onClose, onSaved, notify }: { open: boolean; initialMotoId?: string; onClose: () => void; onSaved: () => void; notify: Notify }) {
   const [motoQuery, setMotoQuery] = useState("");
-  const [motoSuggestions, setMotoSuggestions] = useState<AutocompleteResponse[]>([]);
   const [selectedMoto, setSelectedMoto] = useState<MotovehiculoResponse | null>(null);
   const [clientQuery, setClientQuery] = useState("");
-  const [clientSuggestions, setClientSuggestions] = useState<AutocompleteResponse[]>([]);
   const [selectedClient, setSelectedClient] = useState<AutocompleteResponse | null>(null);
   const [fechaTransferencia, setFechaTransferencia] = useState(todayInAr());
   const [observaciones, setObservaciones] = useState("");
@@ -44,29 +35,16 @@ function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onC
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || motoQuery.trim().length < 2 || selectedMoto) return;
-    let active = true;
-    void api<AutocompleteResponse[]>("/motovehiculos/autocomplete", {}, { q: motoQuery.trim() })
-      .then((items) => { if (active) setMotoSuggestions(items); })
-      .catch(() => { if (active) setMotoSuggestions([]); });
-    return () => { active = false; };
-  }, [open, motoQuery, selectedMoto]);
-
-  useEffect(() => {
-    if (!open || clientQuery.trim().length < 2 || selectedClient) return;
-    let active = true;
-    void api<AutocompleteResponse[]>("/clientes/autocomplete", {}, { q: clientQuery.trim() })
-      .then((items) => { if (active) setClientSuggestions(items); })
-      .catch(() => { if (active) setClientSuggestions([]); });
-    return () => { active = false; };
-  }, [open, clientQuery, selectedClient]);
+    if (!open || !initialMotoId || selectedMoto) return;
+    void api<MotovehiculoResponse>(`/motovehiculos/${initialMotoId}`)
+      .then((moto) => { setSelectedMoto(moto); setMotoQuery(moto.patente); })
+      .catch((reason) => setError(errorMessage(reason)));
+  }, [initialMotoId, open, selectedMoto]);
 
   const reset = () => {
     setMotoQuery("");
-    setMotoSuggestions([]);
     setSelectedMoto(null);
     setClientQuery("");
-    setClientSuggestions([]);
     setSelectedClient(null);
     setFechaTransferencia(todayInAr());
     setObservaciones("");
@@ -81,13 +59,11 @@ function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onC
       const moto = await api<MotovehiculoResponse>(`/motovehiculos/${item.id}`);
       setSelectedMoto(moto);
       setMotoQuery(moto.patente);
-      setMotoSuggestions([]);
     } catch (reason) { setError(errorMessage(reason)); } finally { setBusy(false); }
   };
   const chooseClient = (item: AutocompleteResponse) => {
     setSelectedClient(item);
     setClientQuery(item.label);
-    setClientSuggestions([]);
   };
   const createClient = async (values: Record<string, string>) => {
     try {
@@ -121,7 +97,9 @@ function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onC
     } catch (reason) { setError(errorMessage(reason)); } finally { setBusy(false); }
   };
 
-  return <Dialog open={open} title="Nueva transferencia" onClose={close} wide className="transfer-modal">
+   const loadMotos = (query: string) => api<AutocompleteResponse[]>("/motovehiculos/autocomplete", {}, { q: query });
+   const loadClients = (query: string) => api<AutocompleteResponse[]>("/clientes/autocomplete", {}, { q: query });
+   return <Dialog open={open} title="Nueva transferencia" onClose={close} wide className="transfer-modal">
     <form className="transfer-form" onSubmit={(event) => void submit(event)}>
       {error && <p className="login-pending" role="alert">{error}</p>}
       <section className="transfer-step">
@@ -129,14 +107,11 @@ function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onC
         <div className="transfer-step-content">
           <h3>Elegí la moto</h3>
           <p>Buscá por patente, marca o modelo.</p>
-          <div className="autocomplete-field">
-            <input value={motoQuery} autoComplete="off" placeholder="Ej.: AA 123 AA" disabled={Boolean(selectedMoto) || busy} onChange={(event) => { setMotoQuery(event.target.value); setSelectedMoto(null); }} />
-            {!selectedMoto && motoQuery.trim().length >= 2 && <AutocompleteList items={motoSuggestions} onChoose={(item) => void chooseMoto(item)} />}
-          </div>
+           <AutocompleteField value={motoQuery} onChange={(value) => { setMotoQuery(value); setSelectedMoto(null); }} onSelect={(item) => void chooseMoto(item)} onClear={() => setSelectedMoto(null)} selected={selectedMoto ? { id: selectedMoto.id, label: selectedMoto.patente, secondary: `${selectedMoto.marca} ${selectedMoto.modelo}` } : null} loadOptions={loadMotos} placeholder="Ej.: AA 123 AA" disabled={busy} />
           {selectedMoto && <div className="transfer-vehicle">
             <div><strong>{selectedMoto.patente}</strong><span>{selectedMoto.marca} {selectedMoto.modelo}</span></div>
             <div><small>Cliente actual</small><strong>{selectedMoto.propietario ?? "Sin propietario"}</strong></div>
-            <button type="button" className="icon-button" aria-label="Cambiar moto" onClick={() => { setSelectedMoto(null); setMotoQuery(""); setSelectedClient(null); setClientQuery(""); setClientSuggestions([]); }}><X size={17} /></button>
+             <button type="button" className="icon-button" aria-label="Cambiar moto" onClick={() => { setSelectedMoto(null); setMotoQuery(""); setSelectedClient(null); setClientQuery(""); }}><X size={17} /></button>
           </div>}
         </div>
       </section>
@@ -144,10 +119,7 @@ function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onC
         <div className="transfer-step-number">2</div>
         <div className="transfer-step-content">
           <div className="transfer-client-head"><div><h3>Asigná el nuevo cliente</h3><p>El historial de fichas anteriores no se modifica.</p></div><button type="button" className="button secondary transfer-add-client" disabled={busy} onClick={() => setNewClientOpen(true)}>+ Agregar Cliente</button></div>
-          <div className="autocomplete-field">
-            <input value={clientQuery} autoComplete="off" placeholder="Buscar por nombre o documento" disabled={!selectedMoto || Boolean(selectedClient) || busy} onChange={(event) => { setClientQuery(event.target.value); setSelectedClient(null); }} />
-            {selectedMoto && !selectedClient && clientQuery.trim().length >= 2 && <AutocompleteList items={clientSuggestions} onChoose={chooseClient} />}
-          </div>
+           <AutocompleteField value={clientQuery} onChange={(value) => { setClientQuery(value); setSelectedClient(null); }} onSelect={chooseClient} onClear={() => setSelectedClient(null)} selected={selectedClient} loadOptions={loadClients} placeholder="Buscar por nombre o documento" disabled={!selectedMoto || busy} />
           {selectedClient && <div className="transfer-selection"><span>Nuevo cliente</span><strong>{selectedClient.label}</strong><button type="button" className="icon-button" aria-label="Cambiar cliente" onClick={() => { setSelectedClient(null); setClientQuery(""); }}><X size={17} /></button></div>}
         </div>
       </section>
@@ -178,20 +150,11 @@ function TransferDialog({ open, onClose, onSaved, notify }: { open: boolean; onC
 
 function TransferEditDialog({ transfer, onClose, onSaved, notify }: { transfer: TransferResponse | null; onClose: () => void; onSaved: () => void; notify: Notify }) {
   const [clientQuery, setClientQuery] = useState(transfer?.clienteNuevo ?? "");
-  const [clientSuggestions, setClientSuggestions] = useState<AutocompleteResponse[]>([]);
   const [selectedClient, setSelectedClient] = useState<AutocompleteResponse | null>(transfer ? { id: transfer.clienteNuevoId, label: transfer.clienteNuevo, secondary: "" } : null);
   const [fechaTransferencia, setFechaTransferencia] = useState(transfer?.fechaTransferencia ?? todayInAr());
   const [observaciones, setObservaciones] = useState(transfer?.observaciones ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    if (!transfer || clientQuery.trim().length < 2 || selectedClient) return;
-    let active = true;
-    void api<AutocompleteResponse[]>("/clientes/autocomplete", {}, { q: clientQuery.trim() })
-      .then((items) => { if (active) setClientSuggestions(items); })
-      .catch(() => { if (active) setClientSuggestions([]); });
-    return () => { active = false; };
-  }, [transfer, clientQuery, selectedClient]);
   if (!transfer) return null;
   const close = () => { if (!busy) onClose(); };
   const submit = async (event: FormEvent) => {
@@ -211,25 +174,26 @@ function TransferEditDialog({ transfer, onClose, onSaved, notify }: { transfer: 
       setBusy(false);
     }
   };
+  const loadClients = (query: string) => api<AutocompleteResponse[]>("/clientes/autocomplete", {}, { q: query });
   return <Dialog open title="Editar transferencia" onClose={close} wide className="transfer-modal">
     <form className="transfer-form" onSubmit={(event) => void submit(event)}>
       {error && <p className="login-pending" role="alert">{error}</p>}
       <section className="transfer-step"><div className="transfer-step-number">1</div><div className="transfer-step-content"><h3>{transfer.patente}</h3><p>{transfer.moto} · Cliente anterior: {transfer.clienteAnterior}</p></div></section>
-      <section className="transfer-step"><div className="transfer-step-number">2</div><div className="transfer-step-content"><h3>Asigná el nuevo cliente</h3><div className="autocomplete-field"><input value={clientQuery} autoComplete="off" placeholder="Buscar por nombre o documento" disabled={Boolean(selectedClient) || busy} onChange={(event) => { setClientQuery(event.target.value); setSelectedClient(null); }} />{!selectedClient && clientQuery.trim().length >= 2 && <AutocompleteList items={clientSuggestions} onChoose={(item) => { setSelectedClient(item); setClientQuery(item.label); setClientSuggestions([]); }} />}</div>{selectedClient && <div className="transfer-selection"><span>Nuevo cliente</span><strong>{selectedClient.label}</strong><button type="button" className="icon-button" aria-label="Cambiar cliente" onClick={() => { setSelectedClient(null); setClientQuery(""); }}><X size={17} /></button></div>}</div></section>
+       <section className="transfer-step"><div className="transfer-step-number">2</div><div className="transfer-step-content"><h3>Asigná el nuevo cliente</h3><AutocompleteField value={clientQuery} onChange={(value) => { setClientQuery(value); setSelectedClient(null); }} onSelect={(item) => { setSelectedClient(item); setClientQuery(item.label); }} onClear={() => setSelectedClient(null)} selected={selectedClient} loadOptions={loadClients} placeholder="Buscar por nombre o documento" disabled={busy} />{selectedClient && <div className="transfer-selection"><span>Nuevo cliente</span><strong>{selectedClient.label}</strong><button type="button" className="icon-button" aria-label="Cambiar cliente" onClick={() => { setSelectedClient(null); setClientQuery(""); }}><X size={17} /></button></div>}</div></section>
       <section className="transfer-step"><div className="transfer-step-number">3</div><div className="transfer-step-content"><h3>Definí la vigencia</h3><div className="two-col transfer-fields"><label>Fecha de transferencia<input type="date" value={fechaTransferencia} max={todayInAr()} onChange={(event) => setFechaTransferencia(event.target.value)} required /></label><label>Observaciones <span className="field-optional">Opcional</span><textarea value={observaciones} onChange={(event) => setObservaciones(event.target.value)} /></label></div></div></section>
       <div className="modal-actions"><button type="button" className="button secondary" onClick={close} disabled={busy}>Cancelar</button><button type="submit" className="button primary" disabled={busy || !selectedClient}>{busy ? "Guardando..." : "Guardar cambios"}</button></div>
     </form>
   </Dialog>;
 }
 
-export function TransferenciasView({ canTransfer, onOpenMoto, notify }: { canTransfer: boolean; onOpenMoto: (id: string) => void; notify: Notify }) {
+export function TransferenciasView({ canTransfer, initialMotoId, onOpenMoto, notify }: { canTransfer: boolean; initialMotoId?: string; onOpenMoto: (id: string) => void; notify: Notify }) {
   const [query, setQuery] = useState("");
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [direction, setDirection] = useState<"ASC" | "DESC">("DESC");
   const [result, setResult] = useState<PageResponse<TransferResponse> | null>(null);
   const [page, setPage] = useState(1);
-  const [flowOpen, setFlowOpen] = useState(false);
+  const [flowOpen, setFlowOpen] = useState(Boolean(initialMotoId));
   const [editing, setEditing] = useState<TransferResponse | null>(null);
   const [deleting, setDeleting] = useState<TransferResponse | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -271,7 +235,7 @@ export function TransferenciasView({ canTransfer, onOpenMoto, notify }: { canTra
       {result?.content.length ? <table><thead><tr><th>Patente</th><th>Fecha</th><th>Cliente anterior</th><th>Cliente nuevo</th><th>Observaciones</th><th>Acciones</th></tr></thead><tbody>{result.content.map((transfer) => <tr key={transfer.id}><td data-label="Patente"><strong>{transfer.patente}</strong><small>{transfer.moto}</small></td><td data-label="Fecha">{date(transfer.fechaTransferencia)}</td><td data-label="Cliente anterior">{transfer.clienteAnterior}</td><td data-label="Cliente nuevo">{transfer.clienteNuevo}</td><td data-label="Observaciones">{transfer.observaciones || "—"}</td><td className="table-actions"><button onClick={() => onOpenMoto(transfer.motoId)} aria-label={`Ver moto ${transfer.patente}`}><Eye size={17} /></button>{canTransfer && <><button onClick={() => setEditing(transfer)} aria-label={`Editar transferencia de ${transfer.patente}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(transfer)} aria-label={`Eliminar transferencia de ${transfer.patente}`}><Trash2 size={17} /></button></>}</td></tr>)}</tbody></table> : result ? <EmptyState title="No hay transferencias" body="Probá ajustar los filtros o registrá una nueva transferencia." action={canTransfer ? <button className="button primary" onClick={() => setFlowOpen(true)}><Plus size={17} />Nueva transferencia</button> : undefined} /> : <div className="table-loading" role="status">Cargando transferencias...</div>}
       <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
     </section>
-    <TransferDialog open={flowOpen} onClose={() => setFlowOpen(false)} onSaved={() => { setPage(1); setReloadKey((value) => value + 1); }} notify={notify} />
+     <TransferDialog open={flowOpen} initialMotoId={initialMotoId} onClose={() => setFlowOpen(false)} onSaved={() => { setPage(1); setReloadKey((value) => value + 1); }} notify={notify} />
     <TransferEditDialog key={editing?.id ?? "none"} transfer={editing} onClose={() => setEditing(null)} onSaved={() => { setPage(1); setReloadKey((value) => value + 1); }} notify={notify} />
     <ConfirmModal open={deleting !== null} title="Eliminar transferencia" body={`Se dará de baja la transferencia de ${deleting?.patente ?? "la moto seleccionada"} y se recalculará su historial de propietarios. Los registros no se borrarán de la base de datos.`} confirmLabel="Eliminar transferencia" onClose={() => setDeleting(null)} onConfirm={removeTransfer} />
   </div>;
