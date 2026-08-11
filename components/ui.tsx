@@ -306,7 +306,7 @@ export function SelectField({
       )}
     </div>
   );
-  return label ? <label className={`select-field ${className}`}>{label}{control}</label> : control;
+  return label ? <div className={`select-field ${className}`}><span className="select-label">{label}</span>{control}</div> : control;
 }
 
 export function AutocompleteField({

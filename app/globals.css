@@ -231,6 +231,46 @@ textarea:focus-visible {
   padding-top: 20px;
   border-top: 1px solid var(--line);
 }
+.intake-new-profile .two-col {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+}
+.intake-field {
+  display: grid;
+  gap: 7px;
+  color: #43556b;
+  font-weight: 750;
+}
+.intake-field input,
+.intake-card .plate-search input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #9eb5c8;
+  border-radius: 10px;
+  padding: 11px 13px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: inset 0 1px 2px rgba(18, 53, 91, 0.06);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+.intake-field input::placeholder,
+.intake-card .plate-search input::placeholder {
+  color: #7890a5;
+}
+.intake-field input:hover,
+.intake-card .plate-search input:hover {
+  border-color: #7598b3;
+  background: #fbfdfe;
+}
+.intake-field input:focus,
+.intake-card .plate-search input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(119, 183, 236, 0.3), inset 0 1px 2px rgba(18, 53, 91, 0.06);
+  outline: 0;
+}
+.intake-new-profile .button {
+  min-height: 46px;
+}
 .intake-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2337,6 +2377,9 @@ td.table-actions {
   .two-col {
     grid-template-columns: 1fr;
   }
+  .intake-new-profile .two-col {
+    grid-template-columns: 1fr;
+  }
   .order-form .two-col {
     grid-template-columns: 1fr;
   }
@@ -2469,6 +2512,10 @@ td.table-actions {
   padding: 0;
   min-height: 0;
   background: transparent;
+}
+.select-label {
+  color: #43556b;
+  font-weight: 750;
 }
 .select-field > .select-control {
   width: 100%;

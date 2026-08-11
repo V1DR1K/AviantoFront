@@ -222,6 +222,11 @@ export function Dashboard({
 }
 
 const salesStatuses: VentaMotoResponse["estado"][] = ["Ingresada Venta", "En venta", "Transferencia en curso", "Vendida"];
+const salesSortOptions = [
+  { value: "fechaIngreso", label: "Fecha de ingreso" },
+  { value: "patente", label: "Dominio" },
+  { value: "estado", label: "Estado" },
+];
 
 export function VentasView({
   onIntake,
@@ -237,28 +242,52 @@ export function VentasView({
   canCompleteSale: boolean;
 }) {
   const [result, setResult] = useState<VentaResponse | null>(null);
-  const [tab, setTab] = useState<VentaMotoResponse["estado"]>("Ingresada Venta");
+  const [status, setStatus] = useState<"Todos" | VentaMotoResponse["estado"]>("Todos");
   const [query, setQuery] = useState("");
+  const [desde, setDesde] = useState(daysAgoInAr(30));
+  const [hasta, setHasta] = useState(todayInAr());
+  const [sortBy, setSortBy] = useState("fechaIngreso");
+  const [direction, setDirection] = useState<"ASC" | "DESC">("DESC");
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const load = () => void api<VentaResponse>("/dashboard/ventas").then(setResult).catch((reason) => setError(errorMessage(reason)));
   useEffect(load, []);
-  const current = result?.estados.find((item) => item.estado === tab)?.motos ?? [];
-  const visible = current.filter((moto) => `${moto.patente} ${moto.moto} ${moto.cliente ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()));
+  const current = status === "Todos"
+    ? result?.estados.flatMap((item) => item.motos) ?? []
+    : result?.estados.find((item) => item.estado === status)?.motos ?? [];
+  const visible = [...current]
+    .filter((moto) => `${moto.patente} ${moto.moto} ${moto.cliente ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()))
+    .filter((moto) => {
+      const ingreso = moto.fechaIngreso?.slice(0, 10);
+      return Boolean(ingreso && (!desde || ingreso >= desde) && (!hasta || ingreso <= hasta));
+    })
+    .sort((left, right) => {
+      const leftValue = sortBy === "fechaIngreso" ? left.fechaIngreso?.slice(0, 10) ?? "" : sortBy === "patente" ? left.patente : left.estado;
+      const rightValue = sortBy === "fechaIngreso" ? right.fechaIngreso?.slice(0, 10) ?? "" : sortBy === "patente" ? right.patente : right.estado;
+      const comparison = leftValue.localeCompare(rightValue, "es");
+      return direction === "DESC" ? -comparison : comparison;
+    });
   const transition = async (moto: VentaMotoResponse, action: () => Promise<unknown>, message: string) => {
     setBusyId(moto.motoId);
     try { await action(); notify(message); load(); } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); } finally { setBusyId(null); }
   };
+  const emptyLabel = status === "Todos" ? "para mostrar" : status.toLowerCase();
   return <div className="page">
     <div className="page-heading"><div><h1>Ventas</h1><p>Seguí cada moto desde su ingreso hasta la transferencia final.</p></div><div className="page-actions"><button className="button secondary" onClick={onIntake}><Plus size={18} />Ingresar moto</button></div></div>
     {error && <p className="login-pending" role="alert">{error}</p>}
     <section className="panel table-panel">
-      <div className="filter-bar"><SearchBox value={query} onChange={setQuery} placeholder="Patente, moto o cliente" /><SelectField value={tab} onChange={(value) => setTab(value as typeof tab)} options={salesStatuses.map((status) => ({ value: status, label: status }))} icon={Filter} ariaLabel="Filtrar ventas por estado" /></div>
-      <nav className="tabs taller-tabs" aria-label="Estado de las ventas">{salesStatuses.map((status) => <button key={status} className={`${tab === status ? "active" : ""} tab-${tabKey(status)}`} onClick={() => setTab(status)}>{status}<span className="tab-count">{result?.estados.find((item) => item.estado === status)?.motos.length ?? 0}</span></button>)}</nav>
+      <div className="filter-bar">
+        <SearchBox value={query} onChange={setQuery} placeholder="Patente, moto o cliente" />
+        <SelectField value={status} onChange={(value) => setStatus(value as typeof status)} options={[{ value: "Todos", label: "Todos los estados" }, ...salesStatuses.map((value) => ({ value, label: value }))]} icon={Filter} ariaLabel="Filtrar ventas por estado" />
+        <label><span className="date-label">Desde</span><input type="date" value={desde} onChange={(event) => setDesde(event.target.value)} /></label>
+        <label><span className="date-label">Hasta</span><input type="date" value={hasta} onChange={(event) => setHasta(event.target.value)} /></label>
+        <SelectField value={sortBy} onChange={setSortBy} options={salesSortOptions} icon={Filter} ariaLabel="Ordenar ventas por" />
+        <button className="button secondary" onClick={() => setDirection((value) => value === "DESC" ? "ASC" : "DESC")} aria-label="Cambiar orden de ventas"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
+      </div>
       {visible.length ? <table><thead><tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{visible.map((moto) => {
         const busy = busyId === moto.motoId;
         return <tr key={moto.motoId}><td data-label="Moto"><strong>{moto.patente}</strong><small>{moto.moto}</small></td><td data-label="Cliente">{moto.cliente ?? "Sin propietario"}</td><td data-label="KM actual">{moto.kilometraje != null ? moto.kilometraje.toLocaleString("es-AR") : "—"}</td><td data-label="Estado"><StatusBadge status={moto.estado} /></td><td className="table-actions sales-actions"><button className="row-action" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button>{moto.estado === "Ingresada Venta" && <button className="button secondary compact" disabled={busy} onClick={() => void transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/estado`, { method: "PATCH", body: JSON.stringify({ estado: "En venta" }) }), "Moto marcada En venta.")}><Tag size={15} />En venta</button>}{moto.estado === "En venta" && <button className="button secondary compact" disabled={busy} onClick={() => onOpenTransfers(moto.motoId)}><ArrowRightLeft size={15} />Transferir</button>}{moto.estado === "Transferencia en curso" && canCompleteSale && <button className="button primary compact" disabled={busy} onClick={() => void transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/completar`, { method: "POST" }), "Venta completada.")}><LogOut size={15} />Completar</button>}</td></tr>;
-      })}</tbody></table> : result ? <EmptyState title={`Sin motos ${tab.toLowerCase()}`} body={query ? "Probá con otra búsqueda." : "No hay motos en este estado por el momento."} /> : <div className="table-loading" role="status">Cargando ventas...</div>}
+      })}</tbody></table> : result ? <EmptyState title={`Sin motos ${emptyLabel}`} body={query ? "Probá con otra búsqueda." : "No hay motos dentro de los filtros seleccionados."} /> : <div className="table-loading" role="status">Cargando ventas...</div>}
     </section>
   </div>;
 }
@@ -328,8 +357,8 @@ export function FichasView({
       <section className="panel table-panel">
         <div className="filter-bar">
           <SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Número o cliente" />
-          <SelectField value={status} onChange={(value) => { setStatus(value as typeof status); setPage(1); }} options={fichaStatuses.map((option) => ({ value: option, label: option }))} placeholder="Todos los estados" icon={Filter} ariaLabel="Filtrar fichas por estado" />
-          <SelectField value={paymentStatus} onChange={(value) => { setPaymentStatus(value as typeof paymentStatus); setPage(1); }} options={fichaPaymentStatuses.map((option) => ({ value: option, label: option }))} placeholder="Todos los pagos" icon={Filter} ariaLabel="Filtrar fichas por pago" />
+          <SelectField value={status} onChange={(value) => { setStatus(value as typeof status); setPage(1); }} options={[{ value: "Todos", label: "Todos los estados" }, ...fichaStatuses.map((option) => ({ value: option, label: option }))]} placeholder="Todos los estados" icon={Filter} ariaLabel="Filtrar fichas por estado" />
+          <SelectField value={paymentStatus} onChange={(value) => { setPaymentStatus(value as typeof paymentStatus); setPage(1); }} options={[{ value: "Todos", label: "Todos los pagos" }, ...fichaPaymentStatuses.map((option) => ({ value: option, label: option }))]} placeholder="Todos los pagos" icon={Filter} ariaLabel="Filtrar fichas por pago" />
           <label>
             <span className="date-label">Desde</span>
             <input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); setPage(1); }} />
