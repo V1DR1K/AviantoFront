@@ -14,3 +14,14 @@ export const daysAgoInAr = (days: number): string => {
   const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
   return `${map.year}-${map.month}-${map.day}`;
 };
+
+export const formatDateInAr = (value?: string | null): string => {
+  if (!value) return "—";
+  const source = value.includes("T") ? value : `${value}T12:00:00`;
+  return new Intl.DateTimeFormat("es-AR").format(new Date(source));
+};
+
+export const formatDateTimeInAr = (value?: string | null): string => {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+};

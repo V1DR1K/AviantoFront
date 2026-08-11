@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowDownUp, Download, Edit3, Eye, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download } from "../lib/api";
 import { money, parsePrice, priceInput } from "../lib/format";
-import { daysAgoInAr, todayInAr } from "../lib/dates";
+import { daysAgoInAr, formatDateInAr, todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
   FichaResponse,
@@ -16,11 +16,10 @@ import type {
 } from "../lib/types";
 import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, StatusBadge, type Notify } from "./ui";
 
-const date = (value: string) => new Intl.DateTimeFormat("es-AR").format(new Date(value));
+const date = formatDateInAr;
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
 
 const repuestoStates: RepuestoState[] = ["En curso", "Completado", "Cancelado"];
-const itemStates: RepuestoItemState[] = ["Pendiente de pedir", "Pedido", "Recibido", "Entregado", "Cancelado"];
 
 export function RepuestosView({
   onOpen,
@@ -215,7 +214,7 @@ function CreateRepuestoDialog({
           })
         : await api<RepuestoResponse>("/repuestos", {
             method: "POST",
-            body: JSON.stringify({ motoVehiculoId: motoId, clienteId: clientId, fichaId: fichaId || null, fecha: new Date().toISOString().slice(0, 10), proveedor: proveedor || null, observaciones: null, items: items.map((item) => ({ descripcion: item.descripcion, tipo: item.tipo === "Accesorio" ? "ACCESORIO" : "REPUESTO", cantidad: item.cantidad, precio: parsePrice(item.precio), fichaTrabajoId: item.fichaTrabajoId || null, estado: "Pendiente de pedir" })) }),
+             body: JSON.stringify({ motoVehiculoId: motoId, clienteId: clientId, fichaId: fichaId || null, fecha: todayInAr(), proveedor: proveedor || null, observaciones: null, items: items.map((item) => ({ descripcion: item.descripcion, tipo: item.tipo === "Accesorio" ? "ACCESORIO" : "REPUESTO", cantidad: item.cantidad, precio: parsePrice(item.precio), fichaTrabajoId: item.fichaTrabajoId || null, estado: "Pendiente de pedir" })) }),
           });
       notify(`Pedido ${repuesto.numero} ${initial ? "actualizado" : "creado"}.`);
       onSaved(repuesto);
@@ -272,7 +271,8 @@ export function RepuestoDetail({
   useEffect(load, [repuestoId]);
   if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><p className="login-pending">{error}</p></div>;
   if (!repuesto) return <div className="page">Cargando…</div>;
-  const locked = repuesto.estado === "Cancelado";
+  const locked = repuesto.estado === "Cancelado" || repuesto.estado === "Completado";
+  const nextItemStates = (state: RepuestoItemState) => state === "Pendiente de pedir" ? ["Pedido", "Cancelado"] : state === "Pedido" ? ["Recibido", "Cancelado"] : state === "Recibido" ? ["Entregado", "Cancelado"] : [];
   const setItemState = async (itemId: string, estado: RepuestoItemState) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/items/${itemId}/estado`, { method: "PATCH", body: JSON.stringify({ estado }) }); setRepuesto(next); notify(`Ítem marcado como ${estado}.`); } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); } finally { setPending(false); } };
   const patch = async (path: string, body: Record<string, string>) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(path, { method: "PATCH", body: JSON.stringify(body) }); setRepuesto(next); return next; } catch (reason) { const message = errorMessage(reason); setError(message); notify(message, "error"); return null; } finally { setPending(false); } };
   const openPartialPayment = () => { setSelectedPaidItemIds(repuesto.items.filter((item) => item.estado !== "Cancelado" && item.pagado).map((item) => item.id)); setPaymentOpen(true); };
@@ -305,7 +305,7 @@ export function RepuestoDetail({
                   {!locked && <td data-label="Cambiar">
                     <select value="" disabled={pending} onChange={(event) => event.target.value && void setItemState(item.id, event.target.value as RepuestoItemState)}>
                       <option value="">Cambiar…</option>
-                      {itemStates.filter((option) => option !== item.estado).map((option) => <option key={option} value={option}>{option}</option>)}
+                       {nextItemStates(item.estado).map((option) => <option key={option} value={option}>{option}</option>)}
                     </select>
                   </td>}
                 </tr>

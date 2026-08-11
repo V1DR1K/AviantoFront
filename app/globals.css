@@ -1228,6 +1228,33 @@ a.existing-photo {
 .ficha-actions .button {
   flex: 1;
 }
+.ficha-more-actions {
+  flex: 0 0 auto;
+}
+.ficha-more-actions summary {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  color: var(--navy);
+  cursor: pointer;
+  font-weight: 700;
+}
+.ficha-more-actions > div {
+  position: absolute;
+  right: 12px;
+  bottom: 64px;
+  display: grid;
+  min-width: 220px;
+  gap: 8px;
+  padding: 10px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 28px rgba(18, 53, 91, 0.12);
+}
 .repuesto-summary .total {
   margin-top: 12px;
 }

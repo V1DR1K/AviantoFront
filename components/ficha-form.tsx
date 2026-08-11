@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Plus, Save, Search, X } from "lucide-react";
 import { api, objectUrl } from "../lib/api";
 import { money, parsePrice, priceInput } from "../lib/format";
+import { todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
   FichaRequest,
@@ -17,15 +18,18 @@ import { ConfirmModal } from "./ui";
 
 type Line = {
   key: string;
+  id?: string;
   descripcion: string;
   precioUnitario: number;
   descuento: number;
   realizado: boolean;
+  estadoTrabajo?: "Pendiente" | "Realizado" | "Cancelado";
+  observacionTrabajo?: string;
   catalogo?: boolean;
 };
 type PhotoDraft = { file: File; url: string };
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = todayInAr;
 const clientLabel = (client: ClienteResponse) =>
   `${client.nombre}${client.telefono ? ` · ${client.telefono}` : ""}`;
 const readAsBase64 = (file: File) =>
@@ -101,6 +105,7 @@ export function FichaForm({
   const [vehicleId, setVehicleId] = useState("");
   const [fechaIngreso, setFechaIngreso] = useState(today());
   const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState("");
+  const [vencimiento, setVencimiento] = useState("");
   const [kilometrajeIngreso, setKilometrajeIngreso] = useState("");
   const [trabajos, setTrabajos] = useState<Line[]>([]);
   const [workQuery, setWorkQuery] = useState("");
@@ -108,6 +113,7 @@ export function FichaForm({
   const [workSuggestions, setWorkSuggestions] = useState<TrabajoCatalogoResponse[]>([]);
   const [notes, setNotes] = useState("");
   const [iva, setIva] = useState(false);
+  const [descuentoGlobal, setDescuentoGlobal] = useState(0);
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
   const [existing, setExisting] = useState<PhotoResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -275,6 +281,7 @@ export function FichaForm({
         setLoadedEstado(ficha.estado);
         setFechaIngreso(ficha.fechaIngreso.slice(0, 10) || today());
         setFechaEntregaEstimada(ficha.fechaEntregaEstimada ?? "");
+        setVencimiento(ficha.vencimiento ?? "");
         setKilometrajeIngreso(
           ficha.kilometrajeIngreso != null
             ? String(ficha.kilometrajeIngreso)
@@ -282,14 +289,18 @@ export function FichaForm({
         );
         setNotes(ficha.observaciones ?? "");
         setIva(ficha.iva);
+        setDescuentoGlobal(Number(ficha.descuentoGlobal ?? 0));
         setExisting(ficha.fotos);
         setTrabajos(
           ficha.trabajos.map((trabajo) => ({
             key: crypto.randomUUID(),
+            id: trabajo.id,
             descripcion: trabajo.descripcion,
             precioUnitario: trabajo.precioUnitario,
             descuento: trabajo.descuento,
             realizado: trabajo.estadoTrabajo === "Realizado",
+            estadoTrabajo: trabajo.estadoTrabajo,
+            observacionTrabajo: trabajo.observacionTrabajo ?? "",
           })),
         );
         setClientId(ficha.clienteId);
@@ -309,14 +320,14 @@ export function FichaForm({
   const subtotal = useMemo(
     () =>
       trabajos.reduce(
-        (sum, trabajo) =>
-          sum + Number(trabajo.precioUnitario) - Number(trabajo.descuento),
+        (sum, trabajo) => trabajo.estadoTrabajo === "Cancelado" ? sum : sum + Number(trabajo.precioUnitario) - Number(trabajo.descuento),
         0,
       ),
     [trabajos],
   );
-  const ivaVal = iva ? subtotal * 0.21 : 0;
-  const total = subtotal + ivaVal;
+  const taxableSubtotal = Math.max(0, subtotal - descuentoGlobal);
+  const ivaVal = iva ? taxableSubtotal * 0.21 : 0;
+  const total = taxableSubtotal + ivaVal;
   const hasDraftContent =
     trabajos.length > 0 ||
     Boolean(notes) ||
@@ -387,17 +398,20 @@ export function FichaForm({
         motoId: vehicleId,
         fechaIngreso: fechaIngreso || today(),
         fechaEntregaEstimada: fechaEntregaEstimada || undefined,
+        vencimiento: vencimiento || undefined,
         kilometrajeIngreso: kilometrajeIngreso
           ? Number(kilometrajeIngreso)
           : undefined,
         observaciones: notes || undefined,
-        descuentoGlobal: 0,
+        descuentoGlobal,
         iva,
         trabajos: validWork.map((trabajo) => ({
           descripcion: trabajo.descripcion.trim(),
           precioUnitario: trabajo.precioUnitario,
           descuento: trabajo.descuento,
-          estadoTrabajo: trabajo.realizado ? "Realizado" : "Pendiente",
+          id: trabajo.id,
+          estadoTrabajo: trabajo.estadoTrabajo ?? (trabajo.realizado ? "Realizado" : "Pendiente"),
+          observacionTrabajo: trabajo.observacionTrabajo || undefined,
         })),
       };
       let ficha = fichaKey
@@ -572,6 +586,10 @@ export function FichaForm({
                 />
               </label>
               <label>
+                Vencimiento
+                <input type="date" value={vencimiento} onChange={(event) => setVencimiento(event.target.value)} />
+              </label>
+              <label>
                 Kilometraje ingreso
                 <input
                   type="number"
@@ -646,17 +664,20 @@ export function FichaForm({
                     </strong>
                   )}
                   <label className="line-check">
-                    <input
-                      type="checkbox"
-                      checked={trabajo.realizado}
-                      onChange={(event) =>
-                        updateLine(trabajo.key, {
+                   <input
+                     type="checkbox"
+                     checked={trabajo.estadoTrabajo === "Realizado" || trabajo.realizado}
+                     disabled={trabajo.estadoTrabajo === "Cancelado"}
+                     onChange={(event) =>
+                       updateLine(trabajo.key, {
                           realizado: event.target.checked,
+                          estadoTrabajo: event.target.checked ? "Realizado" : "Pendiente",
                         })
                       }
-                    />
-                    Realizado
+                   />
+                   Realizado
                   </label>
+                  <label className="form-field-wide">Observación del trabajo<input value={trabajo.observacionTrabajo ?? ""} onChange={(event) => updateLine(trabajo.key, { observacionTrabajo: event.target.value })} /></label>
                   <button
                     type="button"
                     aria-label="Eliminar trabajo"
@@ -752,10 +773,15 @@ export function FichaForm({
             <strong>{currentVehicle?.patente ?? "—"}</strong>
           </div>
           <hr />
-          <div>
-            <span>Subtotal trabajos</span>
-            <strong>{money(subtotal)}</strong>
-          </div>
+           <div>
+             <span>Subtotal trabajos</span>
+             <strong>{money(subtotal)}</strong>
+           </div>
+           <label>
+             Descuento global
+             <input type="number" min="0" step="0.01" value={descuentoGlobal || ""} onChange={(event) => setDescuentoGlobal(Number(event.target.value) || 0)} />
+           </label>
+           {descuentoGlobal > 0 && <div><span>Después del descuento</span><strong>{money(Math.max(0, subtotal - descuentoGlobal))}</strong></div>}
           <label className="iva-toggle">
             <input
               type="checkbox"

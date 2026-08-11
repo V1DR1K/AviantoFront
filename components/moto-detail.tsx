@@ -51,6 +51,7 @@ export function MotoDetail({
   const [nextService, setNextService] = useState<NextServiceResponse | null>(null);
   const [fichas, setFichas] = useState<PageResponse<FichaResponse> | null>(null);
   const [repuestos, setRepuestos] = useState<PageResponse<RepuestoResponse> | null>(null);
+  const [panelErrors, setPanelErrors] = useState<Record<string, string>>({});
   const [serviceDesde, setServiceDesde] = useState("");
   const [serviceHasta, setServiceHasta] = useState("");
   const [serviceSort, setServiceSort] = useState("fecha");
@@ -88,10 +89,11 @@ export function MotoDetail({
     void api<MotovehiculoResponse>(`/motovehiculos/${id}`)
       .then((next) => { setMoto(next); if (next.propietarioId) void api<ClienteResponse>(`/clientes/${next.propietarioId}`).then(setClient).catch(() => setClient(null)); })
       .catch((reason) => setError(errorMessage(reason)));
-  const loadServices = () => void api<PageResponse<ServiceResponse>>(`/motovehiculos/${id}/services/historial`, {}, { fechaDesde: serviceDesde || undefined, fechaHasta: serviceHasta || undefined, page: servicePage - 1, size: 10, sortBy: serviceSort, direction: serviceDirection }).then(setServices).catch(() => undefined);
-  const loadFichas = () => void api<PageResponse<FichaResponse>>("/fichas", {}, { motoId: id, fechaDesde: fichaDesde || undefined, fechaHasta: fichaHasta || undefined, estado: fichaEstado || undefined, estadoPago: fichaPago || undefined, page: fichaPage - 1, size: 10, sortBy: fichaSort, direction: fichaDirection }).then(setFichas).catch(() => undefined);
-  const loadRepuestos = () => void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { motoId: id, fechaDesde: repuestoDesde || undefined, fechaHasta: repuestoHasta || undefined, estado: repuestoEstado || undefined, estadoPago: repuestoPago || undefined, page: repuestoPage - 1, size: 10, sortBy: repuestoSort, direction: repuestoDirection }).then(setRepuestos).catch(() => undefined);
-  const loadNext = () => void api<NextServiceResponse[]>("/services/proximos").then((list) => setNextService(list.find((next) => next.motoId === id) ?? null)).catch(() => undefined);
+  const panelError = (key: string, reason: unknown) => setPanelErrors((current) => ({ ...current, [key]: errorMessage(reason) }));
+  const loadServices = () => void api<PageResponse<ServiceResponse>>(`/motovehiculos/${id}/services/historial`, {}, { fechaDesde: serviceDesde || undefined, fechaHasta: serviceHasta || undefined, page: servicePage - 1, size: 10, sortBy: serviceSort, direction: serviceDirection }).then((value) => { setServices(value); setPanelErrors((current) => ({ ...current, services: "" })); }).catch((reason) => panelError("services", reason));
+  const loadFichas = () => void api<PageResponse<FichaResponse>>("/fichas", {}, { motoId: id, fechaDesde: fichaDesde || undefined, fechaHasta: fichaHasta || undefined, estado: fichaEstado || undefined, estadoPago: fichaPago || undefined, page: fichaPage - 1, size: 10, sortBy: fichaSort, direction: fichaDirection }).then((value) => { setFichas(value); setPanelErrors((current) => ({ ...current, fichas: "" })); }).catch((reason) => panelError("fichas", reason));
+  const loadRepuestos = () => void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { motoId: id, fechaDesde: repuestoDesde || undefined, fechaHasta: repuestoHasta || undefined, estado: repuestoEstado || undefined, estadoPago: repuestoPago || undefined, page: repuestoPage - 1, size: 10, sortBy: repuestoSort, direction: repuestoDirection }).then((value) => { setRepuestos(value); setPanelErrors((current) => ({ ...current, repuestos: "" })); }).catch((reason) => panelError("repuestos", reason));
+  const loadNext = () => void api<NextServiceResponse[]>("/services/proximos").then((list) => { setNextService(list.find((next) => next.motoId === id) ?? null); setPanelErrors((current) => ({ ...current, next: "" })); }).catch((reason) => panelError("next", reason));
   useEffect(load, [id]);
   useEffect(() => { loadServices(); }, [id, serviceDesde, serviceHasta, serviceSort, serviceDirection, servicePage]);
   useEffect(() => { loadFichas(); }, [id, fichaDesde, fichaHasta, fichaEstado, fichaPago, fichaSort, fichaDirection, fichaPage]);
@@ -172,7 +174,7 @@ export function MotoDetail({
         </div>
         <div className="detail-stack">
           <StatusBadge status={moto.estado} />
-          {!moto.ingresada ? <button className="button secondary" onClick={() => setIntakeOpen(true)}><LogIn size={17} />Ingresar</button> : moto.seccion === "Venta" && moto.estado === "Ingresada Venta" ? <button className="button secondary" onClick={() => void runMotoAction(`/motovehiculos/${moto.id}/venta/estado`, { method: "PATCH", body: JSON.stringify({ estado: "En venta" }) })}><Tag size={17} />Marcar en venta</button> : moto.seccion === "Venta" && moto.estado === "Transferencia en curso" ? <button className="button primary" onClick={() => void runMotoAction(`/motovehiculos/${moto.id}/venta/completar`, { method: "POST" })}><LogOut size={17} />Completar venta</button> : <button className="button secondary" onClick={() => void runMotoAction(`/motovehiculos/${moto.id}/entrega`, { method: "POST" })}><LogOut size={17} />Entregar</button>}
+          {moto.estado === "Vendida" ? <span className="detail-note">Venta completada</span> : !moto.ingresada ? <button className="button secondary" onClick={() => setIntakeOpen(true)}><LogIn size={17} />Ingresar</button> : moto.seccion === "Venta" && moto.estado === "Ingresada Venta" ? <button className="button secondary" onClick={() => void runMotoAction(`/motovehiculos/${moto.id}/venta/estado`, { method: "PATCH", body: JSON.stringify({ estado: "En venta" }) })}><Tag size={17} />Marcar en venta</button> : moto.seccion === "Venta" && moto.estado === "Transferencia en curso" ? <button className="button primary" onClick={() => void runMotoAction(`/motovehiculos/${moto.id}/venta/completar`, { method: "POST" })}><LogOut size={17} />Completar venta</button> : <span className="detail-note">La entrega se completa desde la revisión</span>}
           <strong>{moto.anio ?? "—"}</strong>
         </div>
       </div>
@@ -222,7 +224,7 @@ export function MotoDetail({
             <label><Filter size={16} /><select value={serviceSort} onChange={(event) => { setServiceSort(event.target.value); setServicePage(1); }}><option value="fecha">Fecha</option><option value="kilometraje">Kilometraje</option></select></label>
             <button className="button secondary" onClick={() => { setServiceDirection((value) => value === "ASC" ? "DESC" : "ASC"); setServicePage(1); }} aria-label="Cambiar orden de services"><ArrowDownUp size={16} />{serviceDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
           </div>
-          {services?.content.length ? (
+           {panelErrors.services ? <EmptyState title="No se pudo cargar el historial" body={panelErrors.services} action={<button className="button secondary" onClick={loadServices}>Reintentar</button>} /> : services?.content.length ? (
             <table>
               <thead><tr><th>Fecha</th><th>Kilometraje</th><th>Ficha</th><th>Observaciones</th></tr></thead>
               <tbody>{services.content.map((service) => <tr key={service.id}><td data-label="Fecha">{date(service.fecha)}</td><td data-label="Kilometraje">{service.kilometraje}</td><td data-label="Ficha">{service.fichaNumero ?? "—"}</td><td data-label="Observaciones">{service.observaciones || "—"}</td></tr>)}</tbody>
@@ -233,7 +235,7 @@ export function MotoDetail({
       )}
       {tab === "fichas" && (
         <section className="panel table-panel">
-           <div className="panel-head"><div><h2>Ficha</h2><p>Trabajo actual e historial de ingresos al taller.</p></div><button className="button secondary" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewFicha({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nueva ficha</button></div>
+           <div className="panel-head"><div><h2>Fichas</h2><p>Trabajo actual e historial de ingresos al taller.</p></div><button className="button secondary" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewFicha({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nueva ficha</button></div>
           <div className="filter-bar">
             <label><span className="date-label">Desde</span><input type="date" value={fichaDesde} onChange={(event) => { setFichaDesde(event.target.value); setFichaPage(1); }} /></label>
             <label><span className="date-label">Hasta</span><input type="date" value={fichaHasta} onChange={(event) => { setFichaHasta(event.target.value); setFichaPage(1); }} /></label>
@@ -242,7 +244,7 @@ export function MotoDetail({
             <label><Filter size={16} /><select value={fichaSort} onChange={(event) => { setFichaSort(event.target.value); setFichaPage(1); }}><option value="fechaIngreso">Fecha</option><option value="estado">Estado</option><option value="estadoPago">Pago</option></select></label>
             <button className="button secondary" onClick={() => { setFichaDirection((value) => value === "ASC" ? "DESC" : "ASC"); setFichaPage(1); }} aria-label="Cambiar orden de fichas"><ArrowDownUp size={16} />{fichaDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
           </div>
-          {fichas?.content.length ? (
+           {panelErrors.fichas ? <EmptyState title="No se pudieron cargar las fichas" body={panelErrors.fichas} action={<button className="button secondary" onClick={loadFichas}>Reintentar</button>} /> : fichas?.content.length ? (
             <table>
               <thead><tr><th>Ficha</th><th>Ingreso</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
               <tbody>{fichas.content.map((ficha) => <tr key={ficha.id}><td data-label="Ficha">{ficha.numero}</td><td data-label="Ingreso">{date(ficha.fechaIngreso)}</td><td data-label="Estado"><StatusBadge status={ficha.estado} /></td><td data-label="Pago"><StatusBadge status={ficha.estadoPago} /></td><td data-label="Total">{money(ficha.total)}</td><td className="table-actions"><button onClick={() => onOpenFicha(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
@@ -262,7 +264,7 @@ export function MotoDetail({
             <label><Filter size={16} /><select value={repuestoSort} onChange={(event) => { setRepuestoSort(event.target.value); setRepuestoPage(1); }}><option value="fecha">Fecha</option><option value="estado">Estado</option><option value="estadoPago">Pago</option></select></label>
             <button className="button secondary" onClick={() => { setRepuestoDirection((value) => value === "ASC" ? "DESC" : "ASC"); setRepuestoPage(1); }} aria-label="Cambiar orden de pedidos"><ArrowDownUp size={16} />{repuestoDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
           </div>
-          {repuestos?.content.length ? (
+           {panelErrors.repuestos ? <EmptyState title="No se pudieron cargar los pedidos" body={panelErrors.repuestos} action={<button className="button secondary" onClick={loadRepuestos}>Reintentar</button>} /> : repuestos?.content.length ? (
             <table>
               <thead><tr><th>Pedido</th><th>Fecha</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
               <tbody>{repuestos.content.map((repuesto) => <tr key={repuesto.id}><td data-label="Pedido">{repuesto.numero}</td><td data-label="Fecha">{date(repuesto.fecha)}</td><td data-label="Estado"><StatusBadge status={repuesto.estado} /></td><td data-label="Pago"><StatusBadge status={repuesto.estadoPago} /></td><td data-label="Total">{money(repuesto.total)}</td><td className="table-actions"><button onClick={() => onOpenRepuesto(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>

@@ -10,7 +10,8 @@ function statusToneValue(status: string) {
   const s = status.toLowerCase();
   if (s.includes("cancel") || s.includes("no pag") || s.includes("correc")) return "danger";
   if (s.includes("aprob") || s.includes("pag") || s.includes("entreg") || s.includes("realiz") || s.includes("recibido")) return "success";
-  if (s.includes("ingresada") || s === "cargada") return "info";
+  if (s.includes("ingresada") || s === "cargada" || s === "disponible") return "info";
+  if (s.includes("atrasad") || s.includes("sin service")) return "danger";
   if (s.includes("revisi")) return "violet";
   if (s.includes("parcial") || s.includes("para ") || s.includes("pedido") || s.includes("curso") || s.includes("taller") || s.includes("trabaj") || s.includes("proc")) return "warning";
   return "neutral";

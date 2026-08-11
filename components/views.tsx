@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowDownUp, Download, Edit3, Eye, FileDown, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download, objectUrl } from "../lib/api";
 import { money } from "../lib/format";
-import { daysAgoInAr, todayInAr } from "../lib/dates";
+import { daysAgoInAr, formatDateInAr, todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
   DashboardFichasResponse,
@@ -22,8 +22,7 @@ import type {
 } from "../lib/types";
 import { Dialog, EmptyState, Pagination, SearchBox, StatusBadge, type Notify } from "./ui";
 
-const date = (value: string) =>
-  new Intl.DateTimeFormat("es-AR").format(new Date(value));
+const date = formatDateInAr;
 const errorMessage = (reason: unknown) =>
   reason instanceof Error ? reason.message : "No fue posible cargar la información.";
 const tabKey = (estado: string) =>
@@ -320,7 +319,7 @@ export function FichasView({
             </thead>
             <tbody>
               {result.content.map((ficha) => {
-                 const editable = ficha.estado === "Carga" || ficha.estado === "Cargada" || ficha.estado === "En proceso";
+                 const editable = ficha.estado === "Cargada" || ficha.estado === "En proceso";
                 return (
                   <tr key={ficha.id}>
                     <td data-label="Ficha">{ficha.numero}</td>
@@ -516,7 +515,7 @@ export function FichaDetail({
     }
   };
   const locked = current === "Cancelada" || current === "Entregada";
-  const pendingControls = revision?.controles.filter((control) => control.estado === "Pendiente") ?? [];
+  const pendingControls = revision?.controles.filter((control) => control.obligatorio && control.estado === "Pendiente") ?? [];
   const flowSteps: FichaStatus[] = ["Cargada", "En proceso", "Revisión", "Entregada"];
   const currentStep = flowSteps.indexOf(current);
   const bottomActions: { key: string; label: string; className: string; onClick: () => void }[] = [];
@@ -575,11 +574,8 @@ export function FichaDetail({
       </ol>
       {bottomActions.length > 0 && (
         <div className="ficha-actions">
-          {bottomActions.map((action) => (
-            <button key={action.key} className={`button large ${action.className}`} disabled={Boolean(pending)} onClick={action.onClick}>
-              {action.label}
-            </button>
-          ))}
+          {bottomActions.filter((action) => action.className === "primary").map((action) => <button key={action.key} className="button large primary" disabled={Boolean(pending)} onClick={action.onClick}>{action.label}</button>)}
+          {bottomActions.some((action) => action.className !== "primary") && <details className="ficha-more-actions"><summary>Más acciones</summary><div>{bottomActions.filter((action) => action.className !== "primary").map((action) => <button key={action.key} className={`button large ${action.className}`} disabled={Boolean(pending)} onClick={action.onClick}>{action.label}</button>)}</div></details>}
         </div>
       )}
       <section className="detail-grid">
@@ -619,10 +615,7 @@ export function FichaDetail({
                           <strong>{control.control}</strong>
                           <span>{control.categorias}{control.obligatorio ? " · Obligatorio" : ""}</span>
                         </div>
-                        <label className="line-check detail-line-check">
-                          <input type="checkbox" checked={control.estado === "Revisado"} onChange={(event) => void updateControl(control.id, { estado: event.target.checked ? "Revisado" : "Pendiente" })} />
-                          Revisado
-                        </label>
+                         <label className="detail-line-check">Estado del control<select value={control.estado} onChange={(event) => void updateControl(control.id, { estado: event.target.value })}><option value="Pendiente">Pendiente</option><option value="Revisado">Revisado</option><option value="No aplica">No aplica</option></select></label>
                         {control.estado === "Revisado" && (
                           <input
                             type="text"
@@ -635,7 +628,7 @@ export function FichaDetail({
                     ))}
                   </div>
                 )}
-                 {revision.estado !== "APROBADA" && !pendingControls.length && <p>Todos los controles fueron revisados.</p>}
+                  {revision.estado !== "APROBADA" && !pendingControls.length && <p>Los controles obligatorios están listos para aprobar.</p>}
               </section>
             )}
           </section>
@@ -676,7 +669,7 @@ export function FichaDetail({
       </Dialog>
       <Dialog open={reverseOpen} title="Volver un paso atrás" onClose={() => setReverseOpen(false)}>
         <p>¿Está seguro que desea volver un paso atrás?</p>
-        <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setReverseOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={Boolean(pending)} onClick={() => { setReverseOpen(false); void update(`/fichas/${ficha.id}/estado`, { estado: current === "Revisión" ? "En proceso" : "Carga" }, "retroceder", "Ficha retrocedida un paso."); }}>Confirmar</button></div>
+        <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setReverseOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={Boolean(pending)} onClick={() => { setReverseOpen(false); void update(`/fichas/${ficha.id}/estado`, { estado: current === "Revisión" ? "En proceso" : "Cargada" }, "retroceder", "Ficha retrocedida un paso."); }}>Confirmar</button></div>
       </Dialog>
     </div>
   );

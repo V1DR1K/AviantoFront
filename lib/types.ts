@@ -1,6 +1,6 @@
-export type FichaStatus = "Carga" | "Cargada" | "En proceso" | "Revisión" | "Entregada" | "Cancelada";
+export type FichaStatus = "Cargada" | "En proceso" | "Revisión" | "Entregada" | "Cancelada";
 export type MotoSection = "Taller" | "Venta";
-export type MotoStatus = "Fuera del taller" | "Ingresada Taller" | "Cargada" | "En proceso" | "En revisión" | "Entregada" | "Ingresada Venta" | "En venta" | "Transferencia en curso" | "Vendida";
+export type MotoStatus = "Disponible" | "Ingresada Taller" | "Cargada" | "En proceso" | "En revisión" | "Entregada" | "Ingresada Venta" | "En venta" | "Transferencia en curso" | "Vendida";
 export type PagoStatus = "No pagado" | "Parcial" | "Pagado";
 export type TrabajoStatus = "Pendiente" | "Realizado" | "Cancelado";
 export type RepuestoItemType = "REPUESTO" | "ACCESORIO";export type RepuestoItemState = "Pendiente de pedir" | "Pedido" | "Recibido" | "Entregado" | "Cancelado";
@@ -112,6 +112,7 @@ export interface TrabajoCatalogoResponse {
 }
 
 export interface FichaTrabajoRequest {
+  id?: string;
   descripcion: string;
   precioUnitario: number;
   descuento: number;
@@ -128,7 +129,6 @@ export interface FichaTrabajoResponse {
   observacionTrabajo?: string | null;
   completadoAt?: string | null;
   completadoPor?: string | null;
-  pagado: boolean;
 }
 export interface PhotoResponse {
   id: string;
@@ -178,7 +178,7 @@ export interface OwnerResponse {
   id: string;
   clienteId: string;
   cliente: string;
-  fechaDesde: string;
+  fechaDesde: string | null;
   fechaHasta: string | null;
   actual: boolean;
   observaciones?: string;
@@ -262,6 +262,7 @@ export interface RepuestoItemResponse {
   subtotal: number;
   estado: RepuestoItemState;
   observaciones?: string | null;
+  pagado: boolean;
 }
 export interface RepuestoRequest {
   motoVehiculoId: string;
@@ -335,7 +336,7 @@ export interface RevisionResponse {
 export interface AuditoriaResponse {
   id: string;
   fecha: string;
-  usuario: string;
+  usuario: string | null;
   modulo: string;
   accion: string;
   descripcion: string;
