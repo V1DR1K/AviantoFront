@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowDownUp, ArrowRightLeft, Download, Edit3, Eye, FileDown, Filter, LogOut, Plus, Tag, Trash2 } from "lucide-react";
 import { api, download, objectUrl } from "../lib/api";
 import { money } from "../lib/format";
@@ -450,6 +450,24 @@ function ItemRow({
   );
 }
 
+function MoreActions({ actions, pending }: { actions: { key: string; label: string; className: string; onClick: () => void }[]; pending: boolean }) {
+  const detailsRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const close = (event: PointerEvent) => {
+      if (!detailsRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, []);
+  return (
+    <div ref={detailsRef} className={`ficha-more-actions${open ? " is-open" : ""}`} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false); }}>
+      <button type="button" className="ficha-more-trigger" aria-expanded={open} onClick={() => setOpen((value) => !value)}>Más acciones</button>
+      <div aria-hidden={!open}>{actions.map((action) => <button key={action.key} className={`button large ${action.className}`} disabled={pending} onClick={() => { setOpen(false); action.onClick(); }}>{action.label}</button>)}</div>
+    </div>
+  );
+}
+
 export function FichaDetail({
   fichaKey,
   onBack,
@@ -670,7 +688,7 @@ export function FichaDetail({
       {bottomActions.length > 0 && (
         <div className="ficha-actions">
           {bottomActions.filter((action) => action.className === "primary").map((action) => <button key={action.key} className="button large primary" disabled={Boolean(pending)} onClick={action.onClick}>{action.label}</button>)}
-          {bottomActions.some((action) => action.className !== "primary") && <details className="ficha-more-actions"><summary>Más acciones</summary><div>{bottomActions.filter((action) => action.className !== "primary").map((action) => <button key={action.key} className={`button large ${action.className}`} disabled={Boolean(pending)} onClick={action.onClick}>{action.label}</button>)}</div></details>}
+          {bottomActions.some((action) => action.className !== "primary") && <MoreActions actions={bottomActions.filter((action) => action.className !== "primary")} pending={Boolean(pending)} />}
         </div>
       )}
       <section className="detail-grid">
@@ -710,7 +728,7 @@ export function FichaDetail({
                           <strong>{control.control}</strong>
                           <span>{control.categorias}{control.obligatorio ? " · Obligatorio" : ""}</span>
                         </div>
-                          <div className="detail-line-check"><span>Estado del control</span><SelectField value={control.estado} onChange={(value) => void updateControl(control.id, { estado: value })} options={[{ value: "Pendiente", label: "Pendiente" }, { value: "Revisado", label: "Revisado" }, { value: "No aplica", label: "No aplica" }]} ariaLabel={`Estado del control ${control.control}`} /></div>
+                          <label className="detail-line-check"><input type="checkbox" checked={control.estado === "Revisado"} onChange={(event) => void updateControl(control.id, { estado: event.target.checked ? "Revisado" : "Pendiente" })} />{control.estado === "No aplica" ? "No aplica" : "Revisado"}</label>
                         {control.estado === "Revisado" && (
                           <input
                             type="text"

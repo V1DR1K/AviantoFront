@@ -1094,6 +1094,7 @@ td small {
 }
 .line-item {
   display: flex;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
@@ -1150,6 +1151,35 @@ td small {
 }
 .line-item .autocomplete-field .suggestions button:hover {
   background: #eef5fa;
+}
+.line-item.revision-control {
+  justify-content: space-between;
+}
+.revision-control > div:first-child {
+  flex: 0 1 30%;
+}
+.revision-control > input {
+  order: 2;
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+.revision-control > .detail-line-check {
+  order: 3;
+  margin-top: 0;
+  flex: 0 0 auto;
+}
+.detail-line-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+.detail-line-check input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--blue);
 }
 .ficha-moto-card {
   padding: 23px;
@@ -1434,16 +1464,31 @@ a.existing-photo {
 .ficha-more-actions {
   flex: 0 0 auto;
 }
-.ficha-more-actions summary {
+.ficha-more-trigger {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
   padding: 0 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
+  background: transparent;
   color: var(--navy);
   cursor: pointer;
+  font: inherit;
   font-weight: 700;
+}
+.ficha-more-trigger:after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-left: 9px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 160ms ease;
+}
+.ficha-more-actions.is-open .ficha-more-trigger:after {
+  transform: translateY(2px) rotate(225deg);
 }
 .ficha-more-actions > div {
   position: absolute;
@@ -1457,6 +1502,18 @@ a.existing-photo {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: 0 12px 28px rgba(18, 53, 91, 0.12);
+  transform-origin: bottom right;
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms ease;
+}
+.ficha-more-actions.is-open > div {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  visibility: visible;
+  pointer-events: auto;
 }
 .repuesto-summary .total {
   margin-top: 12px;
@@ -2512,6 +2569,8 @@ td.table-actions {
   .line-item > label:not(.line-descr):not(.line-check) { min-width: 0; }
   .line-item > .line-check { margin-top: 0; }
   .line-item > button { margin-top: 0; }
+  .revision-control > div:first-child { flex-basis: 100%; }
+  .revision-control > input { min-width: 0; }
   .repuesto-pick {
     grid-template-columns: 1fr;
   }
@@ -2533,6 +2592,7 @@ td.table-actions {
   .line-item label {
     min-width: 0;
   }
+  .revision-control > .detail-line-check { justify-content: flex-start; }
   .ficha-moto-fields {
     grid-template-columns: 1fr;
   }
@@ -2761,6 +2821,9 @@ td.table-actions {
   .summary-work-list,
   .line-items-list {
     animation: none;
+    transition: none;
+  }
+  .ficha-more-actions > div {
     transition: none;
   }
 }
