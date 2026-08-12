@@ -78,7 +78,6 @@ const fichaStatuses: FichaStatus[] = ["Cargada", "En proceso", "Revisión", "Ent
 const fichaPaymentStatuses: PagoStatus[] = ["No pagado", "Parcial", "Pagado"];
 
 export function Dashboard({
-  onNewOrder,
   onIntake,
   onSelect,
   onOpenMoto,
@@ -86,8 +85,7 @@ export function Dashboard({
   initialSection = "taller",
   notify,
 }: {
-  onNewOrder: () => void;
-  onIntake?: () => void;
+  onIntake: () => void;
   onSelect: (ficha: FichaResponse) => void;
   onOpenMoto: (id: string) => void;
   userName?: string;
@@ -130,7 +128,7 @@ export function Dashboard({
           <h1>Buenos días, {userName}</h1>
           <p>Estado actual del taller.</p>
         </div>
-        <div className="page-actions"><button className="button secondary" onClick={onIntake}><Plus size={19} />Ingresar moto</button><button className="button primary" onClick={onNewOrder}><Plus size={19} />Nuevo perfil</button></div>
+        <div className="page-actions"><button className="button primary" onClick={onIntake}><Plus size={19} />Ingresar moto</button></div>
       </div>
       {taller && fichasAgrupadas && (
         <>

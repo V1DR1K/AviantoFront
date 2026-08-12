@@ -32,6 +32,7 @@ export function MotoDetail({
   onOpenRepuesto,
   onNewFicha,
   onNewRepuesto,
+  onIntake,
   notify,
 }: {
   id: string;
@@ -41,6 +42,7 @@ export function MotoDetail({
   onOpenRepuesto: (repuesto: RepuestoResponse) => void;
   onNewFicha: (prefill: { motoId: string; clienteId?: string | null }) => void;
   onNewRepuesto: (prefill: { motoId: string; clienteId?: string | null }) => void;
+  onIntake: (plate?: string) => void;
   notify: Notify;
 }) {
   const [tab, setTab] = useState<"general" | "client" | "services" | "fichas" | "repuestos">(initialTab ?? "general");
@@ -82,8 +84,6 @@ export function MotoDetail({
   const [configMonths, setConfigMonths] = useState("");
   const [configNotes, setConfigNotes] = useState("");
   const [configSaving, setConfigSaving] = useState(false);
-  const [intakeOpen, setIntakeOpen] = useState(false);
-  const [intakeSection, setIntakeSection] = useState<"TALLER" | "VENTA">("TALLER");
   const [confirmation, setConfirmation] = useState<{
     title: string;
     body: string;
@@ -156,7 +156,7 @@ export function MotoDetail({
     setConfigOpen(true);
   };
   const runMotoAction = async (path: string, options: RequestInit = {}) => {
-    try { const next = await api<MotovehiculoResponse>(path, options); setMoto(next); setIntakeOpen(false); }
+    try { const next = await api<MotovehiculoResponse>(path, options); setMoto(next); }
     catch (reason) { notify(errorMessage(reason), "error"); throw reason; }
   };
 
@@ -181,7 +181,7 @@ export function MotoDetail({
         </div>
         <div className="detail-stack">
           <StatusBadge status={moto.estado} />
-           {moto.estado === "Vendida" ? <span className="detail-note">Venta completada</span> : !moto.ingresada ? <button className="button secondary" onClick={() => setIntakeOpen(true)}><LogIn size={17} />Ingresar</button> : moto.seccion === "Venta" && moto.estado === "Ingresada Venta" ? <button className="button secondary" onClick={() => setConfirmation({ title: "Marcar moto en venta", body: `${moto.patente} pasará al estado En venta.`, confirmLabel: "Marcar en venta", successMessage: "Moto marcada como En venta.", action: () => runMotoAction(`/motovehiculos/${moto.id}/venta/estado`, { method: "PATCH", body: JSON.stringify({ estado: "En venta" }) }) })}><Tag size={17} />Marcar en venta</button> : moto.seccion === "Venta" && moto.estado === "Transferencia en curso" ? <button className="button primary" onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${moto.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: () => runMotoAction(`/motovehiculos/${moto.id}/venta/completar`, { method: "POST" }) })}><LogOut size={17} />Completar venta</button> : <span className="detail-note">La entrega se completa desde la revisión</span>}
+           {moto.estado === "Vendida" ? <span className="detail-note">Venta completada</span> : !moto.ingresada ? <button className="button secondary" onClick={() => onIntake(moto.patente)}><LogIn size={17} />Ingresar moto</button> : moto.seccion === "Venta" && moto.estado === "Ingresada Venta" ? <button className="button secondary" onClick={() => setConfirmation({ title: "Marcar moto en venta", body: `${moto.patente} pasará al estado En venta.`, confirmLabel: "Marcar en venta", successMessage: "Moto marcada como En venta.", action: () => runMotoAction(`/motovehiculos/${moto.id}/venta/estado`, { method: "PATCH", body: JSON.stringify({ estado: "En venta" }) }) })}><Tag size={17} />Marcar en venta</button> : moto.seccion === "Venta" && moto.estado === "Transferencia en curso" ? <button className="button primary" onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${moto.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: () => runMotoAction(`/motovehiculos/${moto.id}/venta/completar`, { method: "POST" }) })}><LogOut size={17} />Completar venta</button> : <span className="detail-note">La entrega se completa desde la revisión</span>}
           <strong>{moto.anio ?? "—"}</strong>
         </div>
       </div>
@@ -296,7 +296,6 @@ export function MotoDetail({
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setConfigOpen(false)}>Cancelar</button><button className="button primary" disabled={configSaving}>{configSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>
       </Dialog>
-       <Dialog open={intakeOpen} title="Ingresar moto" onClose={() => setIntakeOpen(false)}><p>Elegí el destino operativo para esta moto.</p><div className="intake-options"><button className={intakeSection === "TALLER" ? "selected" : ""} onClick={() => setIntakeSection("TALLER")}>Taller</button><button className={intakeSection === "VENTA" ? "selected" : ""} onClick={() => setIntakeSection("VENTA")}>Ventas</button></div><div className="modal-actions"><button className="button secondary" onClick={() => setIntakeOpen(false)}>Cancelar</button><button className="button primary" onClick={() => { void runMotoAction(`/motovehiculos/${moto.id}/ingreso`, { method: "POST", body: JSON.stringify({ seccion: intakeSection }) }).then(() => notify(`Moto ingresada en ${intakeSection === "TALLER" ? "Taller" : "Ventas"}.`), () => undefined); }}>Ingresar</button></div></Dialog>
       <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; setConfirmation(null); if (!request) return; return request.action().then(() => notify(request.successMessage)).catch((reason) => { notify(errorMessage(reason), "error"); throw reason; }); }} />
     </div>
   );

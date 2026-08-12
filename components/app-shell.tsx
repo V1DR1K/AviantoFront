@@ -27,14 +27,14 @@ export function AppShell({
   children,
   page,
   onPage,
-  onNewOrder,
+  onIntake,
   onLogout,
   session,
 }: {
   children: ReactNode;
   page: string;
   onPage: (page: string) => void;
-  onNewOrder: () => void;
+  onIntake: () => void;
   onLogout: () => void | Promise<void>;
   session: AuthSession;
 }) {
@@ -112,10 +112,10 @@ export function AppShell({
           </button>
           <button
             className="button mobile-new"
-            onClick={onNewOrder}
-            aria-label="Nuevo perfil"
+            onClick={onIntake}
+            aria-label="Ingresar moto"
           >
-            <Plus size={17} /> <span>Nuevo perfil</span>
+            <Plus size={17} /> <span>Ingresar moto</span>
           </button>
         </header>
         {children}
@@ -144,11 +144,11 @@ export function AppShell({
             <button
               className="button primary"
               onClick={() => {
-                onNewOrder();
+                onIntake();
                 setMenuOpen(false);
               }}
             >
-              + Nuevo perfil
+              + Ingresar moto
             </button>
             <button className="settings mobile-logout" onClick={onLogout}>
               <LogOut size={18} /> Cerrar sesión
