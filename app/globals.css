@@ -2603,7 +2603,9 @@ td.table-actions {
   right: auto;
   bottom: auto;
   min-width: 190px;
-  z-index: 12;
+  /* Select menus are portaled to document.body, so they must outlive every
+     local stacking context, including modal backdrops and mobile drawers. */
+  z-index: 100;
   transform-origin: top center;
 }
 .select-menu button {
