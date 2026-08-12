@@ -643,8 +643,8 @@ export function FichaDetail({
           <span>{ficha.cliente}</span>
         </div>
         <div className="detail-stack">
-          <StatusBadge status={ficha.estado} />
-          <StatusBadge status={ficha.estadoPago} />
+          <StatusBadge key={ficha.estado} status={ficha.estado} />
+          <StatusBadge key={ficha.estadoPago} status={ficha.estadoPago} />
           <strong>{money(ficha.total)}</strong>
         </div>
       </div>
@@ -654,7 +654,7 @@ export function FichaDetail({
           const done = current !== "Cancelada" && currentStep >= 0 && index < currentStep;
           const isCurrent = current !== "Cancelada" && index === currentStep;
           return (
-            <li key={step} className={`flow-step${isCurrent ? " current" : ""}${done ? " done" : ""}`}>
+            <li key={`${step}-${isCurrent ? "current" : done ? "done" : "pending"}`} className={`flow-step${isCurrent ? " current" : ""}${done ? " done" : ""}`}>
               <span>{done ? "✓" : index + 1}</span>
               <strong>{step}</strong>
             </li>
@@ -683,7 +683,7 @@ export function FichaDetail({
               </button>
             </div>
             <p className="observation">{ficha.observaciones || "Sin observaciones."}</p>
-            <div className="line-items-list">
+            {current !== "Revisión" && <div className="line-items-list">
                {ficha.trabajos.map((item) => (
                 <ItemRow
                   key={item.id}
@@ -694,7 +694,7 @@ export function FichaDetail({
                    onState={(estado) => void update(`/fichas/${ficha.id}/trabajos/${item.id}/estado`, { estado }, `item-${item.id}`, "Trabajo actualizado.")}
                 />
               ))}
-            </div>
+            </div>}
             <OrderPhotos photos={ficha.fotos} onChange={() => void load()} />
             {ficha.estado === "Revisión" && revision && (
               <section className="revision-panel">
@@ -730,12 +730,22 @@ export function FichaDetail({
         </div>
         <aside className="summary">
           <h3>Resumen monetario</h3>
+          <section className="summary-work-list" aria-label="Trabajos de la ficha">
+            <h4>Trabajos a realizar</h4>
+            {ficha.trabajos.map((item) => (
+              <div key={item.id} className={`summary-work${item.estadoTrabajo === "Cancelado" ? " cancelled" : ""}`}>
+                <div className="summary-work-head"><strong>{item.descripcion}</strong><strong>{money(item.subtotal)}</strong></div>
+                {item.observacionTrabajo && <small>{item.observacionTrabajo}</small>}
+                <div className="summary-work-total"><small>{item.estadoTrabajo}</small>{item.descuento > 0 && <small>Descuento {money(item.descuento)}</small>}</div>
+              </div>
+            ))}
+            <div className="summary-work-total"><span>Subtotal trabajos</span><strong>{money(ficha.trabajos.filter((item) => item.estadoTrabajo !== "Cancelado").reduce((sum, item) => sum + item.subtotal, 0))}</strong></div>
+          </section>
           <div><span>Descuento global</span><strong>{ficha.descuentoGlobal > 0 ? money(ficha.descuentoGlobal) : "—"}</strong></div>
           <div><span>IVA</span><strong>{ficha.iva ? "Incluido" : "No aplica"}</strong></div>
           <div><span>Ingreso</span><strong>{ficha.fechaIngreso ? date(ficha.fechaIngreso) : "—"}</strong></div>
           <div><span>Entrega estimada</span><strong>{ficha.fechaEntregaEstimada ? date(ficha.fechaEntregaEstimada) : "—"}</strong></div>
           <div><span>Entrega real</span><strong>{ficha.fechaEntregaReal ? date(ficha.fechaEntregaReal) : "—"}</strong></div>
-          {ficha.trabajos.filter((item) => item.estadoTrabajo === "Realizado").length > 0 && <><hr /><h4>Trabajos realizados</h4>{ficha.trabajos.filter((item) => item.estadoTrabajo === "Realizado").map((item) => <div key={item.id}><span>{item.descripcion}</span><strong>{money(item.subtotal)}</strong></div>)}</>}
           <div className="total"><span>Total final</span><strong>{money(ficha.total)}</strong></div>
         </aside>
       </section>

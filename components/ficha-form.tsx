@@ -112,6 +112,7 @@ export function FichaForm({
   const [workQuery, setWorkQuery] = useState("");
   const [workOpen, setWorkOpen] = useState<string | null>(null);
   const [workSuggestions, setWorkSuggestions] = useState<TrabajoCatalogoResponse[]>([]);
+  const [duplicateWork, setDuplicateWork] = useState<{ key: string; trabajo: TrabajoCatalogoResponse } | null>(null);
   const [notes, setNotes] = useState("");
   const [iva, setIva] = useState(false);
   const [descuentoGlobal, setDescuentoGlobal] = useState(0);
@@ -332,7 +333,14 @@ export function FichaForm({
     setTrabajos((all) =>
       all.map((line) => (line.key === key ? { ...line, ...changes } : line)),
     );
-  const chooseTrabajo = (key: string, trabajo: TrabajoCatalogoResponse) => {
+  const normalizedWork = (value: string) => value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+  const chooseTrabajo = (key: string, trabajo: TrabajoCatalogoResponse, force = false) => {
+    const duplicate = trabajos.some((line) => line.key !== key && normalizedWork(line.descripcion) === normalizedWork(trabajo.descripcion));
+    if (duplicate && !force) {
+      setDuplicateWork({ key, trabajo });
+      setWorkOpen(null);
+      return;
+    }
     updateLine(key, { descripcion: trabajo.descripcion, precioUnitario: Number(trabajo.precioBase), catalogo: true });
     setWorkOpen(null);
   };
@@ -464,8 +472,8 @@ export function FichaForm({
       )}
       <div className="form-layout">
         <div className="form-stack">
-          <section className="form-section">
-            <h2>1. Moto por patente</h2>
+           <section className="panel moto-data-card ficha-moto-card">
+             <h2>1. Moto por patente</h2>
             <div className="plate-search">
               <input
                 value={patenteQuery}
@@ -499,53 +507,25 @@ export function FichaForm({
                 placeholder="Seleccionar"
                 options={vehicles.map((vehicle) => ({ value: vehicle.id, label: `${vehicle.marca} ${vehicle.modelo} · ${vehicle.patente}` }))}
               />
-              <label>
-                Fecha ingreso
-                <input
-                  type="date"
-                  value={fechaIngreso}
-                  onChange={(event) => setFechaIngreso(event.target.value)}
-                />
-              </label>
-              <label>
-                Entrega estimada
-                <input
-                  type="date"
-                  value={fechaEntregaEstimada}
-                  onChange={(event) =>
-                    setFechaEntregaEstimada(event.target.value)
-                  }
-                />
-              </label>
-              <label>
-                Vencimiento
-                <input type="date" value={vencimiento} onChange={(event) => setVencimiento(event.target.value)} />
-              </label>
-              <label>
-                Kilometraje ingreso
-                <input
-                  type="number"
-                  min="0"
-                  value={kilometrajeIngreso}
-                  onChange={(event) =>
-                    setKilometrajeIngreso(event.target.value)
-                  }
-                  placeholder="KM actual"
-                />
-              </label>
             </div>
-          </section>
-          {currentVehicle && <section className="panel moto-data-card">
-            <div className="panel-head"><h3>Datos de la moto</h3><span className="muted">Información del Perfil</span></div>
-            <dl className="record-detail">
-              <div><dt>Marca / modelo</dt><dd>{currentVehicle.marca} {currentVehicle.modelo}</dd></div>
-              <div><dt>Patente</dt><dd>{currentVehicle.patente}</dd></div>
-              <div><dt>Año</dt><dd>{currentVehicle.anio ?? "—"}</dd></div>
-              <div><dt>Kilometraje actual</dt><dd>{currentVehicle.kilometraje?.toLocaleString("es-AR") ?? "—"}</dd></div>
-              <div><dt>Estado</dt><dd>{currentVehicle.estado}</dd></div>
-              <div><dt>Observaciones</dt><dd>{currentVehicle.observaciones || "—"}</dd></div>
-            </dl>
-          </section>}
+             {currentVehicle && <div className="moto-data-profile">
+               <div className="panel-head"><h3>Datos de la moto</h3><span className="muted">Información del Perfil</span></div>
+               <dl className="record-detail">
+                 <div><dt>Marca / modelo</dt><dd>{currentVehicle.marca} {currentVehicle.modelo}</dd></div>
+                 <div><dt>Patente</dt><dd>{currentVehicle.patente}</dd></div>
+                 <div><dt>Año</dt><dd>{currentVehicle.anio ?? "—"}</dd></div>
+                 <div><dt>Kilometraje actual</dt><dd>{currentVehicle.kilometraje?.toLocaleString("es-AR") ?? "—"}</dd></div>
+                 <div><dt>Estado</dt><dd>{currentVehicle.estado}</dd></div>
+                 <div><dt>Observaciones</dt><dd>{currentVehicle.observaciones || "—"}</dd></div>
+               </dl>
+             </div>}
+             <div className="ficha-moto-fields">
+               <label>Fecha ingreso<input type="date" value={fechaIngreso} onChange={(event) => setFechaIngreso(event.target.value)} /></label>
+               <label>Entrega estimada<input type="date" value={fechaEntregaEstimada} onChange={(event) => setFechaEntregaEstimada(event.target.value)} /></label>
+               <label>Vencimiento<input type="date" value={vencimiento} onChange={(event) => setVencimiento(event.target.value)} /></label>
+               <label>Kilometraje ingreso<input type="number" min="0" value={kilometrajeIngreso} onChange={(event) => setKilometrajeIngreso(event.target.value)} placeholder="KM actual" /></label>
+             </div>
+            </section>
           <section className="form-section">
             <h2>2. Trabajos a realizar</h2>
             <div className="line-items">
@@ -569,8 +549,8 @@ export function FichaForm({
                         placeholder="Ej.: Cambio de aceite"
                         autoComplete="off"
                       />
-                      {workOpen === trabajo.key && <div className="suggestions">
-                        {workSuggestions.length ? workSuggestions.map((option) => <button type="button" key={option.id} onMouseDown={(event) => event.preventDefault()} onClick={() => chooseTrabajo(trabajo.key, option)}><span>{option.descripcion}</span><small>{money(option.precioBase)}</small></button>) : <p>Sin trabajos coincidentes. Podés ingresar una descripción manual.</p>}
+                        {workOpen === trabajo.key && <div className="suggestions">
+                         {workSuggestions.length ? workSuggestions.map((option) => <button type="button" key={option.id} onMouseDown={(event) => event.preventDefault()} onClick={() => chooseTrabajo(trabajo.key, option)}><span>{option.descripcion}</span><small>{money(option.precioBase)}</small></button>) : <p>Sin trabajos coincidentes. Podés ingresar una descripción manual.</p>}
                       </div>}
                     </div>
                   </label>
@@ -746,6 +726,19 @@ export function FichaForm({
           </button>
         </aside>
       </div>
+      <ConfirmModal
+        open={duplicateWork !== null}
+        title="Trabajo ya agregado"
+        body={`“${duplicateWork?.trabajo.descripcion ?? "Este trabajo"}” ya está en la ficha. Podés agregarlo nuevamente si corresponde a otra tarea o reparación.`}
+        confirmLabel="Agregar nuevamente"
+        variant="success"
+        onClose={() => setDuplicateWork(null)}
+        onConfirm={() => {
+          if (!duplicateWork) return;
+          chooseTrabajo(duplicateWork.key, duplicateWork.trabajo, true);
+          setDuplicateWork(null);
+        }}
+      />
       <ConfirmModal
         open={closeConfirmation}
         title="¿Cerrar ficha?"

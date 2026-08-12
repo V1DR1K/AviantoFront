@@ -1090,16 +1090,24 @@ td small {
 }
 .line-items {
   display: grid;
-  border-top: 1px solid var(--line);
+  gap: 12px;
 }
 .line-item {
-  display: grid;
-  grid-template-columns: 1fr 75px 115px 90px 28px;
-  gap: 9px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--line);
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  box-shadow: 0 4px 12px rgba(18, 53, 91, 0.06);
+  animation: line-item-in 180ms ease-out both;
 }
+.line-item .line-descr { flex: 2 1 360px; min-width: 260px; }
+.line-item > label:not(.line-descr):not(.line-check) { flex: 0 1 145px; }
+.line-item > .line-check { flex: 0 0 auto; }
+.line-item > button { flex: 0 0 36px; }
 .line-item span {
   display: block;
   font-size: 12px;
@@ -1128,7 +1136,7 @@ td small {
 .line-item > strong,
 .line-item > .line-check,
 .line-item > button {
-  margin: 2em auto 1em auto;
+  margin-top: 18px;
 }
 .line-item button {
   border: 0;
@@ -1142,6 +1150,84 @@ td small {
 }
 .line-item .autocomplete-field .suggestions button:hover {
   background: #eef5fa;
+}
+.ficha-moto-card {
+  padding: 23px;
+}
+.ficha-moto-card > h2 {
+  margin-bottom: 18px;
+}
+.ficha-moto-card > .two-col {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+}
+.moto-data-profile {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.ficha-moto-fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.ficha-moto-card label {
+  display: grid;
+  gap: 7px;
+  color: var(--color-label);
+  font-weight: 700;
+}
+.ficha-moto-card input {
+  width: 100%;
+  border: 1px solid var(--border-field);
+  border-radius: var(--radius-field);
+  padding: 10px;
+  background: var(--color-surface);
+  color: var(--ink);
+}
+.summary-work-list {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+}
+.summary-work {
+  display: grid;
+  gap: 5px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+.summary-work:first-child { border-top: 0; }
+.summary-work-head,
+.summary-work-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.summary-work-head strong { color: var(--ink); }
+.summary-work small { color: var(--muted); }
+.summary-work.cancelled { opacity: 0.55; text-decoration: line-through; }
+@keyframes line-item-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes status-change {
+  0% { transform: scale(0.96); opacity: 0.65; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.flow-step,
+.flow-step > span,
+.status,
+.summary-work-list,
+.line-items-list {
+  transition: background-color 220ms ease, color 220ms ease, border-color 220ms ease, opacity 220ms ease, transform 220ms ease;
+}
+.flow-step.current,
+.flow-step.done,
+.status {
+  animation: status-change 220ms ease-out both;
 }
 .photo-button {
   border: 1px dashed #96abc0;
@@ -2399,6 +2485,9 @@ td.table-actions {
   .order-form .two-col {
     grid-template-columns: 1fr;
   }
+  .ficha-moto-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .plate-search {
     grid-template-columns: 1fr;
     gap: 8px;
@@ -2407,18 +2496,22 @@ td.table-actions {
     width: 100%;
   }
   .line-item {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: stretch;
   }
   .line-item .line-descr {
-    grid-column: 1 / -1;
+    flex-basis: 100%;
   }
   .ficha-actions {
     flex-direction: column;
     margin: 16px -7px 18px;
   }
   .line-item {
-    grid-template-columns: 1fr 74px 82px 28px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(74px, 0.4fr) 36px;
   }
+  .line-item > label:not(.line-descr):not(.line-check) { min-width: 0; }
+  .line-item > .line-check { margin-top: 0; }
+  .line-item > button { margin-top: 0; }
   .repuesto-pick {
     grid-template-columns: 1fr;
   }
@@ -2439,6 +2532,9 @@ td.table-actions {
   }
   .line-item label {
     min-width: 0;
+  }
+  .ficha-moto-fields {
+    grid-template-columns: 1fr;
   }
   .report-grid {
     grid-template-columns: 1fr;
@@ -2654,6 +2750,16 @@ td.table-actions {
   .select-control,
   .suggestions button,
   .dialog-close {
+    animation: none;
+    transition: none;
+  }
+  .line-item,
+  .flow-step,
+  .flow-step > span,
+  .status,
+  .summary-work,
+  .summary-work-list,
+  .line-items-list {
     animation: none;
     transition: none;
   }
