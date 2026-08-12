@@ -281,7 +281,7 @@ export function MotoDetail({
           <Pagination page={repuestoPage} total={repuestos?.totalPages || 1} onPage={setRepuestoPage} />
         </section>
       )}
-      <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)}>
+      <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void addService(); }}>
           <label>Kilometraje<input type="text" inputMode="numeric" value={integerInput(serviceKm)} onChange={(event) => setServiceKm(event.target.value)} required /></label>
           <label>Fecha<input type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
@@ -289,7 +289,7 @@ export function MotoDetail({
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setServiceOpen(false)}>Cancelar</button><button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>
       </Dialog>
-      <Dialog open={configOpen} title="Configurar service" onClose={() => setConfigOpen(false)}>
+      <Dialog open={configOpen} title="Configurar service" onClose={() => setConfigOpen(false)} dirty={Boolean(configNotes || configKm !== String(moto.kmServicePeriodo ?? "") || configMonths !== String(moto.mesesServicePeriodo ?? ""))}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveConfig(); }}>
           <label>Periodo en km<input type="text" inputMode="numeric" value={integerInput(configKm)} onChange={(event) => setConfigKm(event.target.value)} placeholder="Ej: 5.000" /></label>
           <label>Periodo en meses<input type="text" inputMode="numeric" value={integerInput(configMonths)} onChange={(event) => setConfigMonths(event.target.value)} placeholder="Ej: 6" /></label>

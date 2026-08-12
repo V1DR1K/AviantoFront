@@ -93,7 +93,7 @@ function TransferDialog({ open, initialMotoId, onClose, onSaved, notify }: { ope
 
    const loadMotos = (query: string) => api<AutocompleteResponse[]>("/motovehiculos/autocomplete", {}, { q: query });
    const loadClients = (query: string) => api<AutocompleteResponse[]>("/clientes/autocomplete", {}, { q: query });
-   return <Dialog open={open} title="Nueva transferencia" onClose={close} wide className="transfer-modal">
+    return <Dialog open={open} title="Nueva transferencia" onClose={close} wide className="transfer-modal" dirty={Boolean(selectedClient || observaciones)}>
     <form className="transfer-form" onSubmit={(event) => void submit(event)}>
       <section className="transfer-step">
         <div className="transfer-step-number">1</div>
@@ -137,7 +137,7 @@ function TransferDialog({ open, initialMotoId, onClose, onSaved, notify }: { ope
         <button type="submit" className="button primary" disabled={busy || !selectedMoto || !selectedClient}><ArrowRightLeft size={17} />{busy ? "Registrando..." : "Confirmar transferencia"}</button>
       </div>
     </form>
-    <AbmFormModal open={newClientOpen} resource="cliente" mode="agregar" fields={clientFields} onClose={() => setNewClientOpen(false)} onSubmit={createClient} onError={(message) => notify(message, "error")} />
+    <AbmFormModal key={newClientOpen ? "transfer-client-open" : "transfer-client-closed"} open={newClientOpen} resource="cliente" mode="agregar" fields={clientFields} onClose={() => setNewClientOpen(false)} onSubmit={createClient} onError={(message) => notify(message, "error")} />
   </Dialog>;
 }
 
@@ -166,7 +166,7 @@ function TransferEditDialog({ transfer, onClose, onSaved, notify }: { transfer: 
     }
   };
   const loadClients = (query: string) => api<AutocompleteResponse[]>("/clientes/autocomplete", {}, { q: query });
-  return <Dialog open title="Editar transferencia" onClose={close} wide className="transfer-modal">
+  return <Dialog open title="Editar transferencia" onClose={close} wide className="transfer-modal" dirty={Boolean(selectedClient || observaciones)}>
     <form className="transfer-form" onSubmit={(event) => void submit(event)}>
       <section className="transfer-step"><div className="transfer-step-number">1</div><div className="transfer-step-content"><h3>{transfer.patente}</h3><p>{transfer.moto} · Cliente anterior: {transfer.clienteAnterior}</p></div></section>
        <section className="transfer-step"><div className="transfer-step-number">2</div><div className="transfer-step-content"><h3>Asigná el nuevo cliente</h3><AutocompleteField value={clientQuery} onChange={(value) => { setClientQuery(value); setSelectedClient(null); }} onSelect={(item) => { setSelectedClient(item); setClientQuery(item.label); }} onClear={() => setSelectedClient(null)} selected={selectedClient} loadOptions={loadClients} placeholder="Buscar por nombre o documento" disabled={busy} />{selectedClient && <div className="transfer-selection"><span>Nuevo cliente</span><strong>{selectedClient.label}</strong><button type="button" className="icon-button" aria-label="Cambiar cliente" onClick={() => { setSelectedClient(null); setClientQuery(""); }}><X size={17} /></button></div>}</div></section>

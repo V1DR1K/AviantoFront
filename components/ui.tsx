@@ -425,7 +425,10 @@ export function ConfirmModal({
     <div className="modal-backdrop">
       <section
         ref={modalRef}
-        onKeyDownCapture={onModalKeyDown}
+        onKeyDownCapture={(event) => {
+          if ((event.target as HTMLElement).closest(".confirm-modal")) return;
+          onModalKeyDown(event);
+        }}
         className="modal confirm-modal"
         role="dialog"
         tabIndex={-1}
@@ -460,6 +463,7 @@ export function Dialog({
   onClose,
   wide = false,
   className = "",
+  dirty = false,
 }: {
   open: boolean;
   title: string;
@@ -467,15 +471,30 @@ export function Dialog({
   onClose: () => void;
   wide?: boolean;
   className?: string;
+  dirty?: boolean;
 }) {
-  const [modalRef, onModalKeyDown] = useModalFocus(open, onClose);
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const requestClose = () => {
+    if (dirty) {
+      setDiscardOpen(true);
+      return;
+    }
+    onClose();
+  };
+  const [modalRef, onModalKeyDown] = useModalFocus(open, requestClose);
   const titleId = useId();
   if (!open) return null;
   return (
-    <div className="modal-backdrop">
+    <div role="presentation" className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}>
       <section
         ref={modalRef}
-        onKeyDownCapture={onModalKeyDown}
+        onKeyDownCapture={(event) => {
+          if ((event.target as HTMLElement).closest(".confirm-modal")) {
+            event.stopPropagation();
+            return;
+          }
+          onModalKeyDown(event);
+        }}
         className={`modal form-modal${wide ? " wide" : ""} ${className}`}
         role="dialog"
         tabIndex={-1}
@@ -484,12 +503,20 @@ export function Dialog({
       >
         <header className="modal-header">
           <h2 id={titleId}>{title}</h2>
-          <button className="dialog-close" onClick={onClose} aria-label="Cerrar">
+          <button className="dialog-close" onClick={requestClose} aria-label="Cerrar">
             <X size={19} />
           </button>
         </header>
         <div className="modal-content">{children}</div>
       </section>
+      <ConfirmModal
+        open={discardOpen}
+        title="¿Descartar cambios?"
+        body="Si cerrás ahora, se perderán los cambios que todavía no guardaste."
+        confirmLabel="Descartar cambios"
+        onClose={() => setDiscardOpen(false)}
+        onConfirm={() => { setDiscardOpen(false); onClose(); }}
+      />
     </div>
   );
 }

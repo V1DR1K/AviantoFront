@@ -425,12 +425,14 @@ function ItemRow({
   onDelete,
   locked,
   canDelete,
+  onStartWork,
 }: {
   item: FichaTrabajoResponse;
   onState: (estado: TrabajoStatus) => void;
   onDelete: () => void;
   locked: boolean;
   canDelete: boolean;
+  onStartWork: () => void;
 }) {
   return (
     <div className={`line-item ${item.estadoTrabajo === "Cancelado" ? "muted" : ""}`}>
@@ -441,7 +443,7 @@ function ItemRow({
       <strong>{money(Number(item.subtotal))}</strong>
       {!locked && (
         <label className="line-check detail-line-check">
-          <input type="checkbox" checked={item.estadoTrabajo === "Realizado"} disabled={item.estadoTrabajo === "Cancelado"} onChange={(event) => onState(event.target.checked ? "Realizado" : "Pendiente")} />
+          <input type="checkbox" checked={item.estadoTrabajo === "Realizado"} disabled={item.estadoTrabajo === "Cancelado"} onChange={(event) => event.target.checked ? onStartWork() : onState("Pendiente")} />
           Realizado
         </label>
       )}
@@ -496,6 +498,7 @@ export function FichaDetail({
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [selectedPaidWorkIds, setSelectedPaidWorkIds] = useState<string[]>([]);
   const [paymentSaving, setPaymentSaving] = useState(false);
+  const [startWorkItem, setStartWorkItem] = useState<FichaTrabajoResponse | null>(null);
   const load = () =>
     void api<FichaResponse>(`/fichas/${fichaKey}`)
       .then(setFicha)
@@ -601,6 +604,13 @@ export function FichaDetail({
     } finally {
       setPending(null);
     }
+  };
+  const startWork = async () => {
+    if (!startWorkItem) return;
+    const item = startWorkItem;
+    setStartWorkItem(null);
+    await update(`/fichas/${fichaKey}/estado`, { estado: "En proceso" }, "estado-en-proceso", "Ficha marcada en proceso.");
+    await update(`/fichas/${fichaKey}/trabajos/${item.id}/estado`, { estado: "Realizado" }, `item-${item.id}`, "Trabajo actualizado.");
   };
   const current = ficha.estado;
   const saveService = async () => {
@@ -711,6 +721,7 @@ export function FichaDetail({
                   locked={locked}
                   canDelete={current === "En proceso"}
                    onDelete={() => onConfirm({ title: "Eliminar trabajo", body: "El trabajo se quitará de la ficha y la acción quedará registrada en auditoría.", confirmLabel: "Eliminar trabajo", successMessage: "Trabajo eliminado de la ficha.", action: () => api(`/fichas/${ficha.id}/trabajos/${item.id}`, { method: "DELETE" }).then(load) })}
+                   onStartWork={() => current === "Cargada" ? setStartWorkItem(item) : void update(`/fichas/${ficha.id}/trabajos/${item.id}/estado`, { estado: "Realizado" }, `item-${item.id}`, "Trabajo actualizado.")}
                    onState={(estado) => void update(`/fichas/${ficha.id}/trabajos/${item.id}/estado`, { estado }, `item-${item.id}`, "Trabajo actualizado.")}
                 />
               ))}
@@ -769,7 +780,7 @@ export function FichaDetail({
           <div className="total"><span>Total final</span><strong>{money(ficha.total)}</strong></div>
         </aside>
       </section>
-      <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)}>
+      <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveService(); }}>
         <label>Kilometraje<input type="text" inputMode="numeric" value={integerInput(serviceKm)} onChange={(event) => setServiceKm(event.target.value)} required /></label>
           <label>Fecha<input type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
@@ -777,7 +788,7 @@ export function FichaDetail({
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setServiceOpen(false)}>Cancelar</button><button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>
       </Dialog>
-      <Dialog open={closeOpen} title="Aprobar revisión y entregar" onClose={() => setCloseOpen(false)} className="delivery-modal">
+      <Dialog open={closeOpen} title="Aprobar revisión y entregar" onClose={() => setCloseOpen(false)} className="delivery-modal" dirty={selectedServiceIds.length > 0}>
          <p>Seleccioná los services previos que quieras asociar a la ficha antes de continuar.</p>
         {priorServices.length > 0 && <section className="line-items-list"><h3>Services previos sin ficha</h3>{priorServices.map((service) => <label key={service.id} className="line-check"><input type="checkbox" checked={selectedServiceIds.includes(service.id)} onChange={(event) => setSelectedServiceIds((ids) => event.target.checked ? [...ids, service.id] : ids.filter((id) => id !== service.id))} />{date(service.fecha)} · {service.kilometraje} km{service.observaciones ? ` · ${service.observaciones}` : ""}</label>)}</section>}
         {!priorServices.length && <p>No hay services previos para asociar.</p>}
@@ -786,7 +797,7 @@ export function FichaDetail({
           <button type="button" className="button primary" disabled={Boolean(pending)} onClick={confirmDelivery}>Aprobar y entregar</button>
         </div>
       </Dialog>
-      <Dialog open={paymentOpen} title="Registrar pago parcial" onClose={() => setPaymentOpen(false)}>
+      <Dialog open={paymentOpen} title="Registrar pago parcial" onClose={() => setPaymentOpen(false)} dirty={selectedPaidWorkIds.length > 0}>
         <p>Seleccioná los trabajos realizados que fueron pagados.</p>
         <div className="line-items-list">{ficha.trabajos.filter((item) => item.estadoTrabajo === "Realizado").map((item) => <label key={item.id} className="line-check"><input type="checkbox" checked={selectedPaidWorkIds.includes(item.id)} onChange={(event) => {
            if (!event.target.checked && item.pagado) {
@@ -802,6 +813,7 @@ export function FichaDetail({
            onConfirm({ title: "Desmarcar trabajos pagados", body: "Hay trabajos que ya fueron marcados y persistidos como pagados. ¿Estás seguro de que querés desmarcarlos todos?", confirmLabel: "Desmarcar pagos", successMessage: "Trabajos desmarcados del pago.", action: () => setSelectedPaidWorkIds([]) });
          }}>No pagar ninguno</button><button type="button" className="button secondary" onClick={() => setPaymentOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={paymentSaving} onClick={confirmPartialPayment}>{paymentSaving ? "Guardando..." : "Guardar pago"}</button></div>
       </Dialog>
+      <ConfirmModal open={startWorkItem !== null} title="Iniciar trabajo" body="Esta ficha se marcará como En Proceso si realizás un trabajo." confirmLabel="Marcar en proceso" variant="success" onClose={() => setStartWorkItem(null)} onConfirm={startWork} />
     </div>
   );
 }

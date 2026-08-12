@@ -1,20 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Camera, Plus, Save, Search, X } from "lucide-react";
+import { Camera, Plus, Save, X } from "lucide-react";
 import { api, objectUrl } from "../lib/api";
 import { integerInput, money, parseIntegerInput, parsePrice, priceInput } from "../lib/format";
 import { todayInAr } from "../lib/dates";
 import type {
-  ClienteResponse,
   FichaRequest,
   FichaResponse,
   MotovehiculoResponse,
-  PageResponse,
   PhotoResponse,
   TrabajoCatalogoResponse,
 } from "../lib/types";
-import { AutocompleteField, ConfirmModal, SelectField, type Notify } from "./ui";
+import { ConfirmModal, type Notify } from "./ui";
 
 type Line = {
   key: string;
@@ -30,8 +28,6 @@ type Line = {
 type PhotoDraft = { file: File; url: string };
 
 const today = todayInAr;
-const clientLabel = (client: ClienteResponse) =>
-  `${client.nombre}${client.telefono ? ` · ${client.telefono}` : ""}`;
 const readAsBase64 = (file: File) =>
   new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -82,14 +78,12 @@ export function FichaForm({
   onClose,
   onSave,
   fichaKey,
-  initialClientId,
   initialMotoId,
   notify,
 }: {
   onClose: () => void;
   onSave: (ficha: FichaResponse) => void;
   fichaKey?: string | null;
-  initialClientId?: string | null;
   initialMotoId?: string | null;
   notify: Notify;
 }) {
@@ -97,13 +91,7 @@ export function FichaForm({
   const [loadedEstado, setLoadedEstado] = useState<string | null>(null);
   const editable =
     !editing || loadedEstado === "Cargada" || loadedEstado === "En proceso";
-  const [clients, setClients] = useState<ClienteResponse[]>([]);
-  const [vehicles, setVehicles] = useState<MotovehiculoResponse[]>([]);
-  const [patenteQuery, setPatenteQuery] = useState("");
-  const [patenteBusy, setPatenteBusy] = useState(false);
-  const [clientId, setClientId] = useState(initialClientId ?? "");
-  const [clientQuery, setClientQuery] = useState("");
-  const [vehicleId, setVehicleId] = useState("");
+  const [currentVehicle, setCurrentVehicle] = useState<MotovehiculoResponse | null>(null);
   const [fechaIngreso, setFechaIngreso] = useState(today());
   const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState("");
   const [vencimiento, setVencimiento] = useState("");
@@ -120,11 +108,7 @@ export function FichaForm({
   const [existing, setExisting] = useState<PhotoResponse[]>([]);
   const [saving, setSaving] = useState(false);
   const [closeConfirmation, setCloseConfirmation] = useState(false);
-  const plateLocked = Boolean(initialMotoId);
-  const prefill = useRef<{ motoId?: string } | null>(
-    initialMotoId ? { motoId: initialMotoId } : null,
-  );
-  const [reloadKey, setReloadKey] = useState(0);
+  const [startWorkConfirmation, setStartWorkConfirmation] = useState<string | null>(null);
   const photoInput = useRef<HTMLInputElement>(null);
   const photoUrls = useRef(new Set<string>());
   const existingUrls = useRef<Record<string, string>>({});
@@ -138,27 +122,6 @@ export function FichaForm({
     },
     [],
   );
-  const chooseClient = (id: string) => {
-    const client = clients.find((item) => item.id === id);
-    setClientId(id);
-    setClientQuery(client ? clientLabel(client) : "");
-  };
-  useEffect(() => {
-    void api<PageResponse<ClienteResponse>>(
-      "/clientes",
-      {},
-      { activo: true, size: 100 },
-    )
-      .then((page) => setClients(page.content))
-      .catch((reason) =>
-        notify(
-          reason instanceof Error
-            ? reason.message
-            : "No se pudieron cargar los datos.",
-          "error",
-        ),
-      );
-  }, [notify]);
   useEffect(() => {
     let active = true;
     void api<TrabajoCatalogoResponse[]>("/configuracion/trabajos/autocomplete", {}, { q: workQuery })
@@ -167,99 +130,14 @@ export function FichaForm({
     return () => { active = false; };
   }, [workQuery]);
   useEffect(() => {
-    if (initialMotoId) void api<MotovehiculoResponse>(`/motovehiculos/${initialMotoId}`).then((moto) => setPatenteQuery(moto.patente)).catch(() => undefined);
-  }, [initialMotoId]);
-  const searchByPlate = async () => {
-    const plate = patenteQuery.trim().toUpperCase();
-    if (!plate) return;
-    setPatenteBusy(true);
-    try {
-      const page = await api<PageResponse<MotovehiculoResponse>>(
-        "/motovehiculos",
-        {},
-        { q: plate, activo: true, size: 20 },
-      );
-      if (!page.content.length) {
-        notify(
-          `No se encontró la moto "${plate}". Verificá la patente o creala con el botón "Agregar moto".`,
-          "error",
-        );
-        setVehicles([]);
-        setVehicleId("");
-        return;
-      }
-      const available = page.content.filter((moto) => moto.ingresada && moto.seccion === "Taller");
-      setVehicles(available);
-      const owner = available.find(
-        (moto) => moto.propietarioId,
-      )?.propietarioId;
-      if (owner) chooseClient(owner);
-      setVehicleId(available[0]?.id ?? "");
-    } catch (reason) {
-      notify(
-        reason instanceof Error ? reason.message : "No se pudo buscar la moto.",
-        "error",
-      );
-    } finally {
-      setPatenteBusy(false);
-    }
-  };
-  useEffect(() => {
-    if (!clientId) return;
-    void api<PageResponse<MotovehiculoResponse>>(
-      "/motovehiculos",
-      {},
-      { clienteId: clientId, activo: true, size: 100 },
-    )
-      .then((page) => {
-        const available = page.content.filter((moto) => moto.ingresada && moto.seccion === "Taller");
-        let first = available[0]?.id ?? "";
-        if (prefill.current?.motoId)
-          first = page.content.some(
-            (moto) => moto.id === prefill.current?.motoId,
-          )
-            ? prefill.current.motoId
-            : first;
-        setVehicles(available);
-        setVehicleId(first);
-        void (async () => {
-          const missing =
-            prefill.current?.motoId &&
-            !page.content.some((moto) => moto.id === prefill.current?.motoId)
-              ? prefill.current.motoId
-              : null;
-          if (missing) {
-            try {
-              const moto = await api<MotovehiculoResponse>(
-                `/motovehiculos/${missing}`,
-              );
-              setVehicles((all) =>
-                all.some((vehicle) => vehicle.id === moto.id)
-                  ? all
-                  : [moto, ...all],
-              );
-              setVehicleId(moto.id);
-            } catch {
-              /* la moto ya no existe */
-            }
-          }
-          if (prefill.current?.motoId) prefill.current = null;
-        })();
-      })
-      .catch((reason) =>
-        notify(
-          reason instanceof Error
-            ? reason.message
-            : "No se pudieron cargar las motos.",
-          "error",
-        ),
-      );
-  }, [clientId, reloadKey, notify]);
+    const motoId = fichaKey ? undefined : initialMotoId;
+    if (motoId) void api<MotovehiculoResponse>(`/motovehiculos/${motoId}`).then(setCurrentVehicle).catch((reason) => notify(reason instanceof Error ? reason.message : "No se pudo cargar la moto.", "error"));
+  }, [fichaKey, initialMotoId, notify]);
   useEffect(() => {
     if (!fichaKey) return;
     void api<FichaResponse>(`/fichas/${fichaKey}`)
       .then((ficha) => {
-        prefill.current = { motoId: ficha.motoId };
+        void api<MotovehiculoResponse>(`/motovehiculos/${ficha.motoId}`).then(setCurrentVehicle).catch(() => undefined);
         setLoadedEstado(ficha.estado);
         setFechaIngreso(ficha.fechaIngreso.slice(0, 10) || today());
         setFechaEntregaEstimada(ficha.fechaEntregaEstimada ?? "");
@@ -285,8 +163,6 @@ export function FichaForm({
             observacionTrabajo: trabajo.observacionTrabajo ?? "",
           })),
         );
-        setClientId(ficha.clienteId);
-        setReloadKey((key) => key + 1);
       })
       .catch((reason) =>
         notify(
@@ -298,8 +174,20 @@ export function FichaForm({
       );
   }, [fichaKey, notify]);
 
-  const currentVehicle = vehicles.find((vehicle) => vehicle.id === vehicleId);
-  const selectedClient = clients.find((client) => client.id === clientId);
+  const vehicleId = currentVehicle?.id ?? "";
+  const clientId = currentVehicle?.propietarioId ?? "";
+  const startWork = async (key: string) => {
+    if (fichaKey) {
+      try {
+        await api(`/fichas/${fichaKey}/estado`, { method: "PATCH", body: JSON.stringify({ estado: "En proceso" }) });
+        setLoadedEstado("En proceso");
+      } catch (reason) {
+        notify(reason instanceof Error ? reason.message : "No se pudo iniciar la ficha.", "error");
+        return;
+      }
+    }
+    updateLine(key, { realizado: true, estadoTrabajo: "Realizado" });
+  };
   const subtotal = useMemo(
     () =>
       trabajos.reduce(
@@ -470,44 +358,10 @@ export function FichaForm({
           editar fichas en &quot;Cargada&quot; o &quot;En proceso&quot;.
         </p>
       )}
-      <div className="form-layout">
+        <div className="form-layout">
         <div className="form-stack">
-           <section className="panel moto-data-card ficha-moto-card">
-             <h2>1. Moto por patente</h2>
-            <div className="plate-search">
-              <input
-                value={patenteQuery}
-                readOnly={plateLocked}
-                onChange={(event) => setPatenteQuery(event.target.value)}
-                placeholder="Ej.: AB 123 CD"
-                onKeyDown={(event) => {
-                  if (!plateLocked && event.key === "Enter") void searchByPlate();
-                }}
-              />
-              {!plateLocked && <button
-                className="button secondary"
-                type="button"
-                disabled={patenteBusy}
-                onClick={() => void searchByPlate()}
-              >
-                <Search size={17} />
-                {patenteBusy ? "Buscando..." : "Buscar"}
-              </button>}
-            </div>
-            <div className="two-col">
-              <div className="client-picker">
-                <span>Cliente (propietario)</span>
-                 <AutocompleteField value={selectedClient ? clientLabel(selectedClient) : clientQuery} onChange={(value) => { setClientQuery(value); if (clientId) { setClientId(""); setVehicleId(""); setVehicles([]); } }} onSelect={(item) => chooseClient(item.id)} onClear={() => { setClientId(""); setVehicleId(""); setVehicles([]); }} selected={selectedClient ? { id: selectedClient.id, label: selectedClient.nombre, secondary: selectedClient.telefono || selectedClient.documento || "Sin contacto" } : null} options={clients.map((client) => ({ id: client.id, label: client.nombre, secondary: client.telefono || client.documento || "Sin contacto" }))} placeholder="Buscar cliente por nombre, teléfono o documento" minChars={1} />
-              </div>
-              <SelectField
-                label="Moto"
-                value={vehicleId}
-                onChange={setVehicleId}
-                disabled={!clientId}
-                placeholder="Seleccionar"
-                options={vehicles.map((vehicle) => ({ value: vehicle.id, label: `${vehicle.marca} ${vehicle.modelo} · ${vehicle.patente}` }))}
-              />
-            </div>
+         <section className="panel moto-data-card ficha-moto-card">
+              <h2 className="form-section-title">1. Datos de la moto</h2>
              {currentVehicle && <div className="moto-data-profile">
                <div className="panel-head"><h3>Datos de la moto</h3><span className="muted">Información del Perfil</span></div>
                <dl className="record-detail">
@@ -527,10 +381,10 @@ export function FichaForm({
              </div>
             </section>
           <section className="form-section">
-            <h2>2. Trabajos a realizar</h2>
+             <h2 className="form-section-title">2. Trabajos a realizar</h2>
             <div className="line-items">
               {trabajos.map((trabajo) => (
-                <div className="line-item" key={trabajo.key}>
+                 <div className={`line-item${workOpen === trabajo.key ? " is-work-open" : ""}`} key={trabajo.key}>
                   <label className="line-descr">
                     Descripción
                     <div className="autocomplete-field">
@@ -580,12 +434,13 @@ export function FichaForm({
                      type="checkbox"
                      checked={trabajo.estadoTrabajo === "Realizado" || trabajo.realizado}
                      disabled={trabajo.estadoTrabajo === "Cancelado"}
-                     onChange={(event) =>
-                       updateLine(trabajo.key, {
-                          realizado: event.target.checked,
-                          estadoTrabajo: event.target.checked ? "Realizado" : "Pendiente",
-                        })
-                      }
+                       onChange={(event) => {
+                          if (event.target.checked && loadedEstado === "Cargada") {
+                           setStartWorkConfirmation(trabajo.key);
+                           return;
+                         }
+                         updateLine(trabajo.key, { realizado: event.target.checked, estadoTrabajo: event.target.checked ? "Realizado" : "Pendiente" });
+                       }}
                    />
                    Realizado
                   </label>
@@ -614,7 +469,7 @@ export function FichaForm({
             </button>
           </section>
           <section className="form-section">
-            <h2>3. Fotos y observaciones</h2>
+             <h2 className="form-section-title">3. Fotos y observaciones</h2>
             <label>
               Observaciones
               <textarea
@@ -671,7 +526,7 @@ export function FichaForm({
           </section>
         </div>
         <aside className="summary">
-          <h2>Resumen de la ficha</h2>
+          <h2 className="form-section-title">Resumen de la ficha</h2>
           <div>
             <span>Moto</span>
             <strong>
@@ -746,6 +601,19 @@ export function FichaForm({
         confirmLabel="Sí, cerrar ficha"
         onClose={() => setCloseConfirmation(false)}
         onConfirm={onClose}
+      />
+      <ConfirmModal
+        open={startWorkConfirmation !== null}
+        title="Iniciar ficha"
+        body="Esta ficha se marcará como En Proceso si realizás un trabajo."
+        confirmLabel="Marcar en proceso"
+        variant="success"
+        onClose={() => setStartWorkConfirmation(null)}
+        onConfirm={() => {
+          const key = startWorkConfirmation;
+          setStartWorkConfirmation(null);
+          if (key) void startWork(key);
+        }}
       />
     </section>
   );

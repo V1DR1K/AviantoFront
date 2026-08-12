@@ -244,7 +244,6 @@ export function AppController() {
   const openRepuesto = (repuesto: { id: string }, returnTo?: string) => { const params = new URLSearchParams(); if (returnTo) params.set("returnTo", returnTo); navigate(`/repuestos/${repuesto.id}${params.size ? `?${params}` : ""}`); };
   const createFichaForMoto = (prefill: { motoId: string; clienteId?: string | null }) => {
     const params = new URLSearchParams({ motoId: prefill.motoId });
-    if (prefill.clienteId) params.set("clienteId", prefill.clienteId);
     params.set("returnTo", `/motos/${prefill.motoId}?tab=fichas`);
     navigate(`/fichas/nueva?${params}`);
   };
@@ -257,7 +256,7 @@ export function AppController() {
   const currentPage = ["audit", "settings", "trabajos"].includes(route.page) && session.user.rol !== "ADMINISTRACION" ? "dashboard" : route.page;
   let content: ReactNode;
   if (currentPage === "create") {
-     content = <FichaForm key={`${pathname}?${urlSearch}`} initialClientId={route.initialClientId} initialMotoId={route.initialMotoId} onClose={() => navigate(route.returnTo || "/perfiles")} onSave={(ficha) => { notify("Ficha creada correctamente."); setRefreshKey((key) => key + 1); openFicha(ficha, route.returnTo); }} notify={notify} />;
+      content = route.initialMotoId ? <FichaForm key={`${pathname}?${urlSearch}`} initialMotoId={route.initialMotoId} onClose={() => navigate(route.returnTo || "/perfiles")} onSave={(ficha) => { notify("Ficha creada correctamente."); setRefreshKey((key) => key + 1); openFicha(ficha, route.returnTo); }} notify={notify} /> : <ProfilesView onIntake={(plate) => navigate(`/ingresar?returnTo=%2Fperfiles&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} onOpen={openMoto} notify={notify} />;
   } else if (currentPage === "edit" && route.fichaId) {
      content = <FichaForm key={route.fichaId} fichaKey={route.fichaId} onClose={() => navigate(route.returnTo || "/fichas")} onSave={() => { notify("Ficha actualizada correctamente."); setRefreshKey((key) => key + 1); navigate(route.returnTo || "/fichas"); }} notify={notify} />;
   } else if (currentPage === "dashboard") {
@@ -269,7 +268,7 @@ export function AppController() {
   } else if (currentPage === "profiles") {
      content = <ProfilesView onIntake={(plate) => navigate(`/ingresar?returnTo=%2Fperfiles&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} onOpen={openMoto} notify={notify} />;
   } else if (currentPage === "orders") {
-      content = <FichasView key={refreshKey} onNewOrder={() => navigate("/fichas/nueva?returnTo=%2Ffichas")} onSelect={(ficha) => openFicha(ficha, "/fichas")} onEdit={(ficha) => navigate(`/fichas/${ficha.id}/editar?returnTo=%2Ffichas`)} onDelete={(ficha) => setConfirmation({ title: "Eliminar ficha", body: `Vas a dar de baja la ficha ${ficha.numero}. El historial conservará el registro para auditoría.`, confirmLabel: "Eliminar ficha", successMessage: "Ficha eliminada correctamente.", action: () => api(`/fichas/${ficha.id}`, { method: "DELETE" }).then(() => setRefreshKey((key) => key + 1)) })} notify={notify} />;
+       content = <FichasView key={refreshKey} onNewOrder={() => navigate("/perfiles")} onSelect={(ficha) => openFicha(ficha, "/fichas")} onEdit={(ficha) => navigate(`/fichas/${ficha.id}/editar?returnTo=%2Ffichas`)} onDelete={(ficha) => setConfirmation({ title: "Eliminar ficha", body: `Vas a dar de baja la ficha ${ficha.numero}. El historial conservará el registro para auditoría.`, confirmLabel: "Eliminar ficha", successMessage: "Ficha eliminada correctamente.", action: () => api(`/fichas/${ficha.id}`, { method: "DELETE" }).then(() => setRefreshKey((key) => key + 1)) })} notify={notify} />;
   } else if (currentPage === "fichas" && route.fichaId) {
       content = <FichaDetail fichaKey={route.fichaId} onBack={() => navigate(route.returnTo || "/fichas")} onConfirm={(request) => setConfirmation(request)} onOpenMoto={(id, tab) => openMoto(id, route.returnTo || `/fichas/${route.fichaId}`, tab ?? "fichas")} notify={notify} />;
   } else if (currentPage === "profile" && route.motoId) {

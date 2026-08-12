@@ -213,7 +213,7 @@ function CreateRepuestoDialog({
   };
   const setRow = (key: string, changes: Partial<typeof rows[number]>) => setRows((all) => all.map((row) => row.key === key ? { ...row, ...changes } : row));
   return (
-    <Dialog open={open} title={initial ? "Editar pedido de repuesto" : "Nuevo pedido de repuesto"} onClose={onClose} wide>
+    <Dialog open={open} title={initial ? "Editar pedido de repuesto" : "Nuevo pedido de repuesto"} onClose={onClose} wide dirty={Boolean(clientId || motoId || proveedor || rows.some((row) => row.descripcion || row.precio !== ""))}>
       <form className="record-form repuesto-form" onSubmit={(event) => { event.preventDefault(); void save(); }}>
         <div className="repuesto-pick">
           <SelectField label="Cliente" value={clientId} onChange={changeClient} required placeholder="Seleccionar" options={clients.map((client) => ({ value: client.id, label: client.nombre }))} />
@@ -347,7 +347,7 @@ export function RepuestoDetail({
           </div>
         </aside>
       </section>
-      <Dialog open={paymentOpen} title="Registrar pago parcial" onClose={() => setPaymentOpen(false)}>
+       <Dialog open={paymentOpen} title="Registrar pago parcial" onClose={() => setPaymentOpen(false)} dirty={selectedPaidItemIds.length > 0}>
         <p>Seleccioná los ítems no cancelados que fueron pagados.</p>
         <div className="line-items-list">{repuesto.items.filter((item) => item.estado !== "Cancelado").map((item) => <label key={item.id} className="line-check"><input type="checkbox" checked={selectedPaidItemIds.includes(item.id)} onChange={(event) => {
            if (!event.target.checked && item.pagado) {

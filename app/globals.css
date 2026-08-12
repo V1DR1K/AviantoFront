@@ -57,6 +57,21 @@ select,
 textarea {
   font: inherit;
 }
+textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 10px;
+  border: 1px solid var(--border-field);
+  border-radius: var(--radius-field);
+  background: #fff;
+  color: var(--ink);
+  resize: vertical;
+}
+textarea:focus {
+  border-color: var(--blue);
+  box-shadow: var(--focus-ring);
+  outline: 0;
+}
 button {
   cursor: pointer;
 }
@@ -458,6 +473,14 @@ textarea:focus-visible {
   font-size: 18px;
   letter-spacing: -0.02em;
   margin: 0 0 5px;
+}
+.order-form .form-section-title {
+  margin: 0 0 20px;
+  color: var(--navy);
+  font-size: clamp(21px, 2vw, 28px);
+  font-weight: 850;
+  letter-spacing: -0.035em;
+  text-align: center;
 }
 nav.tabs {
   display: flex;
@@ -943,9 +966,6 @@ td small {
   display: grid;
   gap: 14px;
 }
-.order-form .two-col {
-  grid-template-columns: 1fr;
-}
 .form-close {
   min-height: 44px;
   padding-inline: 16px;
@@ -993,12 +1013,6 @@ td small {
 .plate-search .button {
   padding-inline: 18px;
   white-space: nowrap;
-}
-.client-picker {
-  display: grid;
-  gap: 7px;
-  font-weight: 700;
-  color: #43556b;
 }
 .autocomplete-field {
   position: relative;
@@ -1105,6 +1119,24 @@ td small {
   box-shadow: 0 4px 12px rgba(18, 53, 91, 0.06);
   animation: line-item-in 180ms ease-out both;
 }
+.order-form .line-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 0.35fr) minmax(100px, auto) auto 36px;
+  gap: 10px;
+  position: relative;
+}
+.order-form .line-item.is-work-open {
+  z-index: 10;
+}
+.order-form .line-item.is-work-open .suggestions {
+  z-index: 20;
+}
+.order-form .line-item .line-descr { grid-column: 1; }
+.order-form .line-item > label:not(.line-descr):not(.line-check) { grid-column: 2; }
+.order-form .line-item > strong { grid-column: 3; align-self: end; text-align: center; }
+.order-form .line-item > .line-check { grid-column: 4; align-self: end; }
+.order-form .line-item > .form-field-wide { grid-column: 1 / 5; }
+.order-form .line-item > button { grid-column: 5; grid-row: 1; align-self: end; }
 .line-item .line-descr { flex: 2 1 360px; min-width: 260px; }
 .line-item > label:not(.line-descr):not(.line-check) { flex: 0 1 145px; }
 .line-item > .line-check { flex: 0 0 auto; }
@@ -1187,9 +1219,6 @@ td small {
 .ficha-moto-card > h2 {
   margin-bottom: 18px;
 }
-.ficha-moto-card > .two-col {
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-}
 .moto-data-profile {
   margin-top: 18px;
   padding-top: 18px;
@@ -1257,6 +1286,7 @@ td small {
 .line-items-list {
   display: flex;
   flex-direction: column;
+  gap: 5px;
 }
 .line-items-list > .line-check {
   display: flex;
@@ -2549,9 +2579,6 @@ td.table-actions {
   .intake-new-profile .two-col {
     grid-template-columns: 1fr;
   }
-  .order-form .two-col {
-    grid-template-columns: 1fr;
-  }
   .ficha-moto-fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2572,9 +2599,8 @@ td.table-actions {
     flex-direction: column;
     margin: 16px -7px 18px;
   }
-  .line-item {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(74px, 0.4fr) 36px;
+  .order-form .line-item {
+    grid-template-columns: minmax(0, 1fr) minmax(90px, 0.45fr) auto 36px;
   }
   .line-item > label:not(.line-descr):not(.line-check) { min-width: 0; }
   .line-item > .line-check { margin-top: 0; }
@@ -2593,9 +2619,10 @@ td.table-actions {
   .repuesto-item input:first-child {
     grid-column: 1 / -1;
   }
-  .line-item > strong {
-    display: none;
-  }
+  .order-form .line-item > strong { display: block; grid-column: 2; }
+  .order-form .line-item > .line-check { grid-column: 3; }
+  .order-form .line-item > .form-field-wide { grid-column: 1 / 4; }
+  .order-form .line-item > button { grid-column: 4; }
   .line-item input {
     min-width: 0;
   }

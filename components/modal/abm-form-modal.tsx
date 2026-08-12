@@ -45,6 +45,8 @@ export function AbmFormModal({
     if (field.type === "number") return integerInput(value as number | string | null | undefined);
     return String(value ?? "");
   };
+  const baselineFor = (field: AbmField) => field.type === "number" ? integerInput(initial[field.key] as number | string | null | undefined) : field.type === "currency" ? priceInput(initial[field.key]) : String(initial[field.key] ?? "");
+  const dirty = fields.some((field) => valueFor(field) !== baselineFor(field));
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (saving) return;
@@ -64,6 +66,7 @@ export function AbmFormModal({
       title={`${mode === "agregar" ? "Agregar" : "Modificar"} ${resource}`}
       onClose={onClose}
       wide
+      dirty={dirty}
     >
       <form
         className="record-form"
