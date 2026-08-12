@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Plus, Save, Search, X } from "lucide-react";
 import { api, objectUrl } from "../lib/api";
-import { money, parsePrice, priceInput } from "../lib/format";
+import { integerInput, money, parseIntegerInput, parsePrice, priceInput } from "../lib/format";
 import { todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
@@ -391,7 +391,7 @@ export function FichaForm({
         fechaEntregaEstimada: fechaEntregaEstimada || undefined,
         vencimiento: vencimiento || undefined,
         kilometrajeIngreso: kilometrajeIngreso
-          ? Number(kilometrajeIngreso)
+          ? parseIntegerInput(kilometrajeIngreso)
           : undefined,
         observaciones: notes || undefined,
         descuentoGlobal,
@@ -523,7 +523,7 @@ export function FichaForm({
                <label>Fecha ingreso<input type="date" value={fechaIngreso} onChange={(event) => setFechaIngreso(event.target.value)} /></label>
                <label>Entrega estimada<input type="date" value={fechaEntregaEstimada} onChange={(event) => setFechaEntregaEstimada(event.target.value)} /></label>
                <label>Vencimiento<input type="date" value={vencimiento} onChange={(event) => setVencimiento(event.target.value)} /></label>
-               <label>Kilometraje ingreso<input type="number" min="0" value={kilometrajeIngreso} onChange={(event) => setKilometrajeIngreso(event.target.value)} placeholder="KM actual" /></label>
+               <label>Kilometraje ingreso<input type="text" inputMode="numeric" value={integerInput(kilometrajeIngreso)} onChange={(event) => setKilometrajeIngreso(event.target.value)} placeholder="KM actual" /></label>
              </div>
             </section>
           <section className="form-section">
@@ -691,7 +691,7 @@ export function FichaForm({
            </div>
            <label>
              Descuento global
-             <input type="number" min="0" step="0.01" value={descuentoGlobal || ""} onChange={(event) => setDescuentoGlobal(Number(event.target.value) || 0)} />
+             <input type="text" inputMode="decimal" value={descuentoGlobal ? priceInput(descuentoGlobal) : ""} onChange={(event) => setDescuentoGlobal(parsePrice(event.target.value))} />
            </label>
            {descuentoGlobal > 0 && <div><span>Después del descuento</span><strong>{money(Math.max(0, subtotal - descuentoGlobal))}</strong></div>}
           <label className="iva-toggle">

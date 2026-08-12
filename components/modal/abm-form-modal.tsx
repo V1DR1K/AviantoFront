@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Dialog, SelectField, type SelectOption } from "../ui";
-import { priceInput } from "../../lib/format";
+import { integerInput, parseIntegerInput, priceInput } from "../../lib/format";
 import type { ClienteResponse, MarcaMotoResponse } from "../../lib/types";
 
 export type AbmField = {
@@ -39,13 +39,18 @@ export function AbmFormModal({
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const initial = initialValues && typeof initialValues === "object" ? initialValues as Record<string, string | number | boolean | null | undefined> : {};
-  const valueFor = (field: AbmField) => values[field.key] ?? (field.type === "currency" ? priceInput(initial[field.key]) : String(initial[field.key] ?? ""));
+  const valueFor = (field: AbmField) => {
+    const value = values[field.key] ?? initial[field.key];
+    if (field.type === "currency") return priceInput(value as number | string | null | undefined);
+    if (field.type === "number") return integerInput(value as number | string | null | undefined);
+    return String(value ?? "");
+  };
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (saving) return;
     setSaving(true);
     try {
-      await onSubmit(Object.fromEntries(fields.map((field) => [field.key, valueFor(field)])));
+      await onSubmit(Object.fromEntries(fields.map((field) => [field.key, field.type === "number" && valueFor(field).trim() ? String(parseIntegerInput(valueFor(field))) : valueFor(field)])));
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : "No fue posible guardar el registro.";
       onError?.(message);
@@ -94,13 +99,14 @@ export function AbmFormModal({
               />
             ) : (
               <input
-                type={field.type === "currency" ? "text" : field.type ?? "text"}
-                inputMode={field.type === "currency" ? "decimal" : undefined}
+                type={field.type === "currency" || field.type === "number" ? "text" : field.type ?? "text"}
+                inputMode={field.type === "currency" ? "decimal" : field.type === "number" ? "numeric" : undefined}
                 min={field.min}
                 max={field.max}
                 value={valueFor(field)}
                 readOnly={field.readOnly}
                 required={field.required}
+                onBlur={(event) => field.type === "number" && setValues({ ...values, [field.key]: integerInput(event.target.value) })}
                 onChange={(event) =>
                   setValues({ ...values, [field.key]: event.target.value })
                 }

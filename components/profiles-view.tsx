@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ArrowDownUp, Edit3, Eye, Filter, LogIn, LogOut, Plus, Tag, Trash2 } from "lucide-react";
 import { api } from "../lib/api";
+import { parseIntegerInput } from "../lib/format";
 import type { MarcaMotoResponse, PageResponse, PerfilResponse } from "../lib/types";
 import { AbmFormModal, type AbmField } from "./modal/abm-form-modal";
 import { ConfirmModal, EmptyState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
@@ -52,7 +53,7 @@ export function ProfilesView({ onIntake, onOpen, notify }: { onIntake: (plate?: 
   const saveProfile = async (values: Record<string, string>) => {
     if (!editing) return;
     try {
-      await api(`/motovehiculos/${editing.id}`, { method: "PUT", body: JSON.stringify({ ...values, anio: values.anio ? Number(values.anio) : null, kilometraje: values.kilometraje ? Number(values.kilometraje) : null }) });
+      await api(`/motovehiculos/${editing.id}`, { method: "PUT", body: JSON.stringify({ ...values, anio: values.anio ? parseIntegerInput(values.anio) : null, kilometraje: values.kilometraje ? parseIntegerInput(values.kilometraje) : null }) });
       setEditing(null); setReloadKey((key) => key + 1); notify("Perfil actualizado.");
     } catch (reason) { notify(reason instanceof Error ? reason.message : "No se pudo actualizar el perfil.", "error"); }
   };

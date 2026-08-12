@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ArrowDownUp, Download, Edit3, Eye, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download } from "../lib/api";
-import { money, parsePrice, priceInput } from "../lib/format";
+import { integerInput, money, parseIntegerInput, parsePrice, priceInput } from "../lib/format";
 import { daysAgoInAr, formatDateInAr, todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
@@ -228,7 +228,7 @@ function CreateRepuestoDialog({
               <input placeholder="Ej.: cubierta 110/90" value={row.descripcion} onChange={(event) => setRow(row.key, { descripcion: event.target.value })} />
               <SelectField value={row.tipo} onChange={(value) => setRow(row.key, { tipo: value as typeof row.tipo })} ariaLabel="Tipo" options={[{ value: "Repuesto", label: "Repuesto" }, { value: "Accesorio", label: "Accesorio" }]} />
               <SelectField value={row.fichaTrabajoId ?? ""} onChange={(value) => setRow(row.key, { fichaTrabajoId: value || undefined })} ariaLabel="Trabajo" disabled={!fichaId} placeholder="Sin trabajo" options={fichaTrabajos.map((trabajo) => ({ value: trabajo.id, label: trabajo.descripcion }))} />
-              <input type="number" min="1" value={row.cantidad} onChange={(event) => setRow(row.key, { cantidad: String(event.target.value) })} aria-label="Cantidad" />
+              <input type="text" inputMode="numeric" min="1" value={integerInput(row.cantidad)} onChange={(event) => setRow(row.key, { cantidad: event.target.value })} onBlur={() => setRow(row.key, { cantidad: String(parseIntegerInput(row.cantidad)) })} aria-label="Cantidad" />
               <input inputMode="decimal" value={priceInput(row.precio)} onChange={(event) => setRow(row.key, { precio: event.target.value })} placeholder="Precio" aria-label="Precio" />
               <strong>{money(Number(row.cantidad) * parsePrice(row.precio))}</strong>
               <button type="button" className="remove-item" aria-label="Quitar ítem" onClick={() => setRows((all) => all.filter((r) => r.key !== row.key))}>×</button>
@@ -278,13 +278,16 @@ export function RepuestoDetail({
     if (paymentSaving) return;
     setPaymentSaving(true);
     try {
-      const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/pago`, { method: "PATCH", body: JSON.stringify({ estadoPago: selectedPaidItemIds.length ? "Parcial" : "No pagado", itemIds: selectedPaidItemIds }) });
+      const eligibleCount = repuesto.items.filter((item) => item.estado !== "Cancelado").length;
+      const estadoPago = !selectedPaidItemIds.length ? "No pagado" : selectedPaidItemIds.length === eligibleCount ? "Pagado" : "Parcial";
+      const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/pago`, { method: "PATCH", body: JSON.stringify({ estadoPago, itemIds: selectedPaidItemIds }) });
       setRepuesto(next); setPaymentOpen(false);
     } catch (reason) { notify(errorMessage(reason), "error"); throw reason; }
     finally { setPaymentSaving(false); }
   };
   const confirmPartialPayment = () => {
-    const nextStatus = selectedPaidItemIds.length ? "Parcial" : "No pagado";
+    const eligibleCount = repuesto?.items.filter((item) => item.estado !== "Cancelado").length ?? 0;
+    const nextStatus = !selectedPaidItemIds.length ? "No pagado" : selectedPaidItemIds.length === eligibleCount ? "Pagado" : "Parcial";
     setPaymentOpen(false);
     setConfirmation({
       title: "Guardar pago parcial",
@@ -346,8 +349,18 @@ export function RepuestoDetail({
       </section>
       <Dialog open={paymentOpen} title="Registrar pago parcial" onClose={() => setPaymentOpen(false)}>
         <p>Seleccioná los ítems no cancelados que fueron pagados.</p>
-        <div className="line-items-list">{repuesto.items.filter((item) => item.estado !== "Cancelado").map((item) => <label key={item.id} className="line-check"><input type="checkbox" checked={selectedPaidItemIds.includes(item.id)} onChange={(event) => setSelectedPaidItemIds((ids) => event.target.checked ? [...ids, item.id] : ids.filter((id) => id !== item.id))} />{item.descripcion}<strong>{money(item.subtotal)}</strong></label>)}</div>
-        <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setSelectedPaidItemIds([])}>No pagar ninguno</button><button type="button" className="button secondary" onClick={() => setPaymentOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={paymentSaving} onClick={confirmPartialPayment}>{paymentSaving ? "Guardando..." : "Guardar pago"}</button></div>
+        <div className="line-items-list">{repuesto.items.filter((item) => item.estado !== "Cancelado").map((item) => <label key={item.id} className="line-check"><input type="checkbox" checked={selectedPaidItemIds.includes(item.id)} onChange={(event) => {
+           if (!event.target.checked && item.pagado) {
+             setConfirmation({ title: "Desmarcar ítem pagado", body: `"${item.descripcion}" ya fue marcado y persistido como pagado. ¿Estás seguro de que querés desmarcarlo?`, confirmLabel: "Desmarcar como pagado", successMessage: "Ítem desmarcado del pago.", action: async () => { setSelectedPaidItemIds((ids) => ids.filter((id) => id !== item.id)); } });
+             return;
+           }
+           setSelectedPaidItemIds((ids) => event.target.checked ? [...ids, item.id] : ids.filter((id) => id !== item.id));
+         }} />{item.descripcion}<strong>{money(item.subtotal)}</strong></label>)}</div>
+        <div className="modal-actions"><button type="button" className="button secondary" onClick={() => {
+           const persistedIds = repuesto.items.filter((item) => item.estado !== "Cancelado" && item.pagado && selectedPaidItemIds.includes(item.id)).map((item) => item.id);
+           if (!persistedIds.length) { setSelectedPaidItemIds([]); return; }
+           setConfirmation({ title: "Desmarcar ítems pagados", body: "Hay ítems que ya fueron marcados y persistidos como pagados. ¿Estás seguro de que querés desmarcarlos todos?", confirmLabel: "Desmarcar pagos", successMessage: "Ítems desmarcados del pago.", action: async () => { setSelectedPaidItemIds([]); } });
+         }}>No pagar ninguno</button><button type="button" className="button secondary" onClick={() => setPaymentOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={paymentSaving} onClick={confirmPartialPayment}>{paymentSaving ? "Guardando..." : "Guardar pago"}</button></div>
       </Dialog>
       <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; setConfirmation(null); if (!request) return; return request.action().then(() => notify(request.successMessage)).catch((reason) => { notify(errorMessage(reason), "error"); throw reason; }); }} />
     </div>

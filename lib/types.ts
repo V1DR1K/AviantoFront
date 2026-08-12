@@ -129,6 +129,7 @@ export interface FichaTrabajoResponse {
   observacionTrabajo?: string | null;
   completadoAt?: string | null;
   completadoPor?: string | null;
+  pagado: boolean;
 }
 export interface PhotoResponse {
   id: string;

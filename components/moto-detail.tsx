@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { ArrowDownUp, Eye, Filter, LogIn, LogOut, Plus, Settings2, Tag } from "lucide-react";
 import { api } from "../lib/api";
-import { money } from "../lib/format";
+import { integerInput, money, parseIntegerInput } from "../lib/format";
+import { todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
   FichaResponse,
@@ -117,7 +118,7 @@ export function MotoDetail({
     try {
       await api<ServiceResponse>(`/motovehiculos/${id}/services`, {
         method: "POST",
-        body: JSON.stringify({ kilometraje: Number(serviceKm), fecha: serviceDate || null, observaciones: serviceNotes || null }),
+        body: JSON.stringify({ kilometraje: parseIntegerInput(serviceKm), fecha: serviceDate || null, observaciones: serviceNotes || null }),
       });
       loadServices();
       void api<MotovehiculoResponse>(`/motovehiculos/${id}`).then(setMoto);
@@ -137,8 +138,8 @@ export function MotoDetail({
       const next = await api<MotovehiculoResponse>(`/motovehiculos/${id}/config-service`, {
         method: "PATCH",
         body: JSON.stringify({
-          kmServicePeriodo: configKm ? Number(configKm) : null,
-          mesesServicePeriodo: configMonths ? Number(configMonths) : null,
+          kmServicePeriodo: configKm ? parseIntegerInput(configKm) : null,
+          mesesServicePeriodo: configMonths ? parseIntegerInput(configMonths) : null,
           serviceObservaciones: configNotes || null,
         }),
       });
@@ -221,7 +222,7 @@ export function MotoDetail({
             <h2>Services registrados</h2>
             <div className="panel-actions">
               <button className="button secondary" onClick={openConfig}><Settings2 size={17} />Configurar periodos</button>
-              <button className="button secondary" disabled={serviceSaving} onClick={() => { setServiceKm(moto.kilometraje != null ? String(moto.kilometraje) : ""); setServiceOpen(true); }}><Plus size={17} />Registrar service</button>
+              <button className="button secondary" disabled={serviceSaving} onClick={() => { setServiceKm(moto.kilometraje != null ? String(moto.kilometraje) : ""); setServiceDate(todayInAr()); setServiceOpen(true); }}><Plus size={17} />Registrar service</button>
             </div>
           </div>
           <div className="metrics service-kpis"><section className="metric"><span>Último service</span><strong>{moto.kmUltimoService != null ? `${moto.kmUltimoService.toLocaleString("es-AR")} km` : "—"}</strong><small>{date(moto.fechaUltimoService)}</small></section><section className="metric"><span>Período</span><strong>{moto.kmServicePeriodo ?? "—"} km</strong><small>{moto.mesesServicePeriodo ?? "—"} meses</small></section><section className="metric"><span>Próximo service</span><strong>{nextService?.proximKm != null ? `${nextService.proximKm.toLocaleString("es-AR")} km` : "—"}</strong><small>{nextService?.proximaFecha ? date(nextService.proximaFecha) : nextService?.sinReferencia ? "Sin referencia" : "—"}</small></section></div>
@@ -282,7 +283,7 @@ export function MotoDetail({
       )}
       <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void addService(); }}>
-          <label>Kilometraje<input type="number" min="0" value={serviceKm} onChange={(event) => setServiceKm(event.target.value)} required /></label>
+          <label>Kilometraje<input type="text" inputMode="numeric" value={integerInput(serviceKm)} onChange={(event) => setServiceKm(event.target.value)} required /></label>
           <label>Fecha<input type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
           <label>Observación<input type="text" value={serviceNotes} onChange={(event) => setServiceNotes(event.target.value)} placeholder="Ej: cambio de aceite y filtros" /></label>
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setServiceOpen(false)}>Cancelar</button><button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : "Guardar"}</button></div>
@@ -290,8 +291,8 @@ export function MotoDetail({
       </Dialog>
       <Dialog open={configOpen} title="Configurar service" onClose={() => setConfigOpen(false)}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveConfig(); }}>
-          <label>Periodo en km<input type="number" min="0" value={configKm} onChange={(event) => setConfigKm(event.target.value)} placeholder="Ej: 5000" /></label>
-          <label>Periodo en meses<input type="number" min="0" value={configMonths} onChange={(event) => setConfigMonths(event.target.value)} placeholder="Ej: 6" /></label>
+          <label>Periodo en km<input type="text" inputMode="numeric" value={integerInput(configKm)} onChange={(event) => setConfigKm(event.target.value)} placeholder="Ej: 5.000" /></label>
+          <label>Periodo en meses<input type="text" inputMode="numeric" value={integerInput(configMonths)} onChange={(event) => setConfigMonths(event.target.value)} placeholder="Ej: 6" /></label>
           <label>Observaciones<input type="text" value={configNotes} onChange={(event) => setConfigNotes(event.target.value)} /></label>
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setConfigOpen(false)}>Cancelar</button><button className="button primary" disabled={configSaving}>{configSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>

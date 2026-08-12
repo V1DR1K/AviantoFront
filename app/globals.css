@@ -1254,6 +1254,16 @@ td small {
 .line-items-list {
   transition: background-color 220ms ease, color 220ms ease, border-color 220ms ease, opacity 220ms ease, transform 220ms ease;
 }
+.line-items-list {
+  display: flex;
+  flex-direction: column;
+}
+.line-items-list > .line-check {
+  display: flex;
+  justify-content: space-between;
+  padding: 1em;
+  border-bottom: 1px solid black;
+}
 .flow-step.current,
 .flow-step.done,
 .status {

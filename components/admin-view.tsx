@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Download, Edit3, Eye, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download } from "../lib/api";
+import { parseIntegerInput } from "../lib/format";
 import type { AuditoriaResponse, ClienteResponse, ControlResponse, MarcaMotoResponse, MotovehiculoResponse, PageResponse } from "../lib/types";
 import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, SelectField, type Notify } from "./ui";
 import { AbmFormModal, type AbmField, VehicleAbmModal } from "./modal/abm-form-modal";
@@ -103,9 +104,9 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
   const submit = async (values: Record<string, string>) => {
     try {
       const payload = resource === "vehicles"
-        ? { ...values, anio: values.anio ? Number(values.anio) : null, kilometraje: values.kilometraje ? Number(values.kilometraje) : null }
+        ? { ...values, anio: values.anio ? parseIntegerInput(values.anio) : null, kilometraje: values.kilometraje ? parseIntegerInput(values.kilometraje) : null }
         : resource === "catalog"
-          ? { nombre: values.nombre, descripcion: values.descripcion, obligatorio: values.obligatorio === "true", orden: values.orden ? Number(values.orden) : null }
+          ? { nombre: values.nombre, descripcion: values.descripcion, obligatorio: values.obligatorio === "true", orden: values.orden ? parseIntegerInput(values.orden) : null }
           : values;
       await api(`${config.endpoint}${editing?.id ? `/${editing.id}` : ""}`, { method: editing?.id ? "PUT" : "POST", body: JSON.stringify(payload) });
       setEditing(null);
