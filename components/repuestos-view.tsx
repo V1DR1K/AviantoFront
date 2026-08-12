@@ -14,7 +14,7 @@ import type {
   RepuestoResponse,
   RepuestoState,
 } from "../lib/types";
-import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 
 const date = formatDateInAr;
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
@@ -58,10 +58,12 @@ export function RepuestosView({
         <div><h1>Pedidos de repuestos</h1><p>Control de compras, recepción y pago de repuestos y accesorios.</p></div>
         <button className="button primary" onClick={() => { setCreateOpen(true); loadClients(); }}><Plus size={19} />Nuevo pedido</button>
       </div>
-      <section className="panel table-panel">
-        <div className="filter-bar">
-          <SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Número, cliente o patente" />
-          <SelectField value={estado} onChange={(value) => { setEstado(value as typeof estado); setPage(1); }} options={repuestoStates.map((option) => ({ value: option, label: option }))} placeholder="Todos" icon={Filter} ariaLabel="Filtrar pedidos por estado" />
+       <section className="panel table-panel">
+         <FilterBar
+           primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Número, cliente o patente" />}
+           activeCount={(estado !== "Todos" ? 1 : 0) + (desde !== daysAgoInAr(30) ? 1 : 0) + (hasta !== todayInAr() ? 1 : 0) + (sortBy !== "fecha" ? 1 : 0)}
+         >
+           <SelectField value={estado} onChange={(value) => { setEstado(value as typeof estado); setPage(1); }} options={repuestoStates.map((option) => ({ value: option, label: option }))} placeholder="Todos" icon={Filter} ariaLabel="Filtrar pedidos por estado" />
           <label>
             <span className="date-label">Desde</span>
             <input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); setPage(1); }} />
@@ -75,8 +77,8 @@ export function RepuestosView({
             <ArrowDownUp size={16} />
             {direction === "DESC" ? "Más recientes" : "Más antiguos"}
           </button>
-          <button className="button secondary" onClick={() => void download("/repuestos/export.xlsx", "repuestos.xlsx", repuestoParams()).catch((reason) => notify(errorMessage(reason), "error"))}><Download size={17} />Exportar Excel</button>
-        </div>
+           <button className="button secondary" onClick={() => void download("/repuestos/export.xlsx", "repuestos.xlsx", repuestoParams()).catch((reason) => notify(errorMessage(reason), "error"))}><Download size={17} />Exportar Excel</button>
+         </FilterBar>
         {result?.content.length ? (
           <table>
             <thead><tr><th>Pedido</th><th>Moto</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>

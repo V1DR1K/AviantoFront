@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
-import { AlertTriangle, Check, CheckCircle2, ChevronDown, Clock3, Info, Search, X, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, Clock3, Info, Search, SlidersHorizontal, X, type LucideIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { AutocompleteResponse } from "../lib/types";
 
@@ -78,6 +78,52 @@ export function StatusBadge({ status }: { status: string }) {
     </span>
   );
 }
+
+export function FilterBar({
+  children,
+  primary,
+  activeCount = 0,
+  label = "Filtros",
+}: {
+  children: ReactNode;
+  primary?: ReactNode;
+  activeCount?: number;
+  label?: string;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+  const controlsId = `filter-bar-${useId()}`;
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 680px)");
+    const syncWithViewport = () => setCollapsed(media.matches);
+    syncWithViewport();
+    media.addEventListener("change", syncWithViewport);
+    return () => media.removeEventListener("change", syncWithViewport);
+  }, []);
+
+  return (
+    <div className={`filter-bar${collapsed ? " is-collapsed" : " is-expanded"}`}>
+      <div className="filter-bar-head">
+        {primary && <div className="filter-bar-primary">{primary}</div>}
+        <button
+          type="button"
+          className="filter-bar-toggle"
+          aria-controls={controlsId}
+          aria-expanded={!collapsed}
+          onClick={() => setCollapsed((value) => !value)}
+        >
+          <span className="filter-bar-toggle-label"><SlidersHorizontal size={17} aria-hidden="true" />{label}</span>
+          {activeCount > 0 && <span className="filter-bar-count" aria-label={`${activeCount} filtros activos`}>{activeCount}</span>}
+          <ChevronDown className="filter-bar-chevron" size={17} aria-hidden="true" />
+        </button>
+      </div>
+      <div id={controlsId} className="filter-bar-controls" hidden={collapsed}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function SearchBox({
   value,
   onChange,

@@ -22,7 +22,7 @@ import type {
   VentaMotoResponse,
   TrabajoStatus,
 } from "../lib/types";
-import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 
 const date = formatDateInAr;
 const errorMessage = (reason: unknown) =>
@@ -278,15 +278,17 @@ export function VentasView({
   const emptyLabel = status === "Todos" ? "para mostrar" : status.toLowerCase();
   return <div className="page">
     <div className="page-heading"><div><h1>Ventas</h1><p>Seguí cada moto desde su ingreso hasta la transferencia final.</p></div><div className="page-actions"><button className="button secondary" onClick={onIntake}><Plus size={18} />Ingresar moto</button></div></div>
-    <section className="panel table-panel">
-      <div className="filter-bar">
-        <SearchBox value={query} onChange={setQuery} placeholder="Patente, moto o cliente" />
-        <SelectField value={status} onChange={(value) => setStatus(value as typeof status)} options={[{ value: "Todos", label: "Todos los estados" }, ...salesStatuses.map((value) => ({ value, label: value }))]} icon={Filter} ariaLabel="Filtrar ventas por estado" />
-        <label><span className="date-label">Desde</span><input type="date" value={desde} onChange={(event) => setDesde(event.target.value)} /></label>
-        <label><span className="date-label">Hasta</span><input type="date" value={hasta} onChange={(event) => setHasta(event.target.value)} /></label>
-        <SelectField value={sortBy} onChange={setSortBy} options={salesSortOptions} icon={Filter} ariaLabel="Ordenar ventas por" />
-        <button className="button secondary" onClick={() => setDirection((value) => value === "DESC" ? "ASC" : "DESC")} aria-label="Cambiar orden de ventas"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
-      </div>
+       <section className="panel table-panel">
+       <FilterBar
+         primary={<SearchBox value={query} onChange={setQuery} placeholder="Patente, moto o cliente" />}
+         activeCount={(status !== "Todos" ? 1 : 0) + (desde !== daysAgoInAr(30) ? 1 : 0) + (hasta !== todayInAr() ? 1 : 0) + (sortBy !== "fechaIngreso" ? 1 : 0)}
+       >
+         <SelectField value={status} onChange={(value) => setStatus(value as typeof status)} options={[{ value: "Todos", label: "Todos los estados" }, ...salesStatuses.map((value) => ({ value, label: value }))]} icon={Filter} ariaLabel="Filtrar ventas por estado" />
+         <label><span className="date-label">Desde</span><input type="date" value={desde} onChange={(event) => setDesde(event.target.value)} /></label>
+         <label><span className="date-label">Hasta</span><input type="date" value={hasta} onChange={(event) => setHasta(event.target.value)} /></label>
+         <SelectField value={sortBy} onChange={setSortBy} options={salesSortOptions} icon={Filter} ariaLabel="Ordenar ventas por" />
+         <button className="button secondary" onClick={() => setDirection((value) => value === "DESC" ? "ASC" : "DESC")} aria-label="Cambiar orden de ventas"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
+       </FilterBar>
       {visible.length ? <table><thead><tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{visible.map((moto) => {
         const busy = busyId === moto.motoId;
         return <tr key={moto.motoId}><td data-label="Moto"><strong>{moto.patente}</strong><small>{moto.moto}</small></td><td data-label="Cliente">{moto.cliente ?? "Sin propietario"}</td><td data-label="KM actual">{moto.kilometraje != null ? moto.kilometraje.toLocaleString("es-AR") : "—"}</td><td data-label="Estado"><StatusBadge status={moto.estado} /></td><td className="table-actions sales-actions"><button className="row-action" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button>{moto.estado === "Ingresada Venta" && <button className="button secondary compact" disabled={busy} onClick={() => setConfirmation({ title: "Marcar moto en venta", body: `${moto.patente} pasará al estado En venta.`, confirmLabel: "Marcar en venta", successMessage: "Moto marcada como En venta.", action: async () => { await transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/estado`, { method: "PATCH", body: JSON.stringify({ estado: "En venta" }) }), "Moto marcada como En venta."); } })}><Tag size={15} />En venta</button>}{moto.estado === "En venta" && <button className="button secondary compact" disabled={busy} onClick={() => onOpenTransfers(moto.motoId)}><ArrowRightLeft size={15} />Transferir</button>}{moto.estado === "Transferencia en curso" && canCompleteSale && <button className="button primary compact" disabled={busy} onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${moto.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: async () => { await transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/completar`, { method: "POST" }), "Venta completada."); } })}><LogOut size={15} />Completar</button>}</td></tr>;
@@ -358,11 +360,13 @@ export function FichasView({
           <Plus size={19} />Nueva ficha
         </button>
       </div>
-      <section className="panel table-panel">
-        <div className="filter-bar">
-          <SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Número o cliente" />
-          <SelectField value={status} onChange={(value) => { setStatus(value as typeof status); setPage(1); }} options={[{ value: "Todos", label: "Todos los estados" }, ...fichaStatuses.map((option) => ({ value: option, label: option }))]} placeholder="Todos los estados" icon={Filter} ariaLabel="Filtrar fichas por estado" />
-          <SelectField value={paymentStatus} onChange={(value) => { setPaymentStatus(value as typeof paymentStatus); setPage(1); }} options={[{ value: "Todos", label: "Todos los pagos" }, ...fichaPaymentStatuses.map((option) => ({ value: option, label: option }))]} placeholder="Todos los pagos" icon={Filter} ariaLabel="Filtrar fichas por pago" />
+       <section className="panel table-panel">
+         <FilterBar
+           primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Número o cliente" />}
+           activeCount={(status !== "Todos" ? 1 : 0) + (paymentStatus !== "Todos" ? 1 : 0) + (desde !== daysAgoInAr(30) ? 1 : 0) + (hasta !== todayInAr() ? 1 : 0) + (sortBy !== "fechaIngreso" ? 1 : 0)}
+         >
+           <SelectField value={status} onChange={(value) => { setStatus(value as typeof status); setPage(1); }} options={[{ value: "Todos", label: "Todos los estados" }, ...fichaStatuses.map((option) => ({ value: option, label: option }))]} placeholder="Todos los estados" icon={Filter} ariaLabel="Filtrar fichas por estado" />
+           <SelectField value={paymentStatus} onChange={(value) => { setPaymentStatus(value as typeof paymentStatus); setPage(1); }} options={[{ value: "Todos", label: "Todos los pagos" }, ...fichaPaymentStatuses.map((option) => ({ value: option, label: option }))]} placeholder="Todos los pagos" icon={Filter} ariaLabel="Filtrar fichas por pago" />
           <label>
             <span className="date-label">Desde</span>
             <input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); setPage(1); }} />
@@ -376,10 +380,10 @@ export function FichasView({
             <ArrowDownUp size={16} />
             {direction === "DESC" ? "Más recientes" : "Más antiguos"}
           </button>
-            <button className="button secondary" onClick={() => void download("/fichas/export.xlsx", "fichas.xlsx", params).catch((reason) => notify(errorMessage(reason), "error"))}>
-            <Download size={17} />Exportar Excel
-          </button>
-        </div>
+           <button className="button secondary" onClick={() => void download("/fichas/export.xlsx", "fichas.xlsx", params).catch((reason) => notify(errorMessage(reason), "error"))}>
+             <Download size={17} />Exportar Excel
+           </button>
+         </FilterBar>
         {result?.content.length ? (
           <table>
             <thead>

@@ -6,7 +6,7 @@ import { api, download } from "../lib/api";
 import { todayInAr } from "../lib/dates";
 import type { AutocompleteResponse, ClienteResponse, MotovehiculoResponse, PageResponse, TransferRequest, TransferResponse, TransferUpdateRequest } from "../lib/types";
 import { AbmFormModal } from "./modal/abm-form-modal";
-import { AutocompleteField, ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, type Notify } from "./ui";
+import { AutocompleteField, ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, type Notify } from "./ui";
 
 const date = (value?: string | null) => {
   if (!value) return "—";
@@ -212,13 +212,12 @@ export function TransferenciasView({ canTransfer, initialMotoId, onOpenMoto, not
       {canTransfer && <button className="button primary" onClick={() => setFlowOpen(true)}><Plus size={19} />Nueva transferencia</button>}
     </div>
     <section className="panel table-panel">
-      <div className="filter-bar">
-        <SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Patente o cliente" />
-        <label><Filter size={16} /><span className="date-label">Desde</span><input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); setPage(1); }} /></label>
-        <label><Filter size={16} /><span className="date-label">Hasta</span><input type="date" value={hasta} onChange={(event) => { setHasta(event.target.value); setPage(1); }} /></label>
-        <button className="button secondary" onClick={() => { setDirection((value) => value === "DESC" ? "ASC" : "DESC"); setPage(1); }} aria-label="Cambiar orden de transferencias"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
-          <button className="button secondary" onClick={() => void download("/transferencias/export.xlsx", "transferencias.xlsx", params).catch((reason) => notify(errorMessage(reason), "error"))}><Download size={17} />Exportar Excel</button>
-      </div>
+       <FilterBar primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Patente o cliente" />} activeCount={(desde ? 1 : 0) + (hasta ? 1 : 0)}>
+         <label><Filter size={16} /><span className="date-label">Desde</span><input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); setPage(1); }} /></label>
+         <label><Filter size={16} /><span className="date-label">Hasta</span><input type="date" value={hasta} onChange={(event) => { setHasta(event.target.value); setPage(1); }} /></label>
+         <button className="button secondary" onClick={() => { setDirection((value) => value === "DESC" ? "ASC" : "DESC"); setPage(1); }} aria-label="Cambiar orden de transferencias"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
+           <button className="button secondary" onClick={() => void download("/transferencias/export.xlsx", "transferencias.xlsx", params).catch((reason) => notify(errorMessage(reason), "error"))}><Download size={17} />Exportar Excel</button>
+       </FilterBar>
       {result?.content.length ? <table><thead><tr><th>Patente</th><th>Fecha</th><th>Cliente anterior</th><th>Cliente nuevo</th><th>Observaciones</th><th>Acciones</th></tr></thead><tbody>{result.content.map((transfer) => <tr key={transfer.id}><td data-label="Patente"><strong>{transfer.patente}</strong><small>{transfer.moto}</small></td><td data-label="Fecha">{date(transfer.fechaTransferencia)}</td><td data-label="Cliente anterior">{transfer.clienteAnterior}</td><td data-label="Cliente nuevo">{transfer.clienteNuevo}</td><td data-label="Observaciones">{transfer.observaciones || "—"}</td><td className="table-actions"><button onClick={() => onOpenMoto(transfer.motoId)} aria-label={`Ver moto ${transfer.patente}`}><Eye size={17} /></button>{canTransfer && <><button onClick={() => setEditing(transfer)} aria-label={`Editar transferencia de ${transfer.patente}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(transfer)} aria-label={`Eliminar transferencia de ${transfer.patente}`}><Trash2 size={17} /></button></>}</td></tr>)}</tbody></table> : result ? <EmptyState title="No hay transferencias" body="Probá ajustar los filtros o registrá una nueva transferencia." action={canTransfer ? <button className="button primary" onClick={() => setFlowOpen(true)}><Plus size={17} />Nueva transferencia</button> : undefined} /> : <div className="table-loading" role="status">Cargando transferencias...</div>}
       <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
     </section>

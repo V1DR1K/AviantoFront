@@ -5,7 +5,7 @@ import { Download, Edit3, Eye, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download } from "../lib/api";
 import { parseIntegerInput } from "../lib/format";
 import type { AuditoriaResponse, ClienteResponse, ControlResponse, MarcaMotoResponse, MotovehiculoResponse, PageResponse } from "../lib/types";
-import { ConfirmModal, Dialog, EmptyState, Pagination, SearchBox, SelectField, type Notify } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, SelectField, type Notify } from "./ui";
 import { AbmFormModal, type AbmField, VehicleAbmModal } from "./modal/abm-form-modal";
 
 type Resource = "clients" | "vehicles" | "catalog" | "audit";
@@ -127,12 +127,14 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
           <button className="button primary" onClick={() => setEditing({})}><Plus size={19} />Nuevo {config.singular}</button>
         </div>
       </div>
-      <section className="panel table-panel">
-        <div className="filter-bar">
-          <SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder={`Buscar ${config.singular}`} />
-          <SelectField value={filter} onChange={(value) => { setFilter(value); setPage(1); }} options={[{ value: "Todos", label: "Todos" }, { value: "Activo", label: "Activo" }, { value: "Inactivo", label: "Inactivo" }]} icon={Filter} ariaLabel={`Filtrar ${config.title.toLowerCase()} por estado`} />
-          {config.exportPath && <button className="button secondary" onClick={() => void download(config.exportPath, `${config.title.toLowerCase()}.xlsx`, params).catch((reason) => notify(requestError(reason), "error"))}><Download size={17} />Exportar Excel</button>}
-        </div>
+       <section className="panel table-panel">
+         <FilterBar
+           primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder={`Buscar ${config.singular}`} />}
+           activeCount={filter !== "Todos" ? 1 : 0}
+         >
+           <SelectField value={filter} onChange={(value) => { setFilter(value); setPage(1); }} options={[{ value: "Todos", label: "Todos" }, { value: "Activo", label: "Activo" }, { value: "Inactivo", label: "Inactivo" }]} icon={Filter} ariaLabel={`Filtrar ${config.title.toLowerCase()} por estado`} />
+           {config.exportPath && <button className="button secondary" onClick={() => void download(config.exportPath, `${config.title.toLowerCase()}.xlsx`, params).catch((reason) => notify(requestError(reason), "error"))}><Download size={17} />Exportar Excel</button>}
+         </FilterBar>
         {rows.length ? <table><thead><tr>{config.columns.map((column) => <th key={column}>{column}</th>)}<th>Acciones</th></tr></thead><tbody>{rows.map((row) => <tr key={String(row.id)}>{config.columns.map((column) => <td key={column} data-label={column}>{cell(row, column)}</td>)}<td className="table-actions"><button onClick={() => resource === "vehicles" && onOpenVehicle ? onOpenVehicle(String(row.id)) : setDetail(row)} aria-label={`Ver ${config.singular}`}><Eye size={17} /></button><button onClick={() => setEditing(row)} aria-label={`Editar ${config.singular}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(row)} aria-label={`Eliminar ${config.singular}`}><Trash2 size={17} /></button></td></tr>)}</tbody></table> : <EmptyState title={`No hay ${config.title.toLowerCase()} para mostrar`} body="Probá ajustar los filtros o crear un registro." action={<button className="button primary" onClick={() => setEditing({})}>Crear registro</button>} />}
         <Pagination page={page} total={total} onPage={setPage} />
       </section>
@@ -154,7 +156,7 @@ function AuditView({ notify }: { notify: Notify }) {
   useEffect(() => {
     void api<AuditoriaResponse[]>("/auditoria", {}, { q: query || undefined, modulo: module === "Todos" ? undefined : module }).then(setRows).catch((reason) => notify(requestError(reason), "error"));
   }, [query, module, notify]);
-  return <div className="page"><div className="page-heading"><div><h1>Auditoría</h1><p>Altas, ediciones y transiciones de estado registradas.</p></div></div><section className="panel table-panel"><div className="filter-bar"><SearchBox value={query} onChange={setQuery} placeholder="Usuario, módulo o descripción" /><SelectField value={module} onChange={setModule} options={[{ value: "Todos", label: "Todos" }, { value: "Fichas", label: "Fichas" }, { value: "Repuestos", label: "Repuestos" }, { value: "Configuración", label: "Configuración" }, { value: "Clientes", label: "Clientes" }, { value: "Motovehículos", label: "Motovehículos" }]} icon={Filter} ariaLabel="Filtrar auditoría por módulo" /></div>{rows.length ? <table><thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Módulo</th><th>Acción</th><th>Descripción</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td data-label="Fecha y hora">{iso(row.fecha)}</td><td data-label="Usuario">{row.usuario}</td><td data-label="Módulo">{row.modulo}</td><td data-label="Acción">{row.accion}</td><td data-label="Descripción">{row.descripcion}</td></tr>)}</tbody></table> : <EmptyState title="No hay registros de auditoría" body="No se encontraron eventos con esos filtros." />}</section></div>;
+   return <div className="page"><div className="page-heading"><div><h1>Auditoría</h1><p>Altas, ediciones y transiciones de estado registradas.</p></div></div><section className="panel table-panel"><FilterBar primary={<SearchBox value={query} onChange={setQuery} placeholder="Usuario, módulo o descripción" />} activeCount={module !== "Todos" ? 1 : 0}><SelectField value={module} onChange={setModule} options={[{ value: "Todos", label: "Todos" }, { value: "Fichas", label: "Fichas" }, { value: "Repuestos", label: "Repuestos" }, { value: "Configuración", label: "Configuración" }, { value: "Clientes", label: "Clientes" }, { value: "Motovehículos", label: "Motovehículos" }]} icon={Filter} ariaLabel="Filtrar auditoría por módulo" /></FilterBar>{rows.length ? <table><thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Módulo</th><th>Acción</th><th>Descripción</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td data-label="Fecha y hora">{iso(row.fecha)}</td><td data-label="Usuario">{row.usuario}</td><td data-label="Módulo">{row.modulo}</td><td data-label="Acción">{row.accion}</td><td data-label="Descripción">{row.descripcion}</td></tr>)}</tbody></table> : <EmptyState title="No hay registros de auditoría" body="No se encontraron eventos con esos filtros." />}</section></div>;
 }
 
 type Setting = { title: string; description: string; endpoint: string; fields: AbmField[]; name: (item: DataRow) => string };

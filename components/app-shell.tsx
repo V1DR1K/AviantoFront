@@ -40,12 +40,18 @@ export function AppShell({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [openGroup, setOpenGroup] = useState("operation");
+  const activeGroup = navGroups.find((group) => group.items.some((item) => item.id === page))?.id;
+  const [openGroup, setOpenGroup] = useState(activeGroup ?? "taller");
   const isAdmin = session.user.rol === "ADMINISTRACION";
+  const openMenu = () => {
+    if (activeGroup) setOpenGroup(activeGroup);
+    setMenuOpen(true);
+  };
   const go = (target: string) => {
     onPage(target);
     setMenuOpen(false);
   };
+  const toggleGroup = (groupId: string) => setOpenGroup((current) => current === groupId ? "" : groupId);
   const renderItem = (item: typeof home & { adminOnly?: boolean }) => {
     const Icon = item.icon;
     return (
@@ -104,7 +110,7 @@ export function AppShell({
       </aside>
       <main className={`main${collapsed ? " sidebar-collapsed" : ""}`}>
         <header className="mobile-header">
-          <button aria-label="Abrir menú" onClick={() => setMenuOpen(true)}>
+          <button aria-label="Abrir menú" onClick={openMenu}>
             <Menu />
           </button>
           <button className="brand-text" onClick={() => go("dashboard")}>
@@ -135,9 +141,13 @@ export function AppShell({
              {renderItem(home)}
              {renderItem({ id: "profiles", label: "Perfiles", icon: ClipboardList })}
              {navGroups.map((group) => (
-              <section className="mobile-nav-group" key={group.id}>
-                <p>{group.label}</p>
-                 {group.items.filter((item) => !item.adminOnly || isAdmin).map(renderItem)}
+              <section className={`mobile-nav-group${openGroup === group.id ? " expanded" : ""}`} key={group.id}>
+                <button className="mobile-nav-group-toggle" type="button" aria-expanded={openGroup === group.id} onClick={() => toggleGroup(group.id)}>
+                  <span>{group.label}</span><ChevronDown size={17} aria-hidden="true" />
+                </button>
+                <div className="mobile-nav-group-items">
+                  {group.items.filter((item) => !item.adminOnly || isAdmin).map(renderItem)}
+                </div>
               </section>
             ))}
             {isAdmin && renderItem({ id: "audit", label: "Auditoría", icon: FileText })}
@@ -176,7 +186,7 @@ export function AppShell({
           <Package size={20} />
           <span>Repuestos</span>
         </button>
-        <button onClick={() => setMenuOpen(true)}>
+        <button onClick={openMenu}>
           <Menu size={20} />
           <span>Más</span>
         </button>
