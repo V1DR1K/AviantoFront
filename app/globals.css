@@ -2557,7 +2557,7 @@ td.table-actions {
   .filter-bar-head {
     align-items: stretch;
     flex-direction: column;
-    gap: 0;
+    gap: 10px;
   }
   .filter-bar-primary {
     min-width: 100%;
