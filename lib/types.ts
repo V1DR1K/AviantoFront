@@ -144,7 +144,6 @@ export interface FichaRequest {
   fechaIngreso?: string;
   fechaEntregaEstimada?: string;
   kilometrajeIngreso?: number;
-  vencimiento?: string;
   observaciones?: string;
   descuentoGlobal: number;
   iva: boolean;
@@ -158,7 +157,6 @@ export interface FichaResponse {
   motoId: string;
   moto: string;
   patente: string;
-  vencimiento?: string | null;
   fechaIngreso: string;
   fechaEntregaEstimada?: string | null;
   fechaEntregaReal?: string | null;

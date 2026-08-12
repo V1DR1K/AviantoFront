@@ -94,7 +94,6 @@ export function FichaForm({
   const [currentVehicle, setCurrentVehicle] = useState<MotovehiculoResponse | null>(null);
   const [fechaIngreso, setFechaIngreso] = useState(today());
   const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState("");
-  const [vencimiento, setVencimiento] = useState("");
   const [kilometrajeIngreso, setKilometrajeIngreso] = useState("");
   const [trabajos, setTrabajos] = useState<Line[]>([]);
   const [workQuery, setWorkQuery] = useState("");
@@ -141,7 +140,6 @@ export function FichaForm({
         setLoadedEstado(ficha.estado);
         setFechaIngreso(ficha.fechaIngreso.slice(0, 10) || today());
         setFechaEntregaEstimada(ficha.fechaEntregaEstimada ?? "");
-        setVencimiento(ficha.vencimiento ?? "");
         setKilometrajeIngreso(
           ficha.kilometrajeIngreso != null
             ? String(ficha.kilometrajeIngreso)
@@ -277,7 +275,6 @@ export function FichaForm({
         motoId: vehicleId,
         fechaIngreso: fechaIngreso || today(),
         fechaEntregaEstimada: fechaEntregaEstimada || undefined,
-        vencimiento: vencimiento || undefined,
         kilometrajeIngreso: kilometrajeIngreso
           ? parseIntegerInput(kilometrajeIngreso)
           : undefined,
@@ -376,7 +373,6 @@ export function FichaForm({
              <div className="ficha-moto-fields">
                <label>Fecha ingreso<input type="date" value={fechaIngreso} onChange={(event) => setFechaIngreso(event.target.value)} /></label>
                <label>Entrega estimada<input type="date" value={fechaEntregaEstimada} onChange={(event) => setFechaEntregaEstimada(event.target.value)} /></label>
-               <label>Vencimiento<input type="date" value={vencimiento} onChange={(event) => setVencimiento(event.target.value)} /></label>
                <label>Kilometraje ingreso<input type="text" inputMode="numeric" value={integerInput(kilometrajeIngreso)} onChange={(event) => setKilometrajeIngreso(event.target.value)} placeholder="KM actual" /></label>
              </div>
             </section>

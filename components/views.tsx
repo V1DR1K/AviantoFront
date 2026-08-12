@@ -440,7 +440,6 @@ function ItemRow({
         <strong>{item.descripcion}</strong>
         <span>{money(Number(item.precioUnitario))}{item.descuento > 0 && ` · descuento ${money(Number(item.descuento))}`}{item.estadoTrabajo !== "Pendiente" && ` · ${item.estadoTrabajo}`}</span>
       </div>
-      <strong>{money(Number(item.subtotal))}</strong>
       {!locked && (
         <label className="line-check detail-line-check">
           <input type="checkbox" checked={item.estadoTrabajo === "Realizado"} disabled={item.estadoTrabajo === "Cancelado"} onChange={(event) => event.target.checked ? onStartWork() : onState("Pendiente")} />
@@ -510,8 +509,13 @@ export function FichaDetail({
         .then(setRevision)
         .catch(() => undefined);
   }, [ficha?.estado, fichaKey]);
+  const pendingControls = revision?.controles.filter((control) => control.obligatorio && control.estado === "Pendiente") ?? [];
   const openDelivery = () => {
     if (!ficha) return;
+    if (!revision || pendingControls.length) {
+      notify("Completá los controles obligatorios antes de aprobar la revisión.", "warning");
+      return;
+    }
     void api<ServiceResponse[]>(`/motovehiculos/${ficha.motoId}/services`).then((services) => {
       setPriorServices(services.filter((service) => !service.fichaId));
       setSelectedServiceIds([]);
@@ -641,7 +645,6 @@ export function FichaDetail({
     }
   };
   const locked = current === "Cancelada" || current === "Entregada";
-  const pendingControls = revision?.controles.filter((control) => control.obligatorio && control.estado === "Pendiente") ?? [];
   const flowSteps: FichaStatus[] = ["Cargada", "En proceso", "Revisión", "Entregada"];
   const currentStep = flowSteps.indexOf(current);
   const bottomActions: { key: string; label: string; className: string; onClick: () => void }[] = [];
@@ -699,7 +702,7 @@ export function FichaDetail({
       </ol>
       {bottomActions.length > 0 && (
         <div className="ficha-actions">
-          {bottomActions.filter((action) => action.className === "primary").map((action) => <button key={action.key} className="button large primary" disabled={Boolean(pending)} onClick={action.onClick}>{action.label}</button>)}
+           {bottomActions.filter((action) => action.className === "primary").map((action) => <button key={action.key} className="button large primary" disabled={Boolean(pending) || (action.key === "aprobar" && (!revision || pendingControls.length > 0))} onClick={action.onClick}>{action.label}</button>)}
           {bottomActions.some((action) => action.className !== "primary") && <MoreActions actions={bottomActions.filter((action) => action.className !== "primary")} pending={Boolean(pending)} />}
         </div>
       )}
@@ -754,7 +757,6 @@ export function FichaDetail({
                     ))}
                   </div>
                 )}
-                  {revision.estado !== "APROBADA" && !pendingControls.length && <p>Los controles obligatorios están listos para aprobar.</p>}
               </section>
             )}
           </section>
