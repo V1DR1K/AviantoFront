@@ -12,6 +12,7 @@ import type {
   FichaStatus,
   FichaTrabajoResponse,
   NextServiceResponse,
+  MotovehiculoResponse,
   PagoStatus,
   PageResponse,
   PhotoResponse,
@@ -75,6 +76,7 @@ function OrderPhotos({ photos, onChange }: { photos: PhotoResponse[]; onChange: 
 }
 
 const fichaStatuses: FichaStatus[] = ["Cargada", "En proceso", "Revisión", "Entregada", "Cancelada"];
+const fichaFilterStatuses = ["Ingresada Taller", ...fichaStatuses] as const;
 const fichaPaymentStatuses: PagoStatus[] = ["No pagado", "Parcial", "Pagado"];
 
 export function Dashboard({
@@ -263,7 +265,7 @@ export function VentasView({
     .filter((moto) => `${moto.patente} ${moto.moto} ${moto.cliente ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()))
     .filter((moto) => {
       const ingreso = moto.fechaIngreso?.slice(0, 10);
-      return Boolean(ingreso && (!desde || ingreso >= desde) && (!hasta || ingreso <= hasta));
+      return !ingreso || (!desde || ingreso >= desde) && (!hasta || ingreso <= hasta);
     })
     .sort((left, right) => {
       const leftValue = sortBy === "fechaIngreso" ? left.fechaIngreso?.slice(0, 10) ?? "" : sortBy === "patente" ? left.patente : left.estado;
@@ -301,26 +303,43 @@ export function VentasView({
 export function FichasView({
   onNewOrder,
   onSelect,
+  onOpenMoto,
   onEdit,
   onDelete,
   notify,
 }: {
   onNewOrder: () => void;
   onSelect: (ficha: FichaResponse) => void;
+  onOpenMoto: (id: string) => void;
   onEdit: (ficha: FichaResponse) => void;
   onDelete: (ficha: FichaResponse) => void;
   notify: Notify;
 }) {
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<"Todos" | FichaStatus>("Todos");
+  const [status, setStatus] = useState<"Todos" | (typeof fichaFilterStatuses)[number]>("Todos");
   const [paymentStatus, setPaymentStatus] = useState<"Todos" | PagoStatus>("Todos");
   const [desde, setDesde] = useState(daysAgoInAr(30));
   const [hasta, setHasta] = useState(todayInAr());
   const [sortBy, setSortBy] = useState("fechaIngreso");
   const [direction, setDirection] = useState<"ASC" | "DESC">("DESC");
   const [result, setResult] = useState<PageResponse<FichaResponse> | null>(null);
+  const [pendingMotos, setPendingMotos] = useState<PageResponse<MotovehiculoResponse> | null>(null);
   const [page, setPage] = useState(1);
+  const pendingIntake = status === "Ingresada Taller";
   useEffect(() => {
+    if (pendingIntake) {
+      void api<PageResponse<MotovehiculoResponse>>("/motovehiculos", {}, {
+        q: query || undefined,
+        estado: "Ingresada Taller",
+        page: page - 1,
+        size: 20,
+        sortBy: sortBy === "fechaIngreso" ? "updatedAt" : sortBy === "numero" ? "patente" : sortBy,
+        direction,
+      })
+        .then(setPendingMotos)
+        .catch((reason) => notify(errorMessage(reason), "error"));
+      return;
+    }
     void api<PageResponse<FichaResponse>>(
       "/fichas",
       {},
@@ -338,7 +357,7 @@ export function FichasView({
     )
       .then(setResult)
       .catch((reason) => notify(errorMessage(reason), "error"));
-  }, [query, status, paymentStatus, desde, hasta, sortBy, direction, page, notify]);
+  }, [query, status, paymentStatus, desde, hasta, sortBy, direction, page, pendingIntake, notify]);
   const params = {
     q: query || undefined,
     estado: status === "Todos" ? undefined : status,
@@ -362,29 +381,34 @@ export function FichasView({
       </div>
        <section className="panel table-panel">
          <FilterBar
-           primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Número o cliente" />}
-           activeCount={(status !== "Todos" ? 1 : 0) + (paymentStatus !== "Todos" ? 1 : 0) + (desde !== daysAgoInAr(30) ? 1 : 0) + (hasta !== todayInAr() ? 1 : 0) + (sortBy !== "fechaIngreso" ? 1 : 0)}
-         >
-           <SelectField value={status} onChange={(value) => { setStatus(value as typeof status); setPage(1); }} options={[{ value: "Todos", label: "Todos los estados" }, ...fichaStatuses.map((option) => ({ value: option, label: option }))]} placeholder="Todos los estados" icon={Filter} ariaLabel="Filtrar fichas por estado" />
-           <SelectField value={paymentStatus} onChange={(value) => { setPaymentStatus(value as typeof paymentStatus); setPage(1); }} options={[{ value: "Todos", label: "Todos los pagos" }, ...fichaPaymentStatuses.map((option) => ({ value: option, label: option }))]} placeholder="Todos los pagos" icon={Filter} ariaLabel="Filtrar fichas por pago" />
-          <label>
-            <span className="date-label">Desde</span>
-            <input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); setPage(1); }} />
-          </label>
-          <label>
-            <span className="date-label">Hasta</span>
-            <input type="date" value={hasta} onChange={(event) => { setHasta(event.target.value); setPage(1); }} />
-          </label>
-          <SelectField value={sortBy} onChange={(value) => { setSortBy(value); setPage(1); }} options={[{ value: "fechaIngreso", label: "Fecha de ingreso" }, { value: "numero", label: "Número" }, { value: "total", label: "Total" }, { value: "estado", label: "Estado" }]} icon={Filter} ariaLabel="Ordenar fichas por" />
+            primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder={pendingIntake ? "Patente o moto" : "Número o cliente"} />}
+            activeCount={(status !== "Todos" ? 1 : 0) + (pendingIntake ? 0 : (paymentStatus !== "Todos" ? 1 : 0) + (desde !== daysAgoInAr(30) ? 1 : 0) + (hasta !== todayInAr() ? 1 : 0)) + (sortBy !== "fechaIngreso" ? 1 : 0)}
+          >
+            <SelectField value={status} onChange={(value) => { setStatus(value as typeof status); setSortBy("fechaIngreso"); setPage(1); }} options={[{ value: "Todos", label: "Todos los estados" }, ...fichaFilterStatuses.map((option) => ({ value: option, label: option }))]} placeholder="Todos los estados" icon={Filter} ariaLabel="Filtrar fichas por estado" />
+            {!pendingIntake && <SelectField value={paymentStatus} onChange={(value) => { setPaymentStatus(value as typeof paymentStatus); setPage(1); }} options={[{ value: "Todos", label: "Todos los pagos" }, ...fichaPaymentStatuses.map((option) => ({ value: option, label: option }))]} placeholder="Todos los pagos" icon={Filter} ariaLabel="Filtrar fichas por pago" />}
+            {!pendingIntake && <><label>
+              <span className="date-label">Desde</span>
+              <input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); setPage(1); }} />
+            </label>
+            <label>
+              <span className="date-label">Hasta</span>
+              <input type="date" value={hasta} onChange={(event) => { setHasta(event.target.value); setPage(1); }} />
+            </label></>}
+           <SelectField value={sortBy} onChange={(value) => { setSortBy(value); setPage(1); }} options={pendingIntake ? [{ value: "fechaIngreso", label: "Última modificación" }, { value: "numero", label: "Patente" }, { value: "estado", label: "Estado" }] : [{ value: "fechaIngreso", label: "Fecha de ingreso" }, { value: "numero", label: "Número" }, { value: "total", label: "Total" }, { value: "estado", label: "Estado" }]} icon={Filter} ariaLabel="Ordenar fichas por" />
           <button className="button secondary" onClick={() => { toggleDirection(); setPage(1); }} aria-label="Cambiar orden">
             <ArrowDownUp size={16} />
             {direction === "DESC" ? "Más recientes" : "Más antiguos"}
           </button>
-           <button className="button secondary" onClick={() => void download("/fichas/export.xlsx", "fichas.xlsx", params).catch((reason) => notify(errorMessage(reason), "error"))}>
-             <Download size={17} />Exportar Excel
-           </button>
+            {!pendingIntake && <button className="button secondary" onClick={() => void download("/fichas/export.xlsx", "fichas.xlsx", params).catch((reason) => notify(errorMessage(reason), "error"))}>
+              <Download size={17} />Exportar Excel
+            </button>}
          </FilterBar>
-        {result?.content.length ? (
+         {pendingIntake ? pendingMotos?.content.length ? (
+           <table>
+             <thead><tr><th>Ficha</th><th>Cliente</th><th>Moto</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
+             <tbody>{pendingMotos.content.map((moto) => <tr key={moto.id}><td data-label="Ficha">Sin ficha</td><td data-label="Cliente">{moto.propietario ?? "Sin propietario"}</td><td data-label="Moto">{moto.marca} {moto.modelo}<small>{moto.patente}</small></td><td data-label="Estado"><StatusBadge status={moto.estado} /></td><td data-label="Pago">—</td><td data-label="Total">—</td><td className="table-actions"><button onClick={() => onOpenMoto(moto.id)} aria-label={`Ver perfil ${moto.patente}`}><Eye size={17} /></button></td></tr>)}</tbody>
+           </table>
+         ) : pendingMotos ? <EmptyState title="Sin motos ingresadas" body="No hay motos en Taller pendientes de ficha." /> : <div className="table-loading" role="status">Cargando motos...</div> : result?.content.length ? (
           <table>
             <thead>
               <tr><th>Ficha</th><th>Cliente</th><th>Moto</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr>
@@ -417,7 +441,7 @@ export function FichasView({
         ) : (
           <EmptyState title="No hay fichas" body="Creá una nueva o ajustá los filtros." />
         )}
-        <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
+        <Pagination page={page} total={pendingIntake ? pendingMotos?.totalPages || 1 : result?.totalPages || 1} onPage={setPage} />
       </section>
     </div>
   );

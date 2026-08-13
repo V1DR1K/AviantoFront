@@ -56,4 +56,6 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(stylesheet, /button\[aria-label\^="Ingresar moto"\],[\s\S]*?order: 4;/);
   assert.match(ui, /emptyAction\?: ReactNode/);
   assert.match(views, /className="work-observation"/);
+  assert.match(views, /Ingresada Taller[\s\S]*?Sin ficha/);
+  assert.match(views, /return !ingreso \|\|/);
 });
