@@ -11,12 +11,12 @@ async function render() {
   }, { waitUntil() {}, passThroughOnException() {} });
 }
 
-test("server-renders Avianto metadata", async () => {
+test("server-renders motorcom landing metadata", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
-  assert.match(html, /<title>AviantoSoftware \| Gestión de taller<\/title>/i);
+  assert.match(html, /<title>motorcom \| Gestión de taller<\/title>/i);
   assert.match(html, /Cada moto tiene una historia/);
   assert.match(html, /Conocer motorcom/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview|SkeletonPreview/);
