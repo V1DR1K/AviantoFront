@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, Plus, Search } from "lucide-react";
 import { api } from "../lib/api";
 import { integerInput, parseIntegerInput } from "../lib/format";
@@ -23,6 +23,7 @@ export function IntakeView({ open, initialPlate, onClose, onOpenProfile, notify 
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [brandsError, setBrandsError] = useState<string | null>(null);
+  const autoSearchedPlate = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -33,7 +34,7 @@ export function IntakeView({ open, initialPlate, onClose, onOpenProfile, notify 
     return () => { active = false; };
   }, [open, notify]);
 
-  const search = async () => {
+  const search = useCallback(async () => {
     const normalized = plate.replace(/[^a-z0-9]/gi, "").toUpperCase();
     if (!normalized) return notify("Ingresá el dominio de la moto.", "error");
     setBusy(true); setSearched(true); setProfile(null);
@@ -44,7 +45,12 @@ export function IntakeView({ open, initialPlate, onClose, onOpenProfile, notify 
       else setValues((current) => ({ ...current, patente: normalized }));
     } catch (reason) { notify(reason instanceof Error ? reason.message : "No se pudo buscar el dominio.", "error"); }
     finally { setBusy(false); }
-  };
+  }, [plate, notify]);
+  useEffect(() => {
+    if (!open || !initialPlate || autoSearchedPlate.current === initialPlate) return;
+    autoSearchedPlate.current = initialPlate;
+    void search();
+  }, [open, initialPlate, search]);
   const set = (key: string, value: string) => setValues((current) => ({ ...current, [key]: value }));
   const chooseClient = (client: AutocompleteResponse) => {
     setSelectedClient(client);

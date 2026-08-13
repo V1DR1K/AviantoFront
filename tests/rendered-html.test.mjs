@@ -49,6 +49,7 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(intakeView, /<AutocompleteField[\s\S]*?loadOptions=\{loadClientOptions\}[\s\S]*?minChars=\{2\}[\s\S]*?emptyAction=/);
   assert.match(intakeView, /"\/clientes\/autocomplete"/);
   assert.doesNotMatch(intakeView, /api<PageResponse<ClienteResponse>>\("\/clientes"/);
+  assert.match(intakeView, /autoSearchedPlate\.current === initialPlate/);
   assert.match(stylesheet, /button\[aria-label\^="Ver perfil"\] \{\s*order: 1;/);
   assert.match(stylesheet, /button\[aria-label\^="Editar perfil"\] \{\s*order: 2;/);
   assert.match(stylesheet, /button\[aria-label\^="Eliminar perfil"\] \{\s*order: 3;/);
