@@ -63,7 +63,7 @@ export function IntakeView({ open, initialPlate, onClose, onOpenProfile, notify 
     try {
       const current = profile ?? await api<PerfilResponse>("/perfiles", { method: "POST", body: JSON.stringify({ ...values, anio: values.anio ? parseIntegerInput(values.anio) : null, kilometraje: values.kilometraje ? parseIntegerInput(values.kilometraje) : null }) });
       const next = await api<PerfilResponse>(`/motovehiculos/${current.id}/ingreso`, { method: "POST", body: JSON.stringify({ seccion: section }) });
-      notify(`Moto ingresada en ${section === "TALLER" ? "Taller" : "Ventas"}.`);
+      notify(section === "TALLER" ? "Moto ingresada en Taller." : "Moto ingresada y disponible en venta.");
       onOpenProfile(next.id);
     } catch (reason) { notify(reason instanceof Error ? reason.message : "No se pudo ingresar la moto.", "error"); }
     finally { setBusy(false); }

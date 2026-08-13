@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowDownUp, ArrowRightLeft, Download, Edit3, Eye, FileDown, Filter, LogOut, Plus, Tag, Trash2 } from "lucide-react";
+import { ArrowDownUp, ArrowRightLeft, Download, Edit3, Eye, FileDown, Filter, LogOut, Plus, Trash2 } from "lucide-react";
 import { api, download, objectUrl } from "../lib/api";
 import { integerInput, money, parseIntegerInput } from "../lib/format";
 import { daysAgoInAr, formatDateInAr, todayInAr } from "../lib/dates";
@@ -28,7 +28,7 @@ const date = formatDateInAr;
 const errorMessage = (reason: unknown) =>
   reason instanceof Error ? reason.message : "No fue posible cargar la información.";
 const tabKey = (estado: string) =>
-  ({ "Ingresada Taller": "ingresada", "Cargada": "cargada", "En proceso": "en-proceso", "En revisión": "revision", "Entregada": "entregada", "Cancelada": "cancelada", "Ingresada Venta": "ingresada", "En venta": "en-venta", "Transferencia en curso": "transferencia", "Vendida": "vendida" } as Record<string, string>)[estado] ?? "estado";
+  ({ "Ingresada Taller": "ingresada", "Cargada": "cargada", "En proceso": "en-proceso", "En revisión": "revision", "Entregada": "entregada", "Cancelada": "cancelada", "En venta": "en-venta", "Transferencia en curso": "transferencia", "Vendida": "vendida" } as Record<string, string>)[estado] ?? "estado";
 function Metric({ label, value, tone }: { label: string; value: string; tone: string }) {
   return <section className={`metric ${tone}`}><span>{label}</span><strong>{value}</strong><small>Período seleccionado</small></section>;
 }
@@ -97,7 +97,7 @@ export function Dashboard({
   const [ventas, setVentas] = useState<VentaResponse | null>(null);
   const [groupBy, setGroupBy] = useState<"moto" | "ficha">("moto");
   const [section, setSection] = useState<"taller" | "ventas">(initialSection);
-  const [tab, setTab] = useState<string>(initialSection === "ventas" ? "Ingresada Venta" : "Ingresada Taller");
+  const [tab, setTab] = useState<string>(initialSection === "ventas" ? "En venta" : "Ingresada Taller");
   useEffect(() => {
     void Promise.all([
       api<TallerResponse>("/dashboard/taller"),
@@ -120,7 +120,7 @@ export function Dashboard({
   const sales = ventasEstados.find((item) => item.estado === tab)?.motos ?? [];
   const visible = section === "ventas" ? sales.length : groupBy === "moto" ? motos.length : fichas.length;
   const label = section === "ventas" ? "motos" : groupBy === "moto" ? "motos" : "fichas";
-  const changeSection = (next: "taller" | "ventas") => { setSection(next); setTab(next === "ventas" ? "Ingresada Venta" : groupBy === "moto" ? "Ingresada Taller" : "Cargada"); };
+  const changeSection = (next: "taller" | "ventas") => { setSection(next); setTab(next === "ventas" ? "En venta" : groupBy === "moto" ? "Ingresada Taller" : "Cargada"); };
   return (
     <div className="page">
       <div className="page-heading">
@@ -219,7 +219,7 @@ export function Dashboard({
   );
 }
 
-const salesStatuses: VentaMotoResponse["estado"][] = ["Ingresada Venta", "En venta", "Transferencia en curso", "Vendida"];
+const salesStatuses: VentaMotoResponse["estado"][] = ["En venta", "Transferencia en curso", "Vendida"];
 const salesSortOptions = [
   { value: "fechaIngreso", label: "Fecha de ingreso" },
   { value: "patente", label: "Dominio" },
@@ -291,7 +291,7 @@ export function VentasView({
        </FilterBar>
       {visible.length ? <table><thead><tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{visible.map((moto) => {
         const busy = busyId === moto.motoId;
-        return <tr key={moto.motoId}><td data-label="Moto"><strong>{moto.patente}</strong><small>{moto.moto}</small></td><td data-label="Cliente">{moto.cliente ?? "Sin propietario"}</td><td data-label="KM actual">{moto.kilometraje != null ? moto.kilometraje.toLocaleString("es-AR") : "—"}</td><td data-label="Estado"><StatusBadge status={moto.estado} /></td><td className="table-actions sales-actions"><button className="row-action" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button>{moto.estado === "Ingresada Venta" && <button className="button secondary compact" disabled={busy} onClick={() => setConfirmation({ title: "Marcar moto en venta", body: `${moto.patente} pasará al estado En venta.`, confirmLabel: "Marcar en venta", successMessage: "Moto marcada como En venta.", action: async () => { await transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/estado`, { method: "PATCH", body: JSON.stringify({ estado: "En venta" }) }), "Moto marcada como En venta."); } })}><Tag size={15} />En venta</button>}{moto.estado === "En venta" && <button className="button secondary compact" disabled={busy} onClick={() => onOpenTransfers(moto.motoId)}><ArrowRightLeft size={15} />Transferir</button>}{moto.estado === "Transferencia en curso" && canCompleteSale && <button className="button primary compact" disabled={busy} onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${moto.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: async () => { await transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/completar`, { method: "POST" }), "Venta completada."); } })}><LogOut size={15} />Completar</button>}</td></tr>;
+        return <tr key={moto.motoId}><td data-label="Moto"><strong>{moto.patente}</strong><small>{moto.moto}</small></td><td data-label="Cliente">{moto.cliente ?? "Sin propietario"}</td><td data-label="KM actual">{moto.kilometraje != null ? moto.kilometraje.toLocaleString("es-AR") : "—"}</td><td data-label="Estado"><StatusBadge status={moto.estado} /></td><td className="table-actions sales-actions"><button className="row-action" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button>{moto.estado === "En venta" && <button className="button secondary compact" disabled={busy} onClick={() => onOpenTransfers(moto.motoId)}><ArrowRightLeft size={15} />Transferir</button>}{moto.estado === "Transferencia en curso" && canCompleteSale && <button className="button primary compact" disabled={busy} onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${moto.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: async () => { await transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/completar`, { method: "POST" }), "Venta completada."); } })}><LogOut size={15} />Completar</button>}</td></tr>;
        })}</tbody></table> : result ? <EmptyState title={`Sin motos ${emptyLabel}`} body={query ? "Probá con otra búsqueda." : "No hay motos dentro de los filtros seleccionados."} /> : <div className="table-loading" role="status">Cargando ventas...</div>}
      </section>
      <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; setConfirmation(null); if (!request) return; return request.action().then(() => notify(request.successMessage)).catch((reason) => { notify(errorMessage(reason), "error"); throw reason; }); }} />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDownUp, Eye, Filter, LogIn, LogOut, Plus, Settings2, Tag } from "lucide-react";
+import { ArrowDownUp, Eye, Filter, LogIn, LogOut, Plus, Settings2 } from "lucide-react";
 import { api } from "../lib/api";
 import { integerInput, money, parseIntegerInput } from "../lib/format";
 import { todayInAr } from "../lib/dates";
@@ -182,7 +182,7 @@ export function MotoDetail({
         </div>
         <div className="detail-stack">
           <StatusBadge status={moto.estado} />
-           {moto.estado === "Vendida" ? <span className="detail-note">Venta completada</span> : !moto.ingresada ? <button className="button secondary" onClick={() => onIntake(moto.patente)}><LogIn size={17} />Ingresar moto</button> : moto.seccion === "Venta" && moto.estado === "Ingresada Venta" ? <button className="button secondary" onClick={() => setConfirmation({ title: "Marcar moto en venta", body: `${moto.patente} pasará al estado En venta.`, confirmLabel: "Marcar en venta", successMessage: "Moto marcada como En venta.", action: () => runMotoAction(`/motovehiculos/${moto.id}/venta/estado`, { method: "PATCH", body: JSON.stringify({ estado: "En venta" }) }) })}><Tag size={17} />Marcar en venta</button> : moto.seccion === "Venta" && moto.estado === "Transferencia en curso" ? <button className="button primary" onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${moto.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: () => runMotoAction(`/motovehiculos/${moto.id}/venta/completar`, { method: "POST" }) })}><LogOut size={17} />Completar venta</button> : <span className="detail-note">La entrega se completa desde la revisión</span>}
+           {moto.estado === "Vendida" ? <span className="detail-note">Venta completada</span> : !moto.ingresada ? <button className="button secondary" onClick={() => onIntake(moto.patente)}><LogIn size={17} />Ingresar moto</button> : moto.seccion === "Venta" && moto.estado === "Transferencia en curso" ? <button className="button primary" onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${moto.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: () => runMotoAction(`/motovehiculos/${moto.id}/venta/completar`, { method: "POST" }) })}><LogOut size={17} />Completar venta</button> : <span className="detail-note">La entrega se completa desde la revisión</span>}
           <strong>{moto.anio ?? "—"}</strong>
         </div>
       </div>
