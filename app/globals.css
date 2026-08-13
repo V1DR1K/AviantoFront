@@ -2855,14 +2855,12 @@ td.table-actions {
     grid-template-columns: 1fr;
   }
   .order-form .line-item {
-    grid-template-columns: minmax(0, 1fr) 44px;
+    grid-template-columns: minmax(0, 1fr) 70px;
     grid-template-areas:
       "description delete"
       "price total"
       "status status"
       "observation observation";
-    gap: 14px 10px;
-    padding: 16px;
   }
   .order-form .line-item .line-check {
     justify-content: flex-start;
