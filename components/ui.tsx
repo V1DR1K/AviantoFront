@@ -368,6 +368,7 @@ export function AutocompleteField({
   disabled = false,
   emptyText = "Sin coincidencias.",
   loadingText = "Buscando...",
+  emptyAction,
   className = "",
   ariaLabel,
 }: {
@@ -383,11 +384,13 @@ export function AutocompleteField({
   disabled?: boolean;
   emptyText?: string;
   loadingText?: string;
+  emptyAction?: ReactNode;
   className?: string;
   ariaLabel?: string;
 }) {
   const [suggestions, setSuggestions] = useState<AutocompleteResponse[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const query = value.trim();
   const localSuggestions = !selected && !loadOptions && query.length >= minChars
     ? (options ?? []).filter((item) => `${item.label} ${item.secondary ?? ""}`.toLowerCase().includes(query.toLowerCase())).slice(0, 10)
@@ -399,9 +402,10 @@ export function AutocompleteField({
     let active = true;
     const timer = window.setTimeout(() => {
       setLoading(true);
+      setError(null);
       void loadOptions(query)
         .then((items) => { if (active) setSuggestions(items); })
-        .catch(() => { if (active) setSuggestions([]); })
+        .catch((reason) => { if (active) { setSuggestions([]); setError(reason instanceof Error ? reason.message : "No se pudo buscar."); } })
         .finally(() => { if (active) setLoading(false); });
     }, 180);
     return () => {
@@ -414,6 +418,7 @@ export function AutocompleteField({
     onClear?.();
     onChange("");
     setSuggestions([]);
+    setError(null);
   };
   return (
     <div className={`autocomplete-field ${className}`}>
@@ -428,14 +433,14 @@ export function AutocompleteField({
         aria-autocomplete="list"
       />
       {value && <button type="button" className="icon-button" aria-label="Limpiar selección" onClick={clear}><X size={16} /></button>}
-      {!selected && query.length >= minChars && (loading || visibleSuggestions.length > 0 || Boolean(options && !loadOptions)) && (
+      {!selected && query.length >= minChars && (loading || visibleSuggestions.length > 0 || Boolean(loadOptions) || Boolean(options)) && (
         <div className="suggestions" role="listbox">
-          {loading ? <p className="suggestions-empty">{loadingText}</p> : visibleSuggestions.length ? visibleSuggestions.map((item) => (
+          {loading ? <p className="suggestions-empty">{loadingText}</p> : error ? <p className="suggestions-empty" role="status">{error}</p> : visibleSuggestions.length ? visibleSuggestions.map((item) => (
             <button type="button" key={item.id} role="option" aria-selected="false" onClick={() => { onSelect(item); setSuggestions([]); }}>
               <span>{item.label}</span>
               <small>{item.secondary ?? ""}</small>
             </button>
-          )) : <p className="suggestions-empty">{emptyText}</p>}
+          )) : <div className="suggestions-empty"><p>{emptyText}</p>{emptyAction}</div>}
         </div>
       )}
     </div>

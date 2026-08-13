@@ -24,8 +24,8 @@ test("server-renders motorcom landing metadata", async () => {
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview|SkeletonPreview/);
 });
 
-test("keeps the application entrypoint, production scripts, and responsive ficha controls", async () => {
-  const [page, loginPage, layout, stylesheet, packageJson, controller, fichaForm, views] = await Promise.all([
+test("keeps the application entrypoint, production scripts, and responsive operational controls", async () => {
+  const [page, loginPage, layout, stylesheet, packageJson, controller, fichaForm, intakeView, ui, views] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -33,6 +33,8 @@ test("keeps the application entrypoint, production scripts, and responsive ficha
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../components/app-controller.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/ficha-form.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/intake-view.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/ui.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/views.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page, /LandingPage/);
@@ -44,5 +46,9 @@ test("keeps the application entrypoint, production scripts, and responsive ficha
   assert.match(packageJson, /"build"/);
   assert.match(controller, /perfiles|fichas|repuestos/);
   assert.match(fichaForm, /className="line-observation"[\s\S]*?<textarea[\s\S]*?observacionTrabajo/);
+  assert.match(intakeView, /<AutocompleteField[\s\S]*?loadOptions=\{loadClientOptions\}[\s\S]*?minChars=\{2\}[\s\S]*?emptyAction=/);
+  assert.match(intakeView, /"\/clientes\/autocomplete"/);
+  assert.doesNotMatch(intakeView, /api<PageResponse<ClienteResponse>>\("\/clientes"/);
+  assert.match(ui, /emptyAction\?: ReactNode/);
   assert.match(views, /className="work-observation"/);
 });
