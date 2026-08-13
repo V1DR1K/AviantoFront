@@ -2966,7 +2966,6 @@ td.table-actions {
   }
   .modal {
     --modal-padding: 18px;
-    width: min(var(--modal-width), calc(100vw - 24px));
     max-height: calc(100dvh - 24px);
     border-radius: 15px;
   }
