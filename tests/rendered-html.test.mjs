@@ -24,19 +24,25 @@ test("server-renders motorcom landing metadata", async () => {
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview|SkeletonPreview/);
 });
 
-test("keeps the application entrypoint, production scripts, and mobile ficha controls", async () => {
-  const [page, loginPage, layout, stylesheet, packageJson, controller] = await Promise.all([
+test("keeps the application entrypoint, production scripts, and responsive ficha controls", async () => {
+  const [page, loginPage, layout, stylesheet, packageJson, controller, fichaForm, views] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../components/app-controller.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/ficha-form.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/views.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page, /LandingPage/);
   assert.match(loginPage, /AppController/);
   assert.match(layout, /AviantoSoftware/);
+  assert.match(stylesheet, /\.order-form \.line-item \{[\s\S]*?grid-template-areas:[\s\S]*?"description price total status delete"[\s\S]*?"observation observation observation observation observation"/);
+  assert.match(stylesheet, /@media \(max-width: 680px\) \{[\s\S]*?\.order-form \.line-item \{[\s\S]*?"description delete"[\s\S]*?"observation observation"/);
   assert.match(stylesheet, /@media \(max-width: 680px\) \{[\s\S]*?\.order-form input,[\s\S]*?\.order-form select,[\s\S]*?\.order-form textarea \{[\s\S]*?font-size: 16px;/);
   assert.match(packageJson, /"build"/);
   assert.match(controller, /perfiles|fichas|repuestos/);
+  assert.match(fichaForm, /className="line-observation"[\s\S]*?<textarea[\s\S]*?observacionTrabajo/);
+  assert.match(views, /className="work-observation"/);
 });

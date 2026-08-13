@@ -439,10 +439,11 @@ function ItemRow({
   onStartWork: () => void;
 }) {
   return (
-    <div className={`line-item ${item.estadoTrabajo === "Cancelado" ? "muted" : ""}`}>
-      <div>
+    <div className={`line-item detail-work-item ${item.estadoTrabajo === "Cancelado" ? "muted" : ""}`}>
+      <div className="detail-work-copy">
         <strong>{item.descripcion}</strong>
         <span>{money(Number(item.precioUnitario))}{item.descuento > 0 && ` · descuento ${money(Number(item.descuento))}`}{item.estadoTrabajo !== "Pendiente" && ` · ${item.estadoTrabajo}`}</span>
+        {item.observacionTrabajo && <p className="work-observation">{item.observacionTrabajo}</p>}
       </div>
       {!locked && (
         <label className="line-check detail-line-check">

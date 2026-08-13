@@ -404,9 +404,9 @@ export function FichaForm({
                       </div>}
                     </div>
                   </label>
-                  <label>
-                    Precio
-                    <input
+                   <label className="line-price">
+                     Precio
+                     <input
                       type="text"
                       inputMode="decimal"
                       value={priceInput(trabajo.precioUnitario)}
@@ -417,15 +417,18 @@ export function FichaForm({
                       }
                     />
                   </label>
-                  {trabajo.precioUnitario > 0 && (
-                    <strong>
-                      {money(
-                        Number(trabajo.precioUnitario) -
-                          Number(trabajo.descuento),
-                      )}
-                    </strong>
-                  )}
-                  <label className="line-check">
+                   <div className="line-total">
+                     <span>Total</span>
+                     <strong>
+                       {trabajo.precioUnitario > 0
+                         ? money(
+                             Number(trabajo.precioUnitario) -
+                               Number(trabajo.descuento),
+                           )
+                         : "A definir"}
+                     </strong>
+                   </div>
+                   <label className="line-check">
                    <input
                      type="checkbox"
                      checked={trabajo.estadoTrabajo === "Realizado" || trabajo.realizado}
@@ -440,10 +443,24 @@ export function FichaForm({
                    />
                    Realizado
                   </label>
-                  <label className="form-field-wide">Observación del trabajo<input value={trabajo.observacionTrabajo ?? ""} onChange={(event) => updateLine(trabajo.key, { observacionTrabajo: event.target.value })} /></label>
-                  <button
-                    type="button"
-                    aria-label="Eliminar trabajo"
+                   <label className="line-observation">
+                     Observación del trabajo
+                     <textarea
+                       rows={2}
+                       value={trabajo.observacionTrabajo ?? ""}
+                       onChange={(event) =>
+                         updateLine(trabajo.key, {
+                           observacionTrabajo: event.target.value,
+                         })
+                       }
+                       placeholder="Ej.: revisar transmisión antes de entregar"
+                     />
+                   </label>
+                   <button
+                     type="button"
+                     className="line-delete"
+                     aria-label="Eliminar trabajo"
+                     title="Eliminar trabajo"
                     onClick={() =>
                       setTrabajos((all) =>
                         all.filter((line) => line.key !== trabajo.key),
