@@ -22,6 +22,7 @@ import { TrabajosCatalogoView } from "./trabajos-catalogo-view";
 import type { FichaResponse } from "../lib/types";
 import { LoginView } from "./login-view";
 import { IntakeView } from "./intake-view";
+import { WikiView } from "./wiki-view";
 import {
   clearSession,
   decodeAccessExpiry,
@@ -98,6 +99,7 @@ function routeState(pathname: string, search: string): RouteState {
     reportes: "reports",
     taller: "taller-dashboard",
     ventas: "sales",
+    wiki: "wiki",
   };
   const page = segments.length === 1 ? pages[segments[0]] : undefined;
   return page ? { page } : { page: "dashboard", invalid: true };
@@ -120,7 +122,8 @@ const pathForPage = (page: string) => ({
     sales: "/ventas",
     "taller-dashboard": "/taller",
     "ventas-dashboard": "/ventas",
-  orders: "/fichas",
+    wiki: "/wiki",
+    orders: "/fichas",
 }[page] ?? "/");
 
 const shellPage = (page: string) => {
@@ -269,7 +272,9 @@ export function AppController() {
   } else if (currentPage === "sales") {
       content = <VentasView onIntake={() => navigate("/ingresar?returnTo=%2Fventas&base=sales")} onOpenMoto={(id) => openMoto(id, "/ventas")} onOpenTransfers={(id) => navigate(`/transferencias?motoId=${encodeURIComponent(id)}`)} notify={notify} canCompleteSale={session.user.rol === "ADMINISTRACION"} />;
   } else if (currentPage === "profiles") {
-     content = <ProfilesView onIntake={(plate) => navigate(`/ingresar?returnTo=%2Fperfiles&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} onOpen={openMoto} notify={notify} />;
+      content = <ProfilesView onIntake={(plate) => navigate(`/ingresar?returnTo=%2Fperfiles&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} onOpen={openMoto} notify={notify} />;
+  } else if (currentPage === "wiki") {
+      content = <WikiView />;
   } else if (currentPage === "orders") {
        content = <FichasView key={refreshKey} onNewOrder={() => navigate("/perfiles")} onSelect={(ficha) => openFicha(ficha, "/fichas")} onOpenMoto={(id) => openMoto(id, "/fichas")} onEdit={(ficha) => navigate(`/fichas/${ficha.id}/editar?returnTo=%2Ffichas`)} onDelete={(ficha) => setConfirmation({ title: "Eliminar ficha", body: `Vas a dar de baja la ficha ${ficha.numero}. El historial conservará el registro para auditoría.`, confirmLabel: "Eliminar ficha", successMessage: "Ficha eliminada correctamente.", action: () => api(`/fichas/${ficha.id}`, { method: "DELETE" }).then(() => setRefreshKey((key) => key + 1)) })} notify={notify} />;
   } else if (currentPage === "fichas" && route.fichaId) {

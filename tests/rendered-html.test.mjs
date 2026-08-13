@@ -25,7 +25,7 @@ test("server-renders motorcom landing metadata", async () => {
 });
 
 test("keeps the application entrypoint, production scripts, and responsive operational controls", async () => {
-  const [page, loginPage, layout, stylesheet, packageJson, controller, fichaForm, intakeView, ui, views] = await Promise.all([
+  const [page, loginPage, layout, stylesheet, packageJson, controller, fichaForm, intakeView, ui, views, wiki, shell] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -36,6 +36,8 @@ test("keeps the application entrypoint, production scripts, and responsive opera
     readFile(new URL("../components/intake-view.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/ui.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/views.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/wiki-view.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/app-shell.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page, /LandingPage/);
   assert.match(loginPage, /AppController/);
@@ -60,4 +62,8 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /return !ingreso \|\|/);
   assert.match(views, /\["Pendiente", "En proceso", "En revisión", "Terminada", "Entregada"\]/);
   assert.match(views, /\/fichas\/\$\{ficha\.id\}\/entregar/);
+  assert.match(controller, /wiki:\s*"\/wiki"/);
+  assert.match(shell, /id: "wiki", label: "Wiki"/);
+  assert.match(wiki, /Disponible no significa en venta/);
+  assert.match(wiki, /Transferencia en proceso/);
 });

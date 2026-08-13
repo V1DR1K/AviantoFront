@@ -6,6 +6,7 @@ import {
   ChevronRight,
   ClipboardList,
   ArrowRightLeft,
+  BookOpen,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -77,6 +78,7 @@ export function AppShell({
         <nav>
           {renderItem(home)}
           {renderItem({ id: "profiles", label: "Perfiles", icon: ClipboardList })}
+          {renderItem({ id: "wiki", label: "Wiki", icon: BookOpen })}
           {navGroups.map((group) => {
             const expanded = openGroup === group.id || group.items.some((item) => item.id === page);
             return (
@@ -138,8 +140,9 @@ export function AppShell({
             <button className="drawer-close" onClick={() => setMenuOpen(false)}>
               Cerrar menú ×
             </button>
-             {renderItem(home)}
-             {renderItem({ id: "profiles", label: "Perfiles", icon: ClipboardList })}
+              {renderItem(home)}
+              {renderItem({ id: "profiles", label: "Perfiles", icon: ClipboardList })}
+              {renderItem({ id: "wiki", label: "Wiki", icon: BookOpen })}
              {navGroups.map((group) => (
               <section className={`mobile-nav-group${openGroup === group.id ? " expanded" : ""}`} key={group.id}>
                 <button className="mobile-nav-group-toggle" type="button" aria-expanded={openGroup === group.id} onClick={() => toggleGroup(group.id)}>
