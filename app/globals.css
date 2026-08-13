@@ -3444,7 +3444,7 @@ td.table-actions {
   color: var(--blue);
 }
 .taller-tabs .tab-ingresada,
-.taller-tabs .tab-cargada,
+.taller-tabs .tab-pendiente,
 .taller-tabs .tab-en-venta {
   --tab: var(--blue);
 }
@@ -3453,6 +3453,7 @@ td.table-actions {
   --tab: #946b0b;
 }
 .taller-tabs .tab-vendida,
+.taller-tabs .tab-terminada,
 .taller-tabs .tab-entregada {
   --tab: var(--green);
 }

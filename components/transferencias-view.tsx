@@ -86,7 +86,7 @@ function TransferDialog({ open, initialMotoId, onClose, onSaved, notify }: { ope
       await api<TransferResponse>("/transferencias", { method: "POST", body: JSON.stringify(payload) });
       reset();
       onClose();
-       notify("Transferencia en curso. Completá la venta desde el perfil de la moto.");
+        notify("Transferencia en proceso. Completá la venta desde el perfil de la moto.");
       onSaved();
     } catch (reason) { notify(errorMessage(reason), "error"); } finally { setBusy(false); }
   };

@@ -177,7 +177,7 @@ function CreateRepuestoDialog({
   useEffect(() => {
     if (!motoId) return;
     void api<PageResponse<FichaResponse>>("/fichas", {}, { motoId, size: 50 }).then((page) => {
-      const open = page.content.filter((ficha) => ficha.estado !== "Entregada" && ficha.estado !== "Cancelada");
+      const open = page.content.filter((ficha) => ficha.estado !== "Terminada" && ficha.estado !== "Entregada" && ficha.estado !== "Cancelada");
       setFichas(open);
       const keep = initial?.fichaId && page.content.some((ficha) => ficha.id === initial.fichaId) ? initial.fichaId : "";
       setFichaId(keep || open[0]?.id || "");

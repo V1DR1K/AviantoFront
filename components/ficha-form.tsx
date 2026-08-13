@@ -90,7 +90,7 @@ export function FichaForm({
   const editing = Boolean(fichaKey);
   const [loadedEstado, setLoadedEstado] = useState<string | null>(null);
   const editable =
-    !editing || loadedEstado === "Cargada" || loadedEstado === "En proceso";
+    !editing || loadedEstado === "Pendiente" || loadedEstado === "En proceso";
   const [currentVehicle, setCurrentVehicle] = useState<MotovehiculoResponse | null>(null);
   const [fechaIngreso, setFechaIngreso] = useState(today());
   const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState("");
@@ -352,7 +352,7 @@ export function FichaForm({
       {editing && !editable && (
         <p className="form-notice" role="status">
           Esta ficha ya está en &quot;{loadedEstado}&quot;. Solo se pueden
-          editar fichas en &quot;Cargada&quot; o &quot;En proceso&quot;.
+           editar fichas en &quot;Pendiente&quot; o &quot;En proceso&quot;.
         </p>
       )}
         <div className="form-layout">
@@ -434,7 +434,7 @@ export function FichaForm({
                      checked={trabajo.estadoTrabajo === "Realizado" || trabajo.realizado}
                      disabled={trabajo.estadoTrabajo === "Cancelado"}
                        onChange={(event) => {
-                          if (event.target.checked && loadedEstado === "Cargada") {
+                           if (event.target.checked && loadedEstado === "Pendiente") {
                            setStartWorkConfirmation(trabajo.key);
                            return;
                          }

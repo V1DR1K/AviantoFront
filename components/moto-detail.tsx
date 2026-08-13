@@ -21,7 +21,7 @@ import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SelectField, S
 
 const date = (value?: string | null) => (value ? new Intl.DateTimeFormat("es-AR").format(new Date(value.includes("T") ? value : `${value}T12:00:00`)) : "—");
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
-const fichaStates = ["Cargada", "En proceso", "Revisión", "Entregada", "Cancelada"] as const;
+const fichaStates = ["Pendiente", "En proceso", "En revisión", "Terminada", "Entregada", "Cancelada"] as const;
 const pagoStates: PagoStatus[] = ["No pagado", "Parcial", "Pagado"];
 const repuestoStates: RepuestoState[] = ["En curso", "Completado", "Cancelado"];
 
@@ -182,7 +182,7 @@ export function MotoDetail({
         </div>
         <div className="detail-stack">
           <StatusBadge status={moto.estado} />
-           {moto.estado === "Vendida" ? <span className="detail-note">Venta completada</span> : !moto.ingresada ? <button className="button secondary" onClick={() => onIntake(moto.patente)}><LogIn size={17} />Ingresar moto</button> : moto.seccion === "Venta" && moto.estado === "Transferencia en curso" ? <button className="button primary" onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${moto.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: () => runMotoAction(`/motovehiculos/${moto.id}/venta/completar`, { method: "POST" }) })}><LogOut size={17} />Completar venta</button> : <span className="detail-note">La entrega se completa desde la revisión</span>}
+            {moto.estado === "Vendida" ? <span className="detail-note">Venta completada</span> : !moto.ingresada ? <button className="button secondary" onClick={() => onIntake(moto.patente)}><LogIn size={17} />Ingresar moto</button> : moto.seccion === "Venta" && moto.estado === "Transferencia en proceso" ? <button className="button primary" onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${moto.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: () => runMotoAction(`/motovehiculos/${moto.id}/venta/completar`, { method: "POST" }) })}><LogOut size={17} />Completar venta</button> : moto.estado === "Terminada" ? <span className="detail-note">Pendiente de entrega al cliente</span> : <span className="detail-note">La entrega se completa desde la ficha terminada</span>}
           <strong>{moto.anio ?? "—"}</strong>
         </div>
       </div>

@@ -58,4 +58,6 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /className="work-observation"/);
   assert.match(views, /Ingresada Taller[\s\S]*?Sin ficha/);
   assert.match(views, /return !ingreso \|\|/);
+  assert.match(views, /\["Pendiente", "En proceso", "En revisión", "Terminada", "Entregada"\]/);
+  assert.match(views, /\/fichas\/\$\{ficha\.id\}\/entregar/);
 });

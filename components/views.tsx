@@ -29,7 +29,7 @@ const date = formatDateInAr;
 const errorMessage = (reason: unknown) =>
   reason instanceof Error ? reason.message : "No fue posible cargar la información.";
 const tabKey = (estado: string) =>
-  ({ "Ingresada Taller": "ingresada", "Cargada": "cargada", "En proceso": "en-proceso", "En revisión": "revision", "Entregada": "entregada", "Cancelada": "cancelada", "En venta": "en-venta", "Transferencia en curso": "transferencia", "Vendida": "vendida" } as Record<string, string>)[estado] ?? "estado";
+  ({ "Ingresada Taller": "ingresada", "Pendiente": "pendiente", "En proceso": "en-proceso", "En revisión": "revision", "Terminada": "terminada", "Entregada": "entregada", "Cancelada": "cancelada", "En venta": "en-venta", "Transferencia en proceso": "transferencia", "Vendida": "vendida" } as Record<string, string>)[estado] ?? "estado";
 function Metric({ label, value, tone }: { label: string; value: string; tone: string }) {
   return <section className={`metric ${tone}`}><span>{label}</span><strong>{value}</strong><small>Período seleccionado</small></section>;
 }
@@ -75,7 +75,7 @@ function OrderPhotos({ photos, onChange }: { photos: PhotoResponse[]; onChange: 
   );
 }
 
-const fichaStatuses: FichaStatus[] = ["Cargada", "En proceso", "Revisión", "Entregada", "Cancelada"];
+const fichaStatuses: FichaStatus[] = ["Pendiente", "En proceso", "En revisión", "Terminada", "Entregada", "Cancelada"];
 const fichaFilterStatuses = ["Ingresada Taller", ...fichaStatuses] as const;
 const fichaPaymentStatuses: PagoStatus[] = ["No pagado", "Parcial", "Pagado"];
 
@@ -122,7 +122,7 @@ export function Dashboard({
   const sales = ventasEstados.find((item) => item.estado === tab)?.motos ?? [];
   const visible = section === "ventas" ? sales.length : groupBy === "moto" ? motos.length : fichas.length;
   const label = section === "ventas" ? "motos" : groupBy === "moto" ? "motos" : "fichas";
-  const changeSection = (next: "taller" | "ventas") => { setSection(next); setTab(next === "ventas" ? "En venta" : groupBy === "moto" ? "Ingresada Taller" : "Cargada"); };
+  const changeSection = (next: "taller" | "ventas") => { setSection(next); setTab(next === "ventas" ? "En venta" : groupBy === "moto" ? "Ingresada Taller" : "Pendiente"); };
   return (
     <div className="page">
       <div className="page-heading">
@@ -140,9 +140,9 @@ export function Dashboard({
           </nav>
           <div className="metrics dashboard-metrics">
             <DashboardMetric label="En pantalla" value={`${visible} ${label}`} detail={`${tab} · ${section === "ventas" ? "ventas" : `agrupadas por ${groupBy}`}`} />
-            <DashboardMetric label={section === "ventas" ? "En venta" : "En curso"} value={String(section === "ventas" ? sales.length : count("Cargada") + count("En proceso") + count("En revisión"))} detail={section === "ventas" ? "motos disponibles o en gestión" : `${label} en carga, proceso o revisión`} />
-            <DashboardMetric label={section === "ventas" ? "Vendidas" : "Entregadas"} value={String(section === "ventas" ? salesCount("Vendida") : count("Entregada"))} detail={section === "ventas" ? "transferencias completadas" : `${label} finalizadas`} />
-            <DashboardMetric label={section === "ventas" ? "En transferencia" : "Ingresadas"} value={String(section === "ventas" ? salesCount("Transferencia en curso") : count("Ingresada Taller"))} detail={section === "ventas" ? "operaciones en curso" : "motos dentro del taller"} />
+            <DashboardMetric label={section === "ventas" ? "En venta" : "En curso"} value={String(section === "ventas" ? sales.length : count("Pendiente") + count("En proceso") + count("En revisión"))} detail={section === "ventas" ? "motos disponibles o en gestión" : `${label} pendientes, en proceso o revisión`} />
+            <DashboardMetric label={section === "ventas" ? "Vendidas" : "Terminadas"} value={String(section === "ventas" ? salesCount("Vendida") : count("Terminada"))} detail={section === "ventas" ? "transferencias completadas" : `${label} listas para entregar`} />
+            <DashboardMetric label={section === "ventas" ? "En transferencia" : "Entregadas"} value={String(section === "ventas" ? salesCount("Transferencia en proceso") : count("Entregada"))} detail={section === "ventas" ? "operaciones en proceso" : "motos retiradas por el cliente"} />
           </div>
           {section === "ventas" ? (
             <section className="table-panel taller-panel">
@@ -154,8 +154,8 @@ export function Dashboard({
           ) : (
           <section className="table-panel taller-panel">
             <nav className="tabs dashboard-group-tabs" aria-label="Agrupar tablero">
-              <button className={groupBy === "moto" ? "active" : ""} onClick={() => setGroupBy("moto")}>Agrupar por moto</button>
-              <button className={groupBy === "ficha" ? "active" : ""} onClick={() => setGroupBy("ficha")}>Agrupar por ficha</button>
+              <button className={groupBy === "moto" ? "active" : ""} onClick={() => { setGroupBy("moto"); setTab("Ingresada Taller"); }}>Agrupar por moto</button>
+              <button className={groupBy === "ficha" ? "active" : ""} onClick={() => { setGroupBy("ficha"); setTab("Pendiente"); }}>Agrupar por ficha</button>
             </nav>
             <nav className="tabs taller-tabs" aria-label={`Estado de las ${groupBy === "moto" ? "motos" : "fichas"}`}>
               {estados.map((item) => (
@@ -221,7 +221,7 @@ export function Dashboard({
   );
 }
 
-const salesStatuses: VentaMotoResponse["estado"][] = ["En venta", "Transferencia en curso", "Vendida"];
+const salesStatuses: VentaMotoResponse["estado"][] = ["En venta", "Transferencia en proceso", "Vendida"];
 const salesSortOptions = [
   { value: "fechaIngreso", label: "Fecha de ingreso" },
   { value: "patente", label: "Dominio" },
@@ -293,7 +293,7 @@ export function VentasView({
        </FilterBar>
       {visible.length ? <table><thead><tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{visible.map((moto) => {
         const busy = busyId === moto.motoId;
-        return <tr key={moto.motoId}><td data-label="Moto"><strong>{moto.patente}</strong><small>{moto.moto}</small></td><td data-label="Cliente">{moto.cliente ?? "Sin propietario"}</td><td data-label="KM actual">{moto.kilometraje != null ? moto.kilometraje.toLocaleString("es-AR") : "—"}</td><td data-label="Estado"><StatusBadge status={moto.estado} /></td><td className="table-actions sales-actions"><button className="row-action" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button>{moto.estado === "En venta" && <button className="button secondary compact" disabled={busy} onClick={() => onOpenTransfers(moto.motoId)}><ArrowRightLeft size={15} />Transferir</button>}{moto.estado === "Transferencia en curso" && canCompleteSale && <button className="button primary compact" disabled={busy} onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${moto.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: async () => { await transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/completar`, { method: "POST" }), "Venta completada."); } })}><LogOut size={15} />Completar</button>}</td></tr>;
+        return <tr key={moto.motoId}><td data-label="Moto"><strong>{moto.patente}</strong><small>{moto.moto}</small></td><td data-label="Cliente">{moto.cliente ?? "Sin propietario"}</td><td data-label="KM actual">{moto.kilometraje != null ? moto.kilometraje.toLocaleString("es-AR") : "—"}</td><td data-label="Estado"><StatusBadge status={moto.estado} /></td><td className="table-actions sales-actions"><button className="row-action" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button>{moto.estado === "En venta" && <button className="button secondary compact" disabled={busy} onClick={() => onOpenTransfers(moto.motoId)}><ArrowRightLeft size={15} />Transferir</button>}{moto.estado === "Transferencia en proceso" && canCompleteSale && <button className="button primary compact" disabled={busy} onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${moto.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: async () => { await transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/completar`, { method: "POST" }), "Venta completada."); } })}><LogOut size={15} />Completar</button>}</td></tr>;
        })}</tbody></table> : result ? <EmptyState title={`Sin motos ${emptyLabel}`} body={query ? "Probá con otra búsqueda." : "No hay motos dentro de los filtros seleccionados."} /> : <div className="table-loading" role="status">Cargando ventas...</div>}
      </section>
      <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; setConfirmation(null); if (!request) return; return request.action().then(() => notify(request.successMessage)).catch((reason) => { notify(errorMessage(reason), "error"); throw reason; }); }} />
@@ -415,7 +415,7 @@ export function FichasView({
             </thead>
             <tbody>
               {result.content.map((ficha) => {
-                 const editable = ficha.estado === "Cargada" || ficha.estado === "En proceso";
+                  const editable = ficha.estado === "Pendiente" || ficha.estado === "En proceso";
                 return (
                   <tr key={ficha.id}>
                     <td data-label="Ficha">{ficha.numero}</td>
@@ -533,7 +533,7 @@ export function FichaDetail({
       .catch((reason) => { setError(errorMessage(reason)); notify(errorMessage(reason), "error"); });
   useEffect(load, [fichaKey, notify]);
   useEffect(() => {
-    if (ficha?.estado === "Revisión")
+    if (ficha?.estado === "En revisión")
       void api<RevisionResponse>(`/fichas/${fichaKey}/revision`)
         .then(setRevision)
         .catch(() => undefined);
@@ -559,8 +559,8 @@ export function FichaDetail({
         method: "POST",
         body: JSON.stringify({ forzada: false, serviceIds: selectedServiceIds }),
       });
-      setRevision(null);
-      onOpenMoto(ficha.motoId);
+       setFicha(await api<FichaResponse>(`/fichas/${fichaKey}`));
+       setRevision(null);
     } catch (reason) {
       setError(errorMessage(reason));
       notify(errorMessage(reason), "error");
@@ -573,10 +573,10 @@ export function FichaDetail({
     if (!ficha) return;
     setCloseOpen(false);
     onConfirm({
-      title: "Aprobar revisión y entregar",
-      body: "La ficha pasará a Entregada y la revisión quedará registrada en el historial.",
-      confirmLabel: "Aprobar y entregar",
-      successMessage: "Revisión aprobada y ficha entregada.",
+      title: "Aprobar revisión",
+      body: "La ficha pasará a Terminada y quedará lista para entregar al cliente.",
+      confirmLabel: "Aprobar revisión",
+      successMessage: "Revisión aprobada. La ficha quedó terminada.",
       action: aprobarRevision,
     });
   };
@@ -673,28 +673,30 @@ export function FichaDetail({
       setServiceSaving(false);
     }
   };
-  const locked = current === "Cancelada" || current === "Entregada";
-  const flowSteps: FichaStatus[] = ["Cargada", "En proceso", "Revisión", "Entregada"];
+  const locked = current === "Cancelada" || current === "Terminada" || current === "Entregada";
+  const flowSteps: FichaStatus[] = ["Pendiente", "En proceso", "En revisión", "Terminada", "Entregada"];
   const currentStep = flowSteps.indexOf(current);
   const bottomActions: { key: string; label: string; className: string; onClick: () => void }[] = [];
-   if (current === "Cargada")
+   if (current === "Pendiente")
      bottomActions.push({ key: "iniciar", label: "Comenzar trabajo", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "En proceso" }, "estado-en-proceso", "Ficha marcada en proceso.") });
-  else if (current === "En proceso")
-     bottomActions.push({ key: "revision", label: "Enviar a revisión", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "Revisión" }, "estado-revision", "Ficha enviada a revisión.") });
-  else if (current === "Revisión")
-    bottomActions.push({ key: "aprobar", label: "Aprobar revisión y entregar", className: "primary", onClick: openDelivery });
+   else if (current === "En proceso")
+     bottomActions.push({ key: "revision", label: "Enviar a revisión", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "En revisión" }, "estado-revision", "Ficha enviada a revisión.") });
+  else if (current === "En revisión")
+    bottomActions.push({ key: "aprobar", label: "Aprobar revisión", className: "primary", onClick: openDelivery });
+  else if (current === "Terminada")
+    bottomActions.push({ key: "entregar", label: "Entregar moto", className: "primary", onClick: () => onConfirm({ title: "Entregar moto", body: "La moto quedará entregada al cliente y se cerrará el circuito de Taller.", confirmLabel: "Entregar moto", successMessage: "Moto entregada al cliente.", action: () => api<FichaResponse>(`/fichas/${ficha.id}/entregar`, { method: "POST" }).then(setFicha) }) });
    else if (current === "Entregada")
-    bottomActions.push({ key: "service", label: "Registrar service", className: "primary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setServiceDate(todayInAr()); setServiceOpen(true); } });
+     bottomActions.push({ key: "service", label: "Registrar service", className: "primary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setServiceDate(todayInAr()); setServiceOpen(true); } });
     if (ficha.estadoPago === "Pagado")
        bottomActions.push({ key: "pago-no", label: "Marcar como no pagada", className: "secondary", onClick: () => onConfirm({ title: "Revertir pago", body: "La ficha volverá al estado No pagado. Esta acción quedará registrada en auditoría.", confirmLabel: "Marcar como no pagada", successMessage: "Pago marcado como no pagado.", variant: "success", action: () => update(`/fichas/${ficha.id}/pago`, { estadoPago: "No pagado" }, "pago-no", "Pago marcado como no pagado.") }) });
     else {
        bottomActions.push({ key: "pago", label: "Marcar como pagada", className: "secondary", onClick: () => onConfirm({ title: "Confirmar pago", body: "La ficha se marcará como Pagado y el cambio quedará registrado en auditoría.", confirmLabel: "Marcar como pagada", successMessage: "Pago marcado como pagado.", variant: "success", action: () => update(`/fichas/${ficha.id}/pago`, { estadoPago: "Pagado" }, "pago-pagado", "Pago marcado como completado.") }) });
        bottomActions.push({ key: "pago-parcial", label: ficha.estadoPago === "Parcial" ? "Editar pago parcial" : "Pago parcial", className: "secondary", onClick: openPartialPayment });
    }
-   if (current === "En proceso" || current === "Revisión")
-       bottomActions.push({ key: "retroceder", label: "Volver un paso atrás", className: "secondary", onClick: () => onConfirm({ title: "Volver un paso atrás", body: `La ficha volverá de ${current} a ${current === "Revisión" ? "En proceso" : "Cargada"}. El cambio quedará registrado en auditoría.`, confirmLabel: "Volver un paso atrás", successMessage: "Ficha retrocedida un paso.", action: () => update(`/fichas/${ficha.id}/estado`, { estado: current === "Revisión" ? "En proceso" : "Cargada" }, "retroceder", "Ficha retrocedida un paso.") }) });
-  if (current !== "Entregada" && current !== "Cancelada")
-      bottomActions.push({ key: "cancelar", label: "Cancelar ficha", className: "danger", onClick: () => onConfirm({ title: "Cancelar ficha", body: "La ficha quedará cancelada. El historial conservará el registro para auditoría.", confirmLabel: "Cancelar ficha", successMessage: "Ficha cancelada.", action: () => api<FichaResponse>(`/fichas/${ficha.id}/estado`, { method: "PATCH", body: JSON.stringify({ estado: "Cancelada" }) }).then(setFicha) }) });
+   if (current === "En proceso" || current === "En revisión")
+       bottomActions.push({ key: "retroceder", label: "Volver un paso atrás", className: "secondary", onClick: () => onConfirm({ title: "Volver un paso atrás", body: `La ficha volverá de ${current} a ${current === "En revisión" ? "En proceso" : "Pendiente"}. El cambio quedará registrado en auditoría.`, confirmLabel: "Volver un paso atrás", successMessage: "Ficha retrocedida un paso.", action: () => update(`/fichas/${ficha.id}/estado`, { estado: current === "En revisión" ? "En proceso" : "Pendiente" }, "retroceder", "Ficha retrocedida un paso.") }) });
+  if (current !== "Terminada" && current !== "Entregada" && current !== "Cancelada")
+       bottomActions.push({ key: "cancelar", label: "Cancelar ficha", className: "danger", onClick: () => onConfirm({ title: "Cancelar ficha", body: "La ficha quedará cancelada. El historial conservará el registro para auditoría.", confirmLabel: "Cancelar ficha", successMessage: "Ficha cancelada.", action: () => api<FichaResponse>(`/fichas/${ficha.id}/estado`, { method: "PATCH", body: JSON.stringify({ estado: "Cancelada" }) }).then(setFicha) }) });
   return (
     <div className="page">
       <button className="back" onClick={onBack}>← Volver a fichas</button>
@@ -745,21 +747,21 @@ export function FichaDetail({
               </button>
             </div>
             <p className="observation">{ficha.observaciones || "Sin observaciones."}</p>
-            {current !== "Revisión" && <div className="line-items-list">
+             {current !== "En revisión" && <div className="line-items-list">
                {ficha.trabajos.map((item) => (
                 <ItemRow
                   key={item.id}
                   item={item}
                   locked={locked}
-                  canDelete={current === "En proceso"}
+                   canDelete={current === "En proceso"}
                    onDelete={() => onConfirm({ title: "Eliminar trabajo", body: "El trabajo se quitará de la ficha y la acción quedará registrada en auditoría.", confirmLabel: "Eliminar trabajo", successMessage: "Trabajo eliminado de la ficha.", action: () => api(`/fichas/${ficha.id}/trabajos/${item.id}`, { method: "DELETE" }).then(load) })}
-                   onStartWork={() => current === "Cargada" ? setStartWorkItem(item) : void update(`/fichas/${ficha.id}/trabajos/${item.id}/estado`, { estado: "Realizado" }, `item-${item.id}`, "Trabajo actualizado.")}
+                    onStartWork={() => current === "Pendiente" ? setStartWorkItem(item) : void update(`/fichas/${ficha.id}/trabajos/${item.id}/estado`, { estado: "Realizado" }, `item-${item.id}`, "Trabajo actualizado.")}
                    onState={(estado) => void update(`/fichas/${ficha.id}/trabajos/${item.id}/estado`, { estado }, `item-${item.id}`, "Trabajo actualizado.")}
                 />
               ))}
             </div>}
             <OrderPhotos photos={ficha.fotos} onChange={() => void load()} />
-            {ficha.estado === "Revisión" && revision && (
+             {ficha.estado === "En revisión" && revision && (
               <section className="revision-panel">
                 <div className="panel-head">
                   <h3>Revisión</h3>
@@ -819,13 +821,13 @@ export function FichaDetail({
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setServiceOpen(false)}>Cancelar</button><button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>
       </Dialog>
-      <Dialog open={closeOpen} title="Aprobar revisión y entregar" onClose={() => setCloseOpen(false)} className="delivery-modal" dirty={selectedServiceIds.length > 0}>
+      <Dialog open={closeOpen} title="Aprobar revisión" onClose={() => setCloseOpen(false)} className="delivery-modal" dirty={selectedServiceIds.length > 0}>
          <p>Seleccioná los services previos que quieras asociar a la ficha antes de continuar.</p>
         {priorServices.length > 0 && <section className="line-items-list"><h3>Services previos sin ficha</h3>{priorServices.map((service) => <label key={service.id} className="line-check"><input type="checkbox" checked={selectedServiceIds.includes(service.id)} onChange={(event) => setSelectedServiceIds((ids) => event.target.checked ? [...ids, service.id] : ids.filter((id) => id !== service.id))} />{date(service.fecha)} · {service.kilometraje} km{service.observaciones ? ` · ${service.observaciones}` : ""}</label>)}</section>}
         {!priorServices.length && <p>No hay services previos para asociar.</p>}
         <div className="modal-actions">
           <button type="button" className="button secondary" onClick={() => setCloseOpen(false)}>Cancelar</button>
-          <button type="button" className="button primary" disabled={Boolean(pending)} onClick={confirmDelivery}>Aprobar y entregar</button>
+          <button type="button" className="button primary" disabled={Boolean(pending)} onClick={confirmDelivery}>Aprobar revisión</button>
         </div>
       </Dialog>
       <Dialog open={paymentOpen} title="Registrar pago parcial" onClose={() => setPaymentOpen(false)} dirty={selectedPaidWorkIds.length > 0}>
@@ -844,7 +846,7 @@ export function FichaDetail({
            onConfirm({ title: "Desmarcar trabajos pagados", body: "Hay trabajos que ya fueron marcados y persistidos como pagados. ¿Estás seguro de que querés desmarcarlos todos?", confirmLabel: "Desmarcar pagos", successMessage: "Trabajos desmarcados del pago.", action: () => setSelectedPaidWorkIds([]) });
          }}>No pagar ninguno</button><button type="button" className="button secondary" onClick={() => setPaymentOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={paymentSaving} onClick={confirmPartialPayment}>{paymentSaving ? "Guardando..." : "Guardar pago"}</button></div>
       </Dialog>
-      <ConfirmModal open={startWorkItem !== null} title="Iniciar trabajo" body="Esta ficha se marcará como En Proceso si realizás un trabajo." confirmLabel="Marcar en proceso" variant="success" onClose={() => setStartWorkItem(null)} onConfirm={startWork} />
+      <ConfirmModal open={startWorkItem !== null} title="Iniciar trabajo" body="Esta ficha se marcará como En proceso si realizás un trabajo." confirmLabel="Marcar en proceso" variant="success" onClose={() => setStartWorkItem(null)} onConfirm={startWork} />
     </div>
   );
 }

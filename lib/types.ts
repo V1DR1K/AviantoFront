@@ -1,6 +1,6 @@
-export type FichaStatus = "Cargada" | "En proceso" | "Revisión" | "Entregada" | "Cancelada";
+export type FichaStatus = "Pendiente" | "En proceso" | "En revisión" | "Terminada" | "Entregada" | "Cancelada";
 export type MotoSection = "Taller" | "Venta";
-export type MotoStatus = "Disponible" | "Ingresada Taller" | "Cargada" | "En proceso" | "En revisión" | "Entregada" | "En venta" | "Transferencia en curso" | "Vendida";
+export type MotoStatus = "Disponible" | "Ingresada Taller" | "Pendiente" | "En proceso" | "En revisión" | "Terminada" | "Entregada" | "En venta" | "Transferencia en proceso" | "Vendida";
 export type PagoStatus = "No pagado" | "Parcial" | "Pagado";
 export type TrabajoStatus = "Pendiente" | "Realizado" | "Cancelado";
 export type RepuestoItemType = "REPUESTO" | "ACCESORIO";export type RepuestoItemState = "Pendiente de pedir" | "Pedido" | "Recibido" | "Entregado" | "Cancelado";
