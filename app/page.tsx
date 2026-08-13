@@ -1,5 +1,5 @@
-import { AppController } from "../components/app-controller";
+import { LandingPage } from "../components/landing-page";
 
 export default function Home() {
-  return <AppController />;
+  return <LandingPage />;
 }

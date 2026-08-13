@@ -64,6 +64,8 @@ function routeState(pathname: string, search: string): RouteState {
   const initialPlate = query.get("dominio") || undefined;
 
   if (!segments.length) return { page: "dashboard" };
+  if (segments[0] === "login" && segments.length === 1) return { page: "login" };
+  if (segments[0] === "app" && segments.length === 1) return { page: "dashboard" };
   if (segments[0] === "perfiles" && segments[1] === "nuevo" && segments.length === 2) {
     return { page: "profiles", intake: true, returnTo: returnTo || "/perfiles", initialPlate };
   }
@@ -102,7 +104,7 @@ function routeState(pathname: string, search: string): RouteState {
 }
 
 const pathForPage = (page: string) => ({
-  dashboard: "/",
+  dashboard: "/app",
   profiles: "/perfiles",
   transfers: "/transferencias",
   repuestos: "/repuestos",
@@ -225,9 +227,10 @@ export function AppController() {
   }, [notify, session]);
 
   useEffect(() => {
-    if (route.invalid) router.replace("/");
+    if (route.invalid) router.replace("/app");
+    if (session && route.page === "login") router.replace("/app");
     if (session?.user.rol !== "ADMINISTRACION" && ["audit", "settings", "trabajos"].includes(route.page)) {
-      router.replace("/");
+      router.replace("/app");
     }
   }, [route.invalid, route.page, router, session]);
 
@@ -236,7 +239,7 @@ export function AppController() {
 
   const navigate = (path: string) => router.push(path);
   const navigatePage = (page: string) => {
-    if (session.user.rol !== "ADMINISTRACION" && ["audit", "settings", "trabajos"].includes(page)) return navigate("/");
+    if (session.user.rol !== "ADMINISTRACION" && ["audit", "settings", "trabajos"].includes(page)) return navigate("/app");
     navigate(pathForPage(page));
   };
   const openFicha = (ficha: FichaResponse, returnTo?: string) => { const params = new URLSearchParams(); if (returnTo) params.set("returnTo", returnTo); navigate(`/fichas/${ficha.id}${params.size ? `?${params}` : ""}`); };
@@ -260,7 +263,7 @@ export function AppController() {
   } else if (currentPage === "edit" && route.fichaId) {
      content = <FichaForm key={route.fichaId} fichaKey={route.fichaId} onClose={() => navigate(route.returnTo || "/fichas")} onSave={() => { notify("Ficha actualizada correctamente."); setRefreshKey((key) => key + 1); navigate(route.returnTo || "/fichas"); }} notify={notify} />;
   } else if (currentPage === "dashboard") {
-       content = <Dashboard onIntake={() => navigate("/ingresar?returnTo=%2F&base=dashboard")} onSelect={(ficha) => openFicha(ficha, "/")} onOpenMoto={(id) => openMoto(id, "/")} userName={session.user.nombre} notify={notify} />;
+        content = <Dashboard onIntake={() => navigate("/ingresar?returnTo=%2Fapp&base=dashboard")} onSelect={(ficha) => openFicha(ficha, "/app")} onOpenMoto={(id) => openMoto(id, "/app")} userName={session.user.nombre} notify={notify} />;
   } else if (currentPage === "taller-dashboard") {
         content = <Dashboard initialSection="taller" onIntake={() => navigate("/ingresar?returnTo=%2Ftaller&base=taller")} onSelect={(ficha) => openFicha(ficha, "/taller")} onOpenMoto={(id) => openMoto(id, "/taller")} userName={session.user.nombre} notify={notify} />;
   } else if (currentPage === "sales") {
@@ -298,7 +301,7 @@ export function AppController() {
     <AppShell
       page={shellPage(currentPage)}
       onPage={navigatePage}
-       onIntake={() => navigate("/ingresar?returnTo=%2F&base=dashboard")}
+       onIntake={() => navigate("/ingresar?returnTo=%2Fapp&base=dashboard")}
       session={session}
       onLogout={async () => {
         await logout();
@@ -327,7 +330,7 @@ export function AppController() {
              });
          }}
       />
-      <IntakeView key={`${route.intake ? "open" : "closed"}-${route.initialPlate ?? ""}-${route.returnTo ?? ""}`} open={Boolean(route.intake)} initialPlate={route.initialPlate} onClose={() => navigate(route.returnTo || "/")} onOpenProfile={(id) => openMoto(id, route.returnTo || "/perfiles")} notify={notify} />
+       <IntakeView key={`${route.intake ? "open" : "closed"}-${route.initialPlate ?? ""}-${route.returnTo ?? ""}`} open={Boolean(route.intake)} initialPlate={route.initialPlate} onClose={() => navigate(route.returnTo || "/app")} onOpenProfile={(id) => openMoto(id, route.returnTo || "/perfiles")} notify={notify} />
       <Toast notification={toast} onClose={() => setToast(null)} />
     </AppShell>
   );

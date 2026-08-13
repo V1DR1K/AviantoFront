@@ -17,18 +17,21 @@ test("server-renders Avianto metadata", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /<title>AviantoSoftware \| Gestión de taller<\/title>/i);
-  assert.match(html, /Gestión de pedidos, reparaciones y presupuestos/);
+  assert.match(html, /Cada moto tiene una historia/);
+  assert.match(html, /Conocer Avianto/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview|SkeletonPreview/);
 });
 
 test("keeps the application entrypoint and production scripts", async () => {
-  const [page, layout, packageJson, controller] = await Promise.all([
+  const [page, loginPage, layout, packageJson, controller] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../components/app-controller.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /AppController/);
+  assert.match(page, /LandingPage/);
+  assert.match(loginPage, /AppController/);
   assert.match(layout, /AviantoSoftware/);
   assert.match(packageJson, /"build"/);
   assert.match(controller, /perfiles|fichas|repuestos/);
