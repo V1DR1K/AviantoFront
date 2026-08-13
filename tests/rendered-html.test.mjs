@@ -17,22 +17,26 @@ test("server-renders motorcom landing metadata", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /<title>motorcom \| Gestión de taller<\/title>/i);
+  assert.match(html, /<meta[^>]+name="viewport"[^>]+content="width=device-width, initial-scale=1"[^>]*>/i);
+  assert.doesNotMatch(html, /maximum-scale|user-scalable=no/i);
   assert.match(html, /Cada moto tiene una historia/);
   assert.match(html, /Conocer motorcom/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview|SkeletonPreview/);
 });
 
-test("keeps the application entrypoint and production scripts", async () => {
-  const [page, loginPage, layout, packageJson, controller] = await Promise.all([
+test("keeps the application entrypoint, production scripts, and mobile ficha controls", async () => {
+  const [page, loginPage, layout, stylesheet, packageJson, controller] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../components/app-controller.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page, /LandingPage/);
   assert.match(loginPage, /AppController/);
   assert.match(layout, /AviantoSoftware/);
+  assert.match(stylesheet, /@media \(max-width: 680px\) \{[\s\S]*?\.order-form input,[\s\S]*?\.order-form select,[\s\S]*?\.order-form textarea \{[\s\S]*?font-size: 16px;/);
   assert.match(packageJson, /"build"/);
   assert.match(controller, /perfiles|fichas|repuestos/);
 });
