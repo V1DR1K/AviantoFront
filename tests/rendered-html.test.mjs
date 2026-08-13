@@ -18,7 +18,7 @@ test("server-renders Avianto metadata", async () => {
   const html = await response.text();
   assert.match(html, /<title>AviantoSoftware \| Gestión de taller<\/title>/i);
   assert.match(html, /Cada moto tiene una historia/);
-  assert.match(html, /Conocer Avianto/);
+  assert.match(html, /Conocer motorcom/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview|SkeletonPreview/);
 });
 

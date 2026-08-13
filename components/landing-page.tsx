@@ -5,42 +5,43 @@ import {
   ClipboardList,
   FileCheck2,
   FileText,
-  LogIn,
+  MessageCircle,
   Wrench,
 } from "lucide-react";
-import Link from "next/link";
+
+const whatsappUrl = "https://wa.me/5493412639357?text=Hola%2C%20quiero%20conocer%20motorcom";
 
 export function LandingPage() {
   return (
     <main className="landing-page">
       <header className="landing-header">
-        <a className="landing-brand" href="#inicio" aria-label="Avianto, volver al inicio">
-          <span className="brand-mark">A</span>
-          <span>Avianto<span>Software</span></span>
+        <a className="landing-brand" href="#inicio" aria-label="motorcom, volver al inicio">
+          <span className="brand-mark">M</span>
+          <span>motorcom</span>
         </a>
         <nav className="landing-nav" aria-label="Navegación principal">
           <a href="#como-funciona">Cómo funciona</a>
           <a href="#para-talleres">Para talleres</a>
-          <Link className="landing-login" href="/login"><LogIn size={16} /> Ingresar</Link>
+          <a className="landing-login" href={whatsappUrl} target="_blank" rel="noreferrer"><MessageCircle size={16} /> Contactanos</a>
         </nav>
       </header>
 
       <section className="landing-hero" id="inicio">
         <div className="landing-hero-copy">
-          <h1>Cada moto tiene una historia. <em>Avianto la ordena.</em></h1>
+          <h1>Cada moto tiene una historia. <em>motorcom la ordena.</em></h1>
           <p className="landing-lead">
             Convertí el diagnóstico del taller en órdenes de trabajo claras, presupuestos revisables e historial que siempre se puede consultar.
           </p>
           <div className="landing-actions">
-            <a className="landing-button landing-button-primary" href="#demo">
-              Conocer Avianto <ArrowUpRight size={18} />
+            <a className="landing-button landing-button-primary" href={whatsappUrl} target="_blank" rel="noreferrer">
+              Conocer motorcom <ArrowUpRight size={18} />
             </a>
             <a className="landing-text-link" href="#como-funciona">Ver cómo funciona <ArrowRight size={16} /></a>
           </div>
           <p className="landing-note">Pensado para el ritmo real de un taller de motos.</p>
         </div>
 
-        <div className="landing-hero-visual" aria-label="Ejemplo de una ficha de servicio de Avianto">
+        <div className="landing-hero-visual" aria-label="Ejemplo de una ficha de servicio de motorcom">
           <div className="landing-visual-caption">Vista de producto <span>Ejemplo</span></div>
           <div className="service-record">
             <div className="service-record-topline">
@@ -79,7 +80,7 @@ export function LandingPage() {
           <h2>Menos mensajes sueltos. Más trabajo que avanza.</h2>
         </div>
         <p>
-          Avianto conecta lo que pasa junto a la moto con lo que necesita resolver administración. La información llega ordenada, cada cambio queda visible y el presupuesto se arma sobre datos concretos.
+          motorcom conecta lo que pasa junto a la moto con lo que necesita resolver administración. La información llega ordenada, cada cambio queda visible y el presupuesto se arma sobre datos concretos.
         </p>
       </section>
 
@@ -125,30 +126,30 @@ export function LandingPage() {
 
       <section className="landing-proof">
         <div className="landing-proof-card">
-          <div className="proof-card-head"><FileText size={19} /><span>El lenguaje de Avianto</span></div>
+          <div className="proof-card-head"><FileText size={19} /><span>El lenguaje de motorcom</span></div>
           <p>Una consola hecha para leer rápido: estados visibles, acciones etiquetadas y datos que se pueden revisar.</p>
           <div className="proof-card-rule" />
           <div className="proof-card-meta"><span>Operario</span><strong>captura</strong><span>Administración</span><strong>estandariza</strong></div>
         </div>
         <div className="landing-proof-copy">
           <h2>Es el registro de servicio de tu taller.</h2>
-          <p>Avianto está pensado para que la operación sea simple en el celular y detallada en la PC, sin obligar a todo el equipo a trabajar de la misma manera.</p>
+          <p>motorcom está pensado para que la operación sea simple en el celular y detallada en la PC, sin obligar a todo el equipo a trabajar de la misma manera.</p>
         </div>
       </section>
 
       <section className="landing-cta" id="demo">
         <div>
           <h2>Conocé el flujo completo.</h2>
-          <p>Entrá al sistema para ver cómo Avianto conecta el ingreso de una moto con su orden de trabajo.</p>
+          <p>Escribinos para conocer cómo motorcom conecta el ingreso de una moto con su orden de trabajo.</p>
         </div>
-        <Link className="landing-button landing-button-light" href="/login">
-          Ver el sistema <ArrowUpRight size={18} />
-        </Link>
+        <a className="landing-button landing-button-light" href={whatsappUrl} target="_blank" rel="noreferrer">
+          Contactar por WhatsApp <MessageCircle size={18} />
+        </a>
       </section>
 
       <footer className="landing-footer">
-        <a className="landing-brand" href="#inicio"><span className="brand-mark">A</span><span>Avianto<span>Software</span></span></a>
-        <div><span>Gestión de taller para motos</span><Link href="/login">Ingresar al sistema <LogIn size={14} /></Link></div>
+        <a className="landing-brand" href="#inicio"><span className="brand-mark">M</span><span>motorcom</span></a>
+        <div><span>Gestión de taller para motos</span><a href={whatsappUrl} target="_blank" rel="noreferrer">Escribinos por WhatsApp <MessageCircle size={14} /></a></div>
       </footer>
     </main>
   );
