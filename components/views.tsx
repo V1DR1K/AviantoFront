@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowDownUp, ArrowRightLeft, Check, Download, Edit3, Eye, FileDown, Filter, LogOut, Plus, Trash2 } from "lucide-react";
+import { ArrowDownUp, Check, Download, Edit3, Eye, FileDown, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download, objectUrl } from "../lib/api";
 import { integerInput, money, parseIntegerInput, paymentAmount } from "../lib/format";
 import { daysAgoInAr, formatDateInAr, todayInAr } from "../lib/dates";
@@ -21,8 +21,9 @@ import type {
   RevisionResponse,
   ServiceResponse,
   TallerResponse,
+  VentaFichaResponse,
+  VentaFichaStatus,
   VentaResponse,
-  VentaMotoResponse,
   TrabajoStatus,
 } from "../lib/types";
 import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
@@ -227,83 +228,63 @@ export function Dashboard({
   );
 }
 
-const salesStatuses: VentaMotoResponse["estado"][] = ["En venta", "Transferencia en proceso", "Vendida"];
+const salesStatuses: VentaFichaStatus[] = ["En venta", "Transferencia en proceso", "Vendida"];
 const salesSortOptions = [
-  { value: "fechaIngreso", label: "Fecha de ingreso" },
-  { value: "patente", label: "Dominio" },
-  { value: "estado", label: "Estado" },
+  { value: "createdAt", label: "Fecha de creación" },
+  { value: "updatedAt", label: "Última actualización" },
+  { value: "numero", label: "Número de ficha" },
 ];
 
 export function VentasView({
   onIntake,
   onOpenMoto,
-  onOpenTransfers,
+  onOpenSale,
   notify,
-  canCompleteSale,
 }: {
   onIntake: () => void;
   onOpenMoto: (id: string) => void;
-  onOpenTransfers: (id: string) => void;
+  onOpenSale: (sale: VentaFichaResponse) => void;
   notify: Notify;
-  canCompleteSale: boolean;
 }) {
-  const [result, setResult] = useState<VentaResponse | null>(null);
-  const [status, setStatus] = useState<"Todos" | VentaMotoResponse["estado"]>("Todos");
+  const [result, setResult] = useState<PageResponse<VentaFichaResponse> | null>(null);
+  const [status, setStatus] = useState<"Todos" | VentaFichaStatus>("Todos");
   const [query, setQuery] = useState("");
-  const [desde, setDesde] = useState(daysAgoInAr(30));
-  const [hasta, setHasta] = useState(todayInAr());
-  const [sortBy, setSortBy] = useState("fechaIngreso");
+  const [sortBy, setSortBy] = useState("updatedAt");
   const [direction, setDirection] = useState<"ASC" | "DESC">("DESC");
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [confirmation, setConfirmation] = useState<{
-    title: string;
-    body: string;
-    confirmLabel: string;
-    successMessage: string;
-    action: () => Promise<void>;
-  } | null>(null);
-  const load = () => void api<VentaResponse>("/dashboard/ventas").then(setResult).catch((reason) => notify(errorMessage(reason), "error"));
-  useEffect(load, [notify]);
-  const current = status === "Todos"
-    ? result?.estados.flatMap((item) => item.motos) ?? []
-    : result?.estados.find((item) => item.estado === status)?.motos ?? [];
-  const visible = [...current]
-    .filter((moto) => `${moto.patente} ${moto.moto} ${moto.cliente ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()))
-    .filter((moto) => {
-      const ingreso = moto.fechaIngreso?.slice(0, 10);
-      return !ingreso || (!desde || ingreso >= desde) && (!hasta || ingreso <= hasta);
-    })
-    .sort((left, right) => {
-      const leftValue = sortBy === "fechaIngreso" ? left.fechaIngreso?.slice(0, 10) ?? "" : sortBy === "patente" ? left.patente : left.estado;
-      const rightValue = sortBy === "fechaIngreso" ? right.fechaIngreso?.slice(0, 10) ?? "" : sortBy === "patente" ? right.patente : right.estado;
-      const comparison = leftValue.localeCompare(rightValue, "es");
-      return direction === "DESC" ? -comparison : comparison;
-    });
-  const transition = async (moto: VentaMotoResponse, action: () => Promise<unknown>, message: string) => {
-    setBusyId(moto.motoId);
-    try { await action(); notify(message); load(); } catch (reason) { notify(errorMessage(reason), "error"); throw reason; } finally { setBusyId(null); }
-  };
+  const [page, setPage] = useState(1);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  useEffect(() => {
+    void api<PageResponse<VentaFichaResponse>>("/ventas", {}, {
+      q: query || undefined,
+      estado: status === "Todos" ? undefined : status,
+      sortBy,
+      direction,
+      page: page - 1,
+      size: 20,
+    }).then((next) => { setResult(next); setLoadError(null); }).catch((reason) => { const message = errorMessage(reason); setLoadError(message); notify(message, "error"); });
+  }, [query, status, sortBy, direction, page, notify, reloadKey]);
   const emptyLabel = status === "Todos" ? "para mostrar" : status.toLowerCase();
   return <div className="page">
-    <div className="page-heading"><div><h1>Ventas</h1><p>Seguí cada moto desde su ingreso hasta la transferencia final.</p></div><div className="page-actions"><button className="button secondary" onClick={onIntake}><Plus size={18} />Ingresar moto</button></div></div>
+    <div className="page-heading"><div><h1>Ventas</h1><p>Fichas persistentes para seguir comprador, requisitos y transferencia.</p></div><div className="page-actions"><button className="button secondary" onClick={onIntake}><Plus size={18} />Ingresar moto</button></div></div>
        <section className="panel table-panel">
        <FilterBar
-         primary={<SearchBox value={query} onChange={setQuery} placeholder="Patente, moto o cliente" />}
-         activeCount={(status !== "Todos" ? 1 : 0) + (desde !== daysAgoInAr(30) ? 1 : 0) + (hasta !== todayInAr() ? 1 : 0) + (sortBy !== "fechaIngreso" ? 1 : 0)}
-       >
-         <SelectField value={status} onChange={(value) => setStatus(value as typeof status)} options={[{ value: "Todos", label: "Todos los estados" }, ...salesStatuses.map((value) => ({ value, label: value }))]} icon={Filter} ariaLabel="Filtrar ventas por estado" />
-         <label><span className="date-label">Desde</span><input type="date" value={desde} onChange={(event) => setDesde(event.target.value)} /></label>
-         <label><span className="date-label">Hasta</span><input type="date" value={hasta} onChange={(event) => setHasta(event.target.value)} /></label>
-         <SelectField value={sortBy} onChange={setSortBy} options={salesSortOptions} icon={Filter} ariaLabel="Ordenar ventas por" />
-         <button className="button secondary" onClick={() => setDirection((value) => value === "DESC" ? "ASC" : "DESC")} aria-label="Cambiar orden de ventas"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
-       </FilterBar>
-      {visible.length ? <table><thead><tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{visible.map((moto) => {
-        const busy = busyId === moto.motoId;
-        return <tr key={moto.motoId}><td data-label="Moto"><strong>{moto.patente}</strong><small>{moto.moto}</small></td><td data-label="Cliente">{moto.cliente ?? "Sin propietario"}</td><td data-label="KM actual">{moto.kilometraje != null ? moto.kilometraje.toLocaleString("es-AR") : "—"}</td><td data-label="Estado"><StatusBadge status={moto.estado} /></td><td className="table-actions sales-actions"><button className="row-action" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button>{moto.estado === "En venta" && <button className="button secondary compact" disabled={busy} onClick={() => onOpenTransfers(moto.motoId)}><ArrowRightLeft size={15} />Transferir</button>}{moto.estado === "Transferencia en proceso" && canCompleteSale && <button className="button primary compact" disabled={busy} onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${moto.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: async () => { await transition(moto, () => api(`/motovehiculos/${moto.motoId}/venta/completar`, { method: "POST" }), "Venta completada."); } })}><LogOut size={15} />Completar</button>}</td></tr>;
-       })}</tbody></table> : result ? <EmptyState title={`Sin motos ${emptyLabel}`} body={query ? "Probá con otra búsqueda." : "No hay motos dentro de los filtros seleccionados."} /> : <div className="table-loading" role="status">Cargando ventas...</div>}
-     </section>
-     <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; setConfirmation(null); if (!request) return; return request.action().then(() => notify(request.successMessage)).catch((reason) => { notify(errorMessage(reason), "error"); throw reason; }); }} />
-   </div>;
+          primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Ficha, patente o comprador" />}
+          activeCount={(status !== "Todos" ? 1 : 0) + (sortBy !== "updatedAt" ? 1 : 0)}
+        >
+          <SelectField value={status} onChange={(value) => { setStatus(value as typeof status); setPage(1); }} options={[{ value: "Todos", label: "Todos los estados" }, ...salesStatuses.map((value) => ({ value, label: value }))]} icon={Filter} ariaLabel="Filtrar ventas por estado" />
+          <SelectField value={sortBy} onChange={(value) => { setSortBy(value); setPage(1); }} options={salesSortOptions} icon={Filter} ariaLabel="Ordenar ventas por" />
+          <button className="button secondary" onClick={() => { setDirection((value) => value === "DESC" ? "ASC" : "DESC"); setPage(1); }} aria-label="Cambiar orden de ventas"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
+        </FilterBar>
+       {result?.content.length ? <table><thead><tr><th>Ficha</th><th>Moto</th><th>Comprador</th><th>Checklist</th><th>Cita</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{result.content.map((sale) => {
+         const required = sale.items.filter((item) => item.obligatorio);
+         const completed = required.filter((item) => item.estado === "Realizado").length;
+         const appointment = sale.transferencia?.citaFecha ? `${date(sale.transferencia.citaFecha)} · ${sale.transferencia.citaHora?.slice(0, 5) ?? "—"}` : "Sin cita";
+         return <tr key={sale.id}><td data-label="Ficha"><strong>{sale.numero}</strong><small>Actualizada {date(sale.actualizadaEn)}</small></td><td data-label="Moto"><strong>{sale.patente}</strong><small>{sale.moto}</small></td><td data-label={sale.estado === "Vendida" ? "Comprador final" : "Comprador prospectivo"}>{sale.comprador ?? "Sin comprador"}</td><td data-label="Checklist">{required.length ? `${completed}/${required.length} obligatorios` : "Sin ítems obligatorios"}<small>{sale.obligatoriosCompletos ? "Completo" : "Pendiente"}</small></td><td data-label="Cita">{appointment}<small>{sale.transferencia?.asistenciaAt ? "Asistencia confirmada" : sale.transferencia ? "Asistencia pendiente" : "Esperando transferencia"}</small></td><td data-label="Estado"><StatusBadge status={sale.estado} /></td><td className="table-actions sales-actions"><button className="row-action" onClick={() => onOpenSale(sale)}>Abrir ficha</button><button className="row-action" onClick={() => onOpenMoto(sale.motoId)}>Ver moto</button></td></tr>;
+        })}</tbody></table> : loadError ? <EmptyState title="No se pudieron cargar las fichas de venta" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((value) => value + 1)}>Reintentar</button>} /> : result ? <EmptyState title={`Sin fichas ${emptyLabel}`} body={query ? "Probá con otra búsqueda." : "No hay fichas de venta dentro de los filtros seleccionados."} /> : <div className="table-loading" role="status">Cargando fichas de venta...</div>}
+       <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
+      </section>
+    </div>;
 }
 
 export function FichasView({

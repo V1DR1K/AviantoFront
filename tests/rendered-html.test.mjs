@@ -84,7 +84,7 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(stylesheet, /\.is-completed \.work-state-box \{[\s\S]*?background: var\(--green\);/);
   assert.match(stylesheet, /\.detail-work-item\.is-completed \{[\s\S]*?background: color-mix/);
   assert.match(views, /Ingresada Taller[\s\S]*?Sin ficha/);
-  assert.match(views, /return !ingreso \|\|/);
+  assert.match(views, /api<PageResponse<VentaFichaResponse>>\("\/ventas"/);
   assert.match(views, /\["Pendiente", "En proceso", "En revisión", "Terminada", "Entregada"\]/);
   assert.match(views, /\/fichas\/\$\{ficha\.id\}\/entregar/);
   assert.match(views, /Completá todos los trabajos pendientes antes de enviar la ficha a revisión/);
@@ -145,4 +145,55 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(wiki, /Transferencia en proceso/);
   assert.match(wiki, /Cada pago registra un importe exacto/);
   assert.match(wiki, /historiales de pago separados/);
+});
+
+test("keeps the sale ficha workflow, read-only transfer registry, and sale checklist contract wired to rendered routes", async () => {
+  const [controller, sales, saleDetail, motoDetail, profiles, transfers, admin, intake, types, stylesheet, apiContract] = await Promise.all([
+    readFile(new URL("../components/app-controller.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/views.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/venta-ficha-detail.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/moto-detail.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/profiles-view.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/transferencias-view.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/admin-view.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/intake-view.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/types.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../docs/api-contract.md", import.meta.url), "utf8"),
+  ]);
+  assert.match(controller, /segments\[0\] === "ventas" && segments\.length === 2/);
+  assert.match(controller, /<VentaFichaDetail fichaKey=\{route\.saleId\}/);
+  assert.match(sales, /api<PageResponse<VentaFichaResponse>>\("\/ventas"/);
+  assert.match(sales, /Abrir ficha/);
+  assert.doesNotMatch(sales, /venta\/completar/);
+  assert.match(saleDetail, /Checklist de venta/);
+  assert.match(saleDetail, /La plantilla de checklist está vacía\. Esta ficha no inventa documentos/);
+  assert.match(saleDetail, /Comprador prospectivo/);
+  assert.match(saleDetail, /\/ventas\/\$\{ficha\.id\}\/transferencia\/cita/);
+  assert.match(saleDetail, /\/ventas\/\$\{ficha\.id\}\/transferencia\/cancelar/);
+  assert.match(saleDetail, /item\.obligatorio \? checklistStates\.filter\(\(estado\) => estado !== "No aplica"\)/);
+  assert.match(saleDetail, /\/ventas\/\$\{ficha\.id\}\/completar/);
+  assert.match(motoDetail, /label: "Venta"/);
+  assert.match(motoDetail, /Abrir ficha de venta/);
+  assert.doesNotMatch(motoDetail, /venta\/completar/);
+  assert.match(profiles, /Abrir ficha de venta/);
+  assert.doesNotMatch(profiles, /venta\/completar/);
+  assert.match(transfers, /Registro de solo lectura conectado a las fichas de venta/);
+  assert.match(transfers, /fichaVentaId/);
+  assert.match(transfers, /onOpenSale\(transfer\.fichaVentaId!\)/);
+  assert.match(transfers, /canceladaAt \? "Cancelada"/);
+  assert.doesNotMatch(transfers, /Nueva transferencia|Editar transferencia|Eliminar transferencia/);
+  assert.match(admin, /Checklist de ventas/);
+  assert.match(admin, /"\/configuracion\/ventas\/checklist"/);
+  assert.match(intake, /Solo Administración puede ingresar una moto a Ventas/);
+  assert.match(types, /export interface VentaFichaResponse/);
+  assert.match(types, /export interface VentaTransferenciaResponse/);
+  assert.match(types, /fichaVentaId\?: string \| null;/);
+  assert.match(types, /canceladaAt\?: string \| null;/);
+  assert.match(stylesheet, /\.sale-gates \{[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/);
+  assert.match(stylesheet, /@media \(max-width: 680px\) \{[\s\S]*?\.sale-checklist-item \{[\s\S]*?grid-template-columns: 44px minmax\(0, 1fr\);/);
+  assert.match(apiContract, /GET \/ventas/);
+  assert.match(apiContract, /VentaFichaResponse/);
+  assert.match(apiContract, /registro de solo lectura/i);
+  assert.match(apiContract, /POST \/ventas\/\{id\}\/transferencia\/cancelar/);
 });

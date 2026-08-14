@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDownUp, Edit3, Eye, Filter, LogIn, LogOut, Plus, Trash2 } from "lucide-react";
+import { ArrowDownUp, Edit3, Eye, FileText, Filter, LogIn, Plus, Trash2 } from "lucide-react";
 import { api } from "../lib/api";
 import { parseIntegerInput } from "../lib/format";
 import type { MarcaMotoResponse, PageResponse, PerfilResponse } from "../lib/types";
@@ -10,9 +10,8 @@ import { ConfirmModal, EmptyState, FilterBar, Pagination, SearchBox, SelectField
 
 const profileStates = ["Disponible", "Ingresada Taller", "Pendiente", "En proceso", "En revisión", "Terminada", "Entregada", "En venta", "Transferencia en proceso", "Vendida"];
 const lastModified = (value: string) => new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
-const actionError = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible completar la acción.";
 
-export function ProfilesView({ onIntake, onOpen, notify }: { onIntake: (plate?: string) => void; onOpen: (id: string) => void; notify: Notify }) {
+export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntake: (plate?: string) => void; onOpen: (id: string) => void; onOpenSale: (id: string) => void; notify: Notify }) {
   const [dominio, setDominio] = useState("");
   const [motoQuery, setMotoQuery] = useState("");
   const [clienteQuery, setClienteQuery] = useState("");
@@ -25,13 +24,6 @@ export function ProfilesView({ onIntake, onOpen, notify }: { onIntake: (plate?: 
   const [editing, setEditing] = useState<PerfilResponse | null>(null);
   const [deleting, setDeleting] = useState<PerfilResponse | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [confirmation, setConfirmation] = useState<{
-    title: string;
-    body: string;
-    confirmLabel: string;
-    successMessage: string;
-    action: () => Promise<void>;
-  } | null>(null);
 
   useEffect(() => {
     void api<PageResponse<PerfilResponse>>("/perfiles", {}, { dominio: dominio || undefined, moto: motoQuery || undefined, cliente: clienteQuery || undefined, estado: estado || undefined, sortBy, direction, page: page - 1, size: 20 })
@@ -65,11 +57,6 @@ export function ProfilesView({ onIntake, onOpen, notify }: { onIntake: (plate?: 
       setDeleting(null); setReloadKey((key) => key + 1); notify(`Perfil ${selected.patente} eliminado.`);
     } catch (reason) { setDeleting(null); notify(reason instanceof Error ? reason.message : "No se pudo eliminar el perfil.", "error"); }
   };
-  const completeSale = async (profile: PerfilResponse) => {
-    await api(`/motovehiculos/${profile.id}/venta/completar`, { method: "POST" });
-    setReloadKey((key) => key + 1);
-  };
-
   return <div className="page">
     <div className="page-heading"><div><h1>Perfiles</h1><p>Información integral e historial de cada moto.</p></div><button className="button primary" onClick={() => onIntake()}><Plus size={19} />Ingresar moto</button></div>
        <section className="panel table-panel">
@@ -80,11 +67,10 @@ export function ProfilesView({ onIntake, onOpen, notify }: { onIntake: (plate?: 
           <SelectField value={sortBy} onChange={(value) => { setSortBy(value); setPage(1); }} options={[{ value: "patente", label: "Dominio" }, { value: "modelo", label: "Moto" }, { value: "estado", label: "Estado" }, { value: "updatedAt", label: "Última modificación" }]} icon={Filter} ariaLabel="Ordenar perfiles por" />
           <button className="button secondary" onClick={() => { setDirection((value) => value === "ASC" ? "DESC" : "ASC"); setPage(1); }} aria-label="Cambiar orden de perfiles"><ArrowDownUp size={16} />{direction === "ASC" ? "Ascendente" : "Descendente"}</button>
         </FilterBar>
-        {result?.content.length ? <table><thead><tr><th>Dominio</th><th>Moto</th><th>Cliente</th><th>Sección</th><th>Estado</th><th>Última modificación</th><th>Acciones</th></tr></thead><tbody>{result.content.map((profile) => <tr key={profile.id}><td data-label="Dominio"><strong>{profile.patente}</strong></td><td data-label="Moto">{profile.marca} {profile.modelo}</td><td data-label="Cliente">{profile.propietario ?? "Sin propietario"}</td><td data-label="Sección">{profile.seccion ?? "—"}</td><td data-label="Estado"><StatusBadge status={profile.estado} /></td><td data-label="Última modificación">{lastModified(profile.ultimaModificacion ?? profile.updatedAt)}</td><td className="table-actions"><button onClick={() => onOpen(profile.id)} aria-label={`Ver perfil ${profile.patente}`}><Eye size={17} /></button>{profile.estado === "Vendida" ? null : !profile.ingresada ? <button onClick={() => onIntake(profile.patente)} aria-label={`Ingresar moto ${profile.patente}`}><LogIn size={17} /></button> : profile.seccion === "Venta" && profile.estado === "Transferencia en proceso" ? <button onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${profile.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: () => completeSale(profile) })} aria-label={`Completar venta ${profile.patente}`}><LogOut size={17} /></button> : null}<button onClick={() => setEditing(profile)} aria-label={`Editar perfil ${profile.patente}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(profile)} aria-label={`Eliminar perfil ${profile.patente}`}><Trash2 size={17} /></button></td></tr>)}</tbody></table> : <EmptyState title="No hay perfiles" body="Creá el primer Perfil de una moto." action={<button className="button primary" onClick={() => onIntake()}>Ingresar moto</button>} />}
+        {result?.content.length ? <table><thead><tr><th>Dominio</th><th>Moto</th><th>Cliente</th><th>Sección</th><th>Estado</th><th>Última modificación</th><th>Acciones</th></tr></thead><tbody>{result.content.map((profile) => <tr key={profile.id}><td data-label="Dominio"><strong>{profile.patente}</strong></td><td data-label="Moto">{profile.marca} {profile.modelo}</td><td data-label="Cliente">{profile.propietario ?? "Sin propietario"}</td><td data-label="Sección">{profile.seccion ?? "—"}</td><td data-label="Estado"><StatusBadge status={profile.estado} /></td><td data-label="Última modificación">{lastModified(profile.ultimaModificacion ?? profile.updatedAt)}</td><td className="table-actions"><button onClick={() => onOpen(profile.id)} aria-label={`Ver perfil ${profile.patente}`}><Eye size={17} /></button>{!profile.ingresada ? <button onClick={() => onIntake(profile.patente)} aria-label={`Ingresar moto ${profile.patente}`}><LogIn size={17} /></button> : profile.seccion === "Venta" ? <button onClick={() => onOpenSale(profile.id)} aria-label={`Abrir ficha de venta ${profile.patente}`}><FileText size={17} /></button> : null}<button onClick={() => setEditing(profile)} aria-label={`Editar perfil ${profile.patente}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(profile)} aria-label={`Eliminar perfil ${profile.patente}`}><Trash2 size={17} /></button></td></tr>)}</tbody></table> : <EmptyState title="No hay perfiles" body="Creá el primer Perfil de una moto." action={<button className="button primary" onClick={() => onIntake()}>Ingresar moto</button>} />}
       <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
     </section>
      <AbmFormModal key={String(editing?.id ?? "new")} open={editing !== null} resource="perfil" mode="modificar" initialValues={editing ?? {}} fields={profileFields} onClose={() => setEditing(null)} onSubmit={saveProfile} onError={(message) => notify(message, "error")} />
      <ConfirmModal open={deleting !== null} title="Eliminar perfil" body={`Vas a dar de baja la moto ${deleting?.patente ?? "seleccionada"}. El historial se conservará y no se eliminará de la base de datos.`} confirmLabel="Eliminar perfil" onClose={() => setDeleting(null)} onConfirm={removeProfile} />
-      <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; setConfirmation(null); if (!request) return; return request.action().then(() => notify(request.successMessage)).catch((reason) => { notify(actionError(reason), "error"); throw reason; }); }} />
   </div>;
 }

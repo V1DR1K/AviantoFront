@@ -404,6 +404,15 @@ textarea:focus-visible {
   background: #eef6fb;
   box-shadow: inset 0 0 0 2px var(--blue);
 }
+.intake-options button:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+.intake-role-note {
+  margin: -8px 0 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
 .sidebar-new {
   width: 100%;
   background: transparent;
@@ -624,6 +633,310 @@ nav.tabs button.active {
 }
 .sales-actions {
   min-width: 220px;
+}
+.venta-ficha-page {
+  max-width: 1440px;
+}
+.venta-ficha-title {
+  align-items: flex-start;
+}
+.venta-ficha-title .detail-stack {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.sale-flow .flow-step {
+  min-width: 190px;
+}
+.sale-gates {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 0 20px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--line);
+}
+.sale-gates > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  padding: 13px 14px;
+  background: var(--color-surface-muted);
+  color: var(--muted);
+}
+.sale-gates svg {
+  grid-row: span 2;
+  align-self: center;
+  color: var(--blue);
+}
+.sale-gates span {
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+.sale-gates strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+.sale-gates .is-ready {
+  background: #eff7f1;
+}
+.sale-gates .is-ready svg,
+.sale-gates .is-ready strong {
+  color: var(--green);
+}
+.venta-detail-grid {
+  align-items: start;
+}
+.sale-checklist-panel,
+.sale-transfer-panel {
+  padding: 0;
+  overflow: hidden;
+}
+.sale-checklist-panel > .panel-head,
+.sale-transfer-panel > .panel-head {
+  padding: 20px 23px 16px;
+  margin: 0;
+  border-bottom: 1px solid var(--line);
+}
+.sale-progress {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.sale-checklist {
+  display: grid;
+}
+.sale-checklist-item {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) minmax(148px, .35fr);
+  gap: 12px;
+  align-items: center;
+  padding: 13px 18px;
+  background: var(--color-surface);
+}
+.sale-checklist-item + .sale-checklist-item {
+  border-top: 1px solid var(--line);
+}
+.sale-checklist-item.is-complete {
+  background: color-mix(in srgb, var(--green) 6%, var(--color-surface));
+}
+.sale-check-toggle {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  cursor: pointer;
+}
+.sale-check-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.sale-check-toggle span {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-border-strong);
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+  color: transparent;
+}
+.sale-check-toggle input:checked + span {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+.sale-check-toggle input:focus-visible + span {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+.sale-check-toggle input:disabled + span {
+  opacity: .65;
+  cursor: not-allowed;
+}
+.sale-check-copy {
+  min-width: 0;
+}
+.sale-check-copy strong,
+.sale-check-copy small {
+  display: block;
+}
+.sale-check-copy small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.sale-checklist-item .select-control {
+  min-width: 148px;
+}
+.sale-empty-checklist .empty {
+  min-height: 0;
+  padding: 34px 23px;
+}
+.sale-transfer-waiting,
+.sale-transfer-record {
+  padding: 23px;
+}
+.sale-transfer-waiting {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  background: var(--color-surface-subtle);
+}
+.sale-transfer-waiting > svg {
+  color: var(--blue);
+}
+.sale-transfer-waiting p,
+.sale-final-audit {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.sale-transfer-record {
+  display: grid;
+  gap: 16px;
+}
+.sale-transfer-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.sale-transfer-facts > div,
+.sale-appointment,
+.sale-attendance {
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-field);
+  background: var(--color-surface-subtle);
+}
+.sale-transfer-facts span,
+.sale-appointment span,
+.sale-attendance span,
+.sale-owner-summary > span,
+.sale-buyer-summary > span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.sale-transfer-facts strong,
+.sale-appointment strong,
+.sale-attendance strong,
+.sale-owner-summary strong,
+.sale-buyer-summary strong {
+  display: block;
+  margin-top: 4px;
+}
+.sale-appointment,
+.sale-attendance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.sale-appointment small,
+.sale-attendance small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+}
+.sale-summary {
+  display: grid;
+  gap: 18px;
+}
+.sale-summary > h3 {
+  margin: 0;
+}
+.sale-owner-summary,
+.sale-buyer-summary,
+.sale-finalization {
+  padding-bottom: 17px;
+  border-bottom: 1px solid var(--line);
+}
+.sale-owner-summary small {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.sale-buyer-picker {
+  display: grid;
+  gap: 9px;
+  margin-top: 13px;
+}
+.sale-finalization {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.sale-finalization h4 {
+  margin: 0;
+  font-size: 14px;
+}
+.sale-finalization ul {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 14px;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 13px;
+}
+.sale-finalization li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.sale-finalization li::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+}
+.sale-finalization li.complete {
+  color: var(--green);
+  font-weight: 750;
+}
+.sale-finalization li.complete::before {
+  border-color: var(--green);
+  background: var(--green);
+}
+.sale-final-audit {
+  padding-top: 2px;
+  color: var(--green);
+  font-weight: 700;
+}
+.sale-profile-entry {
+  max-width: 920px;
+}
+.sale-template-list li > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+.sale-template-list small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.config-empty {
+  padding: 13px 0 3px;
+  border-top: 1px solid var(--line);
+}
+.config-empty p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 .button.compact {
   padding: 7px 9px;
@@ -2907,7 +3220,8 @@ td.table-actions {
 }
 .table-actions:has(button[aria-label^="Ver perfil"]) button[aria-label^="Ingresar moto"],
 .table-actions:has(button[aria-label^="Ver perfil"]) button[aria-label^="Marcar en venta"],
-.table-actions:has(button[aria-label^="Ver perfil"]) button[aria-label^="Completar venta"] {
+.table-actions:has(button[aria-label^="Ver perfil"]) button[aria-label^="Completar venta"],
+.table-actions:has(button[aria-label^="Ver perfil"]) button[aria-label^="Abrir ficha de venta"] {
   order: 4;
   min-height: 36px;
   margin-left: 7px;
@@ -2923,6 +3237,9 @@ td.table-actions {
 }
 .table-actions:has(button[aria-label^="Ver perfil"]) button[aria-label^="Completar venta"]::after {
   content: "Completar venta";
+}
+.table-actions:has(button[aria-label^="Ver perfil"]) button[aria-label^="Abrir ficha de venta"]::after {
+  content: "Abrir venta";
 }
 .record-state {
   font-weight: 750;
@@ -3138,6 +3455,9 @@ td.table-actions {
       "description description description delete"
       "price total status status"
       "observation observation observation observation";
+  }
+  .sale-gates {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 680px) {
@@ -3383,7 +3703,8 @@ td.table-actions {
   }
   .table-actions:has(button[aria-label^="Ver perfil"]) button[aria-label^="Ingresar moto"],
   .table-actions:has(button[aria-label^="Ver perfil"]) button[aria-label^="Marcar en venta"],
-  .table-actions:has(button[aria-label^="Ver perfil"]) button[aria-label^="Completar venta"] {
+  .table-actions:has(button[aria-label^="Ver perfil"]) button[aria-label^="Completar venta"],
+  .table-actions:has(button[aria-label^="Ver perfil"]) button[aria-label^="Abrir ficha de venta"] {
     margin-left: 7px;
   }
   td .row-action {
@@ -3401,6 +3722,45 @@ td.table-actions {
     display: grid;
     justify-items: end;
     gap: 5px;
+  }
+  .sale-gates {
+    grid-template-columns: 1fr;
+  }
+  .sale-checklist-panel > .panel-head,
+  .sale-transfer-panel > .panel-head {
+    padding: 17px;
+  }
+  .sale-checklist-item {
+    grid-template-columns: 44px minmax(0, 1fr);
+    padding: 13px 15px;
+  }
+  .sale-checklist-item .select-control {
+    grid-column: 2;
+    min-width: 0;
+    width: 100%;
+  }
+  .sale-transfer-waiting {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 17px;
+  }
+  .sale-transfer-waiting .button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .sale-transfer-record {
+    padding: 17px;
+  }
+  .sale-transfer-facts {
+    grid-template-columns: 1fr;
+  }
+  .sale-appointment,
+  .sale-attendance {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .sale-appointment .button,
+  .sale-attendance .button {
+    width: 100%;
   }
   .two-col {
     grid-template-columns: 1fr;

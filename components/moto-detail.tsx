@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDownUp, Eye, Filter, LogIn, LogOut, Plus, Settings2 } from "lucide-react";
+import { ArrowDownUp, Eye, FileText, Filter, LogIn, Plus, Settings2 } from "lucide-react";
 import { api } from "../lib/api";
 import { integerInput, money, parseIntegerInput } from "../lib/format";
 import { todayInAr } from "../lib/dates";
@@ -16,8 +16,9 @@ import type {
   RepuestoState,
   ServiceResponse,
   TransferResponse,
+  VentaFichaResponse,
 } from "../lib/types";
-import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SelectField, StatusBadge, type Notify } from "./ui";
+import { Dialog, EmptyState, FilterBar, Pagination, SelectField, StatusBadge, type Notify } from "./ui";
 
 const date = (value?: string | null) => (value ? new Intl.DateTimeFormat("es-AR").format(new Date(value.includes("T") ? value : `${value}T12:00:00`)) : "—");
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
@@ -31,22 +32,24 @@ export function MotoDetail({
   onBack,
   onOpenFicha,
   onOpenRepuesto,
+  onOpenVenta,
   onNewFicha,
   onNewRepuesto,
   onIntake,
   notify,
 }: {
   id: string;
-  initialTab?: "general" | "client" | "services" | "fichas" | "repuestos";
+  initialTab?: "general" | "client" | "services" | "fichas" | "repuestos" | "venta";
   onBack: () => void;
   onOpenFicha: (ficha: FichaResponse) => void;
   onOpenRepuesto: (repuesto: RepuestoResponse) => void;
+  onOpenVenta: () => void;
   onNewFicha: (prefill: { motoId: string; clienteId?: string | null }) => void;
   onNewRepuesto: (prefill: { motoId: string; clienteId?: string | null }) => void;
   onIntake: (plate?: string) => void;
   notify: Notify;
 }) {
-  const [tab, setTab] = useState<"general" | "client" | "services" | "fichas" | "repuestos">(initialTab ?? "general");
+  const [tab, setTab] = useState<"general" | "client" | "services" | "fichas" | "repuestos" | "venta">(initialTab ?? "general");
   const [moto, setMoto] = useState<MotovehiculoResponse | null>(null);
   const [client, setClient] = useState<ClienteResponse | null>(null);
   const [transfers, setTransfers] = useState<TransferResponse[]>([]);
@@ -54,6 +57,7 @@ export function MotoDetail({
   const [nextService, setNextService] = useState<NextServiceResponse | null>(null);
   const [fichas, setFichas] = useState<PageResponse<FichaResponse> | null>(null);
   const [repuestos, setRepuestos] = useState<PageResponse<RepuestoResponse> | null>(null);
+  const [saleFicha, setSaleFicha] = useState<VentaFichaResponse | null>(null);
   const [panelErrors, setPanelErrors] = useState<Record<string, string>>({});
   const [serviceDesde, setServiceDesde] = useState("");
   const [serviceHasta, setServiceHasta] = useState("");
@@ -85,13 +89,6 @@ export function MotoDetail({
   const [configMonths, setConfigMonths] = useState("");
   const [configNotes, setConfigNotes] = useState("");
   const [configSaving, setConfigSaving] = useState(false);
-  const [confirmation, setConfirmation] = useState<{
-    title: string;
-    body: string;
-    confirmLabel: string;
-    successMessage: string;
-    action: () => Promise<void>;
-  } | null>(null);
 
   const load = () =>
     void api<MotovehiculoResponse>(`/motovehiculos/${id}`)
@@ -110,6 +107,10 @@ export function MotoDetail({
     loadNext();
     void api<TransferResponse[]>(`/motovehiculos/${id}/transferencias`).then(setTransfers).catch(() => undefined);
   }, [id, notify]);
+  useEffect(() => {
+    if (moto?.seccion !== "Venta") return;
+    void api<VentaFichaResponse>(`/motovehiculos/${id}/venta`).then(setSaleFicha).catch(() => setSaleFicha(null));
+  }, [id, moto?.seccion]);
 
   const addService = async () => {
     if (!serviceKm) return notify("Ingresá el kilometraje del service.", "error");
@@ -156,11 +157,6 @@ export function MotoDetail({
     setConfigNotes(moto?.serviceObservaciones ?? "");
     setConfigOpen(true);
   };
-  const runMotoAction = async (path: string, options: RequestInit = {}) => {
-    try { const next = await api<MotovehiculoResponse>(path, options); setMoto(next); }
-    catch (reason) { notify(errorMessage(reason), "error"); throw reason; }
-  };
-
   if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><EmptyState title="No se pudo cargar la moto" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={load}>Reintentar</button>} /></div>;
   if (!moto) return <div className="page"><div className="table-loading" role="status">Cargando moto...</div></div>;
 
@@ -170,6 +166,7 @@ export function MotoDetail({
     { id: "services", label: "Service" },
     { id: "fichas", label: "Ficha" },
     { id: "repuestos", label: "Repuestos" },
+    ...(moto.seccion === "Venta" ? [{ id: "venta" as const, label: "Venta" }] : []),
   ];
   return (
     <div className="page">
@@ -182,7 +179,7 @@ export function MotoDetail({
         </div>
         <div className="detail-stack">
           <StatusBadge status={moto.estado} />
-            {moto.estado === "Vendida" ? <span className="detail-note">Venta completada</span> : !moto.ingresada ? <button className="button secondary" onClick={() => onIntake(moto.patente)}><LogIn size={17} />Ingresar moto</button> : moto.seccion === "Venta" && moto.estado === "Transferencia en proceso" ? <button className="button primary" onClick={() => setConfirmation({ title: "Completar venta", body: `La venta de ${moto.patente} quedará completada y el cambio será auditado.`, confirmLabel: "Completar venta", successMessage: "Venta completada.", action: () => runMotoAction(`/motovehiculos/${moto.id}/venta/completar`, { method: "POST" }) })}><LogOut size={17} />Completar venta</button> : moto.estado === "Terminada" ? <span className="detail-note">Pendiente de entrega al cliente</span> : <span className="detail-note">La entrega se completa desde la ficha terminada</span>}
+            {moto.seccion === "Venta" ? <button className="button primary" onClick={onOpenVenta}><FileText size={17} />Abrir ficha de venta</button> : !moto.ingresada ? <button className="button secondary" onClick={() => onIntake(moto.patente)}><LogIn size={17} />Ingresar moto</button> : moto.estado === "Terminada" ? <span className="detail-note">Pendiente de entrega al cliente</span> : <span className="detail-note">La entrega se completa desde la ficha terminada</span>}
           <strong>{moto.anio ?? "—"}</strong>
         </div>
       </div>
@@ -213,7 +210,13 @@ export function MotoDetail({
             <div><dt>Nombre y apellido</dt><dd>{moto.propietario ?? "—"}</dd></div>
             <div><dt>Teléfono</dt><dd>{client?.telefono ?? "—"}</dd></div>
           </dl>
-          <section className="table-panel"><div className="panel-head"><div><h3>Historial de transferencias</h3><p>Los clientes anteriores permanecen asociados a sus fichas históricas.</p></div></div>{transfers.length ? <table><thead><tr><th>Fecha</th><th>Cliente anterior</th><th>Cliente nuevo</th><th>Observaciones</th></tr></thead><tbody>{transfers.map((transfer) => <tr key={transfer.id}><td data-label="Fecha">{date(transfer.fechaTransferencia)}</td><td data-label="Cliente anterior">{transfer.clienteAnterior}</td><td data-label="Cliente nuevo">{transfer.clienteNuevo}</td><td data-label="Observaciones">{transfer.observaciones || "—"}</td></tr>)}</tbody></table> : <p>Esta moto no tiene transferencias registradas.</p>}</section>
+          <section className="table-panel"><div className="panel-head"><div><h3>Historial de transferencias</h3><p>Registro de solo lectura; las acciones viven en la ficha de venta.</p></div></div>{transfers.length ? <table><thead><tr><th>Ficha de venta</th><th>Comprador</th><th>Cita</th><th>Asistencia</th><th>Finalización</th></tr></thead><tbody>{transfers.map((transfer) => <tr key={transfer.id}><td data-label="Ficha de venta">{transfer.fichaVentaId ? "Venta vinculada" : "Histórica"}<small>{transfer.fechaTransferencia ? `Efectiva ${date(transfer.fechaTransferencia)}` : "Pendiente"}</small></td><td data-label="Comprador">{transfer.clienteNuevo}<small>Vendedor: {transfer.clienteAnterior}</small></td><td data-label="Cita">{transfer.citaFecha ? `${date(transfer.citaFecha)} · ${transfer.citaHora?.slice(0, 5) ?? "—"}` : "Sin cita"}<small>{transfer.citaLugar || "—"}</small></td><td data-label="Asistencia">{transfer.asistenciaAt ? "Confirmada" : "Pendiente"}<small>{transfer.asistenciaPor ?? "—"}</small></td><td data-label="Finalización">{transfer.finalizadaAt ? date(transfer.finalizadaAt) : "En proceso"}<small>{transfer.finalizadaPor ?? "—"}</small></td></tr>)}</tbody></table> : <p>Esta moto no tiene transferencias registradas.</p>}</section>
+        </section>
+      )}
+      {tab === "venta" && moto.seccion === "Venta" && (
+        <section className="panel sale-profile-entry">
+          <div className="panel-head"><div><h2>Ficha de venta</h2><p>Comprador, checklist y transferencia se gestionan desde una única ficha trazable.</p></div><button className="button primary" onClick={onOpenVenta}><FileText size={17} />Abrir ficha de venta</button></div>
+          {saleFicha ? <dl className="record-detail"><div><dt>Ficha</dt><dd>{saleFicha.numero}</dd></div><div><dt>Estado</dt><dd><StatusBadge status={saleFicha.estado} /></dd></div><div><dt>Vendedor actual</dt><dd>{saleFicha.vendedor}</dd></div><div><dt>{saleFicha.estado === "Vendida" ? "Comprador final" : "Comprador prospectivo"}</dt><dd>{saleFicha.comprador ?? "Sin seleccionar"}</dd></div><div><dt>Checklist obligatorio</dt><dd>{saleFicha.obligatoriosCompletos ? "Completo" : "Pendiente"}</dd></div><div><dt>Cita</dt><dd>{saleFicha.transferencia?.citaFecha ? `${date(saleFicha.transferencia.citaFecha)} · ${saleFicha.transferencia.citaHora?.slice(0, 5) ?? "—"}` : "Sin programar"}</dd></div></dl> : <div className="table-loading" role="status">Cargando resumen de venta...</div>}
         </section>
       )}
       {tab === "services" && (
@@ -297,7 +300,6 @@ export function MotoDetail({
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setConfigOpen(false)}>Cancelar</button><button className="button primary" disabled={configSaving}>{configSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>
       </Dialog>
-      <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; setConfirmation(null); if (!request) return; return request.action().then(() => notify(request.successMessage)).catch((reason) => { notify(errorMessage(reason), "error"); throw reason; }); }} />
     </div>
   );
 }

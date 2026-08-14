@@ -13,13 +13,14 @@ import {
   ServicesView,
   VentasView,
 } from "./views";
+import { VentaFichaDetail } from "./venta-ficha-detail";
 import { MotoDetail } from "./moto-detail";
 import { RepuestoDetail, RepuestosView } from "./repuestos-view";
 import { TransferenciasView } from "./transferencias-view";
 import { ConfirmModal, Toast, type Notify, type ToastState } from "./ui";
 import { AdminView, SettingsView } from "./admin-view";
 import { TrabajosCatalogoView } from "./trabajos-catalogo-view";
-import type { FichaResponse } from "../lib/types";
+import type { FichaResponse, VentaFichaResponse } from "../lib/types";
 import { LoginView } from "./login-view";
 import { IntakeView } from "./intake-view";
 import { WikiView } from "./wiki-view";
@@ -36,6 +37,7 @@ import { api } from "../lib/api";
 type RouteState = {
   page: string;
   fichaId?: string;
+  saleId?: string;
   motoId?: string;
   repuestoId?: string;
   initialClientId?: string;
@@ -43,7 +45,7 @@ type RouteState = {
   initialPlate?: string;
   intake?: boolean;
   returnTo?: string;
-  tab?: "general" | "client" | "services" | "fichas" | "repuestos";
+  tab?: "general" | "client" | "services" | "fichas" | "repuestos" | "venta";
   invalid?: boolean;
 };
 
@@ -59,7 +61,7 @@ function routeState(pathname: string, search: string): RouteState {
   const returnTo = safeReturnTo(query.get("returnTo"));
   const base = query.get("base");
   const requestedTab = query.get("tab");
-  const tab = ["general", "client", "services", "fichas", "repuestos"].includes(requestedTab ?? "") ? requestedTab as RouteState["tab"] : undefined;
+  const tab = ["general", "client", "services", "fichas", "repuestos", "venta"].includes(requestedTab ?? "") ? requestedTab as RouteState["tab"] : undefined;
   const initialClientId = query.get("clienteId") || undefined;
   const initialMotoId = query.get("motoId") || undefined;
   const initialPlate = query.get("dominio") || undefined;
@@ -86,6 +88,7 @@ function routeState(pathname: string, search: string): RouteState {
   }
   if (segments[0] === "repuestos" && segments.length === 2) return { page: "repuesto", repuestoId: segments[1], returnTo };
   if (segments[0] === "repuestos" && segments.length === 1) return { page: "repuestos" };
+  if (segments[0] === "ventas" && segments.length === 2) return { page: "sale", saleId: segments[1], returnTo };
 
   const pages: Record<string, string> = {
     transferencias: "transfers",
@@ -130,6 +133,7 @@ const shellPage = (page: string) => {
   if (page === "profile") return "profiles";
   if (page === "intake") return "dashboard";
   if (page === "sales") return "sales";
+  if (page === "sale") return "sales";
   if (page === "taller-dashboard") return "taller-dashboard";
   if (page === "ventas-dashboard") return "ventas-dashboard";
   if (page === "repuesto-create" || page === "repuesto") return "repuestos";
@@ -248,6 +252,13 @@ export function AppController() {
   const openFicha = (ficha: FichaResponse, returnTo?: string) => { const params = new URLSearchParams(); if (returnTo) params.set("returnTo", returnTo); navigate(`/fichas/${ficha.id}${params.size ? `?${params}` : ""}`); };
   const openMoto = (id: string, returnTo?: string, tab?: RouteState["tab"]) => { const params = new URLSearchParams(); if (returnTo) params.set("returnTo", returnTo); if (tab) params.set("tab", tab); navigate(`/motos/${id}${params.size ? `?${params}` : ""}`); };
   const openRepuesto = (repuesto: { id: string }, returnTo?: string) => { const params = new URLSearchParams(); if (returnTo) params.set("returnTo", returnTo); navigate(`/repuestos/${repuesto.id}${params.size ? `?${params}` : ""}`); };
+  const openSaleById = (id: string, returnTo?: string) => { const params = new URLSearchParams(); if (returnTo) params.set("returnTo", returnTo); navigate(`/ventas/${id}${params.size ? `?${params}` : ""}`); };
+  const openSale = (sale: VentaFichaResponse, returnTo?: string) => openSaleById(sale.id, returnTo);
+  const openSaleForMoto = (motoId: string, returnTo?: string) => {
+    void api<VentaFichaResponse>(`/motovehiculos/${motoId}/venta`)
+      .then((sale) => openSale(sale, returnTo))
+      .catch((reason) => notify(confirmationError(reason), "error"));
+  };
   const createFichaForMoto = (prefill: { motoId: string; clienteId?: string | null }) => {
     const params = new URLSearchParams({ motoId: prefill.motoId });
     params.set("returnTo", `/motos/${prefill.motoId}?tab=fichas`);
@@ -262,7 +273,7 @@ export function AppController() {
   const currentPage = ["audit", "settings", "trabajos"].includes(route.page) && session.user.rol !== "ADMINISTRACION" ? "dashboard" : route.page;
   let content: ReactNode;
   if (currentPage === "create") {
-      content = route.initialMotoId ? <FichaForm key={`${pathname}?${urlSearch}`} initialMotoId={route.initialMotoId} onClose={() => navigate(route.returnTo || "/perfiles")} onSave={(ficha) => { notify("Ficha creada correctamente."); setRefreshKey((key) => key + 1); openFicha(ficha, route.returnTo); }} notify={notify} /> : <ProfilesView onIntake={(plate) => navigate(`/ingresar?returnTo=%2Fperfiles&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} onOpen={openMoto} notify={notify} />;
+      content = route.initialMotoId ? <FichaForm key={`${pathname}?${urlSearch}`} initialMotoId={route.initialMotoId} onClose={() => navigate(route.returnTo || "/perfiles")} onSave={(ficha) => { notify("Ficha creada correctamente."); setRefreshKey((key) => key + 1); openFicha(ficha, route.returnTo); }} notify={notify} /> : <ProfilesView onIntake={(plate) => navigate(`/ingresar?returnTo=%2Fperfiles&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} onOpen={openMoto} onOpenSale={(id) => openSaleForMoto(id, "/perfiles")} notify={notify} />;
   } else if (currentPage === "edit" && route.fichaId) {
      content = <FichaForm key={route.fichaId} fichaKey={route.fichaId} onClose={() => navigate(route.returnTo || "/fichas")} onSave={() => { notify("Ficha actualizada correctamente."); setRefreshKey((key) => key + 1); navigate(route.returnTo || "/fichas"); }} notify={notify} />;
   } else if (currentPage === "dashboard") {
@@ -270,9 +281,11 @@ export function AppController() {
   } else if (currentPage === "taller-dashboard") {
         content = <Dashboard initialSection="taller" onIntake={() => navigate("/ingresar?returnTo=%2Ftaller&base=taller")} onSelect={(ficha) => openFicha(ficha, "/taller")} onOpenMoto={(id) => openMoto(id, "/taller")} userName={session.user.nombre} notify={notify} />;
   } else if (currentPage === "sales") {
-      content = <VentasView onIntake={() => navigate("/ingresar?returnTo=%2Fventas&base=sales")} onOpenMoto={(id) => openMoto(id, "/ventas")} onOpenTransfers={(id) => navigate(`/transferencias?motoId=${encodeURIComponent(id)}`)} notify={notify} canCompleteSale={session.user.rol === "ADMINISTRACION"} />;
+      content = <VentasView onIntake={() => navigate("/ingresar?returnTo=%2Fventas&base=sales")} onOpenMoto={(id) => openMoto(id, "/ventas")} onOpenSale={(sale) => openSale(sale, "/ventas")} notify={notify} />;
+  } else if (currentPage === "sale" && route.saleId) {
+      content = <VentaFichaDetail fichaKey={route.saleId} onBack={() => navigate(route.returnTo || "/ventas")} onOpenMoto={(id) => openMoto(id, route.returnTo || `/ventas/${route.saleId}`, "venta")} canAdmin={session.user.rol === "ADMINISTRACION"} notify={notify} />;
   } else if (currentPage === "profiles") {
-      content = <ProfilesView onIntake={(plate) => navigate(`/ingresar?returnTo=%2Fperfiles&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} onOpen={openMoto} notify={notify} />;
+       content = <ProfilesView onIntake={(plate) => navigate(`/ingresar?returnTo=%2Fperfiles&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} onOpen={openMoto} onOpenSale={(id) => openSaleForMoto(id, "/perfiles")} notify={notify} />;
   } else if (currentPage === "wiki") {
       content = <WikiView />;
   } else if (currentPage === "orders") {
@@ -280,9 +293,9 @@ export function AppController() {
   } else if (currentPage === "fichas" && route.fichaId) {
       content = <FichaDetail fichaKey={route.fichaId} onBack={() => navigate(route.returnTo || "/fichas")} onConfirm={(request) => setConfirmation(request)} onOpenMoto={(id, tab) => openMoto(id, route.returnTo || `/fichas/${route.fichaId}`, tab ?? "fichas")} notify={notify} />;
   } else if (currentPage === "profile" && route.motoId) {
-      content = <MotoDetail key={`${pathname}?${urlSearch}`} id={route.motoId} initialTab={route.tab} onBack={() => navigate(route.returnTo || "/perfiles")} onOpenFicha={(ficha) => openFicha(ficha, `/motos/${route.motoId}?tab=fichas`)} onOpenRepuesto={(repuesto) => openRepuesto(repuesto, `/motos/${route.motoId}?tab=repuestos`)} onNewFicha={createFichaForMoto} onNewRepuesto={createRepuestoForMoto} onIntake={(plate) => navigate(`/ingresar?returnTo=${encodeURIComponent(`/motos/${route.motoId}`)}&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} notify={notify} />;
+      content = <MotoDetail key={`${pathname}?${urlSearch}`} id={route.motoId} initialTab={route.tab} onBack={() => navigate(route.returnTo || "/perfiles")} onOpenFicha={(ficha) => openFicha(ficha, `/motos/${route.motoId}?tab=fichas`)} onOpenRepuesto={(repuesto) => openRepuesto(repuesto, `/motos/${route.motoId}?tab=repuestos`)} onOpenVenta={() => openSaleForMoto(route.motoId!, route.returnTo || "/perfiles")} onNewFicha={createFichaForMoto} onNewRepuesto={createRepuestoForMoto} onIntake={(plate) => navigate(`/ingresar?returnTo=${encodeURIComponent(`/motos/${route.motoId}`)}&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} notify={notify} />;
   } else if (currentPage === "transfers") {
-      content = <TransferenciasView canTransfer={session.user.rol === "ADMINISTRACION"} initialMotoId={route.initialMotoId} onOpenMoto={(id) => openMoto(id, "/transferencias", "client")} notify={notify} />;
+      content = <TransferenciasView initialMotoId={route.initialMotoId} onOpenMoto={(id) => openMoto(id, "/transferencias", "client")} onOpenSale={(id) => openSaleById(id, "/transferencias")} notify={notify} />;
   } else if (currentPage === "repuestos") {
      content = <RepuestosView onOpen={(repuesto) => openRepuesto(repuesto, "/repuestos")} notify={notify} />;
   } else if (currentPage === "repuesto-create") {
@@ -335,7 +348,7 @@ export function AppController() {
              });
          }}
       />
-       <IntakeView key={`${route.intake ? "open" : "closed"}-${route.initialPlate ?? ""}-${route.returnTo ?? ""}`} open={Boolean(route.intake)} initialPlate={route.initialPlate} onClose={() => navigate(route.returnTo || "/app")} onOpenProfile={(id) => openMoto(id, route.returnTo || "/perfiles")} notify={notify} />
+       <IntakeView key={`${route.intake ? "open" : "closed"}-${route.initialPlate ?? ""}-${route.returnTo ?? ""}`} open={Boolean(route.intake)} initialPlate={route.initialPlate} onClose={() => navigate(route.returnTo || "/app")} onOpenProfile={(id) => openMoto(id, route.returnTo || "/perfiles")} canStartSale={session.user.rol === "ADMINISTRACION"} notify={notify} />
       <Toast notification={toast} onClose={() => setToast(null)} />
     </AppShell>
   );

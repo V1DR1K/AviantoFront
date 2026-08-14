@@ -8,6 +8,8 @@ export type RepuestoItemType = "REPUESTO" | "ACCESORIO";export type RepuestoItem
 export type RepuestoState = "En curso" | "Completado" | "Cancelado";
 export type RevisionState = "ABIERTA" | "APROBADA";
 export type RevisionControlState = "Pendiente" | "Revisado" | "No aplica";
+export type VentaFichaStatus = "En venta" | "Transferencia en proceso" | "Vendida";
+export type VentaChecklistItemState = "Pendiente" | "Realizado" | "No aplica";
 
 export interface PageRequest {
   page: number;
@@ -183,17 +185,6 @@ export interface OwnerResponse {
   actual: boolean;
   observaciones?: string;
 }
-export interface TransferRequest {
-  motoId: string;
-  clienteNuevoId: string;
-  fechaTransferencia: string;
-  observaciones?: string;
-}
-export interface TransferUpdateRequest {
-  clienteNuevoId: string;
-  fechaTransferencia: string;
-  observaciones?: string;
-}
 export interface TransferResponse {
   id: string;
   motoId: string;
@@ -203,10 +194,73 @@ export interface TransferResponse {
   clienteAnterior: string;
   clienteNuevoId: string;
   clienteNuevo: string;
-  fechaTransferencia: string;
+  fechaTransferencia?: string | null;
   observaciones?: string | null;
   realizadaPor?: string | null;
   createdAt: string;
+  fichaVentaId?: string | null;
+  citaFecha?: string | null;
+  citaHora?: string | null;
+  citaLugar?: string | null;
+  asistenciaAt?: string | null;
+  asistenciaPor?: string | null;
+  canceladaAt?: string | null;
+  canceladaPor?: string | null;
+  finalizadaAt?: string | null;
+  finalizadaPor?: string | null;
+}
+export interface VentaChecklistPlantillaRequest {
+  etiqueta: string;
+  orden: number;
+  obligatorio: boolean;
+  activo: boolean;
+}
+export interface VentaChecklistPlantillaResponse extends VentaChecklistPlantillaRequest {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface VentaFichaItemResponse {
+  id: string;
+  etiqueta: string;
+  orden: number;
+  obligatorio: boolean;
+  estado: VentaChecklistItemState;
+  realizadoAt?: string | null;
+  realizadoPor?: string | null;
+}
+export interface VentaTransferenciaResponse {
+  id: string;
+  fechaTransferencia?: string | null;
+  citaFecha?: string | null;
+  citaHora?: string | null;
+  citaLugar?: string | null;
+  asistenciaAt?: string | null;
+  asistenciaPor?: string | null;
+  canceladaAt?: string | null;
+  canceladaPor?: string | null;
+  finalizadaAt?: string | null;
+  finalizadaPor?: string | null;
+  creadaEn: string;
+}
+export interface VentaFichaResponse {
+  id: string;
+  numero: string;
+  motoId: string;
+  patente: string;
+  moto: string;
+  vendedorId: string;
+  vendedor: string;
+  compradorId?: string | null;
+  comprador?: string | null;
+  estado: VentaFichaStatus;
+  obligatoriosCompletos: boolean;
+  finalizadaAt?: string | null;
+  finalizadaPor?: string | null;
+  items: VentaFichaItemResponse[];
+  transferencia?: VentaTransferenciaResponse | null;
+  creadaEn: string;
+  actualizadaEn: string;
 }
 export interface ServiceRequest {
   fichaId?: string;

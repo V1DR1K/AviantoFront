@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Download, Edit3, Eye, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download } from "../lib/api";
 import { parseIntegerInput } from "../lib/format";
-import type { AuditoriaResponse, ClienteResponse, ControlResponse, MarcaMotoResponse, MotovehiculoResponse, PageResponse } from "../lib/types";
+import type { AuditoriaResponse, ClienteResponse, ControlResponse, MarcaMotoResponse, MotovehiculoResponse, PageResponse, VentaChecklistPlantillaRequest, VentaChecklistPlantillaResponse } from "../lib/types";
 import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, SelectField, type Notify } from "./ui";
 import { AbmFormModal, type AbmField, VehicleAbmModal } from "./modal/abm-form-modal";
 
@@ -163,7 +163,7 @@ type Setting = { title: string; description: string; endpoint: string; fields: A
 const settings: Setting[] = [{ title: "Marcas de motos", description: "Opciones disponibles en el alta y edición de motos.", endpoint: "/configuracion/marcas-moto", fields: [{ key: "nombre", label: "Marca", required: true, wide: true }], name: (item) => String(item.nombre) }, { title: "Categorías de revisión", description: "Agrupaciones de controles para el checklist de entrega.", endpoint: "/configuracion/categorias", fields: [{ key: "nombre", label: "Categoría", required: true, wide: true }], name: (item) => String(item.nombre) }, { title: "Usuarios del sistema", description: "Usuarios y perfiles de acceso del taller.", endpoint: "/configuracion/usuarios", fields: [{ key: "username", label: "Usuario", required: true }, { key: "nombre", label: "Nombre", required: true }, { key: "email", label: "Email", type: "email" }, { key: "rol", label: "Perfil", type: "select", required: true, options: [{ value: "ADMINISTRACION", label: "Administración" }, { value: "OPERARIO", label: "Operario" }] }, { key: "password", label: "Contraseña", type: "text" }], name: (item) => `${item.nombre} · ${item.rol === "ADMINISTRACION" ? "Administración" : "Operario"}` }];
 
 export function SettingsView({ notify }: { notify: Notify }) {
-  return <div className="page"><div className="page-heading"><div><h1>Administración</h1><p>Marcas, categorías y usuarios del sistema.</p></div></div><section className="settings-grid">{settings.map((setting) => <ConfigSection key={setting.endpoint} setting={setting} notify={notify} />)}</section></div>;
+  return <div className="page"><div className="page-heading"><div><h1>Administración</h1><p>Marcas, categorías, usuarios y la plantilla de checklist para futuras ventas.</p></div></div><section className="settings-grid">{settings.map((setting) => <ConfigSection key={setting.endpoint} setting={setting} notify={notify} />)}<SaleChecklistSection notify={notify} /></section></div>;
 }
 
 function ConfigSection({ setting, notify }: { setting: Setting; notify: Notify }) {
@@ -184,4 +184,38 @@ function ConfigSection({ setting, notify }: { setting: Setting; notify: Notify }
     }
   };
   return <section className="panel config-section"><div className="config-head"><div><h2>{setting.title}</h2><p>{setting.description}</p></div><button className="button secondary" onClick={() => setEditing({})}><Plus size={16} />Agregar</button></div><ul className="config-list">{entries.map((entry) => <li key={String(entry.id)}><span>{setting.name(entry)}</span><div className="table-actions"><button onClick={() => setEditing(entry)} aria-label={`Editar ${setting.name(entry)}`}><Edit3 size={16} /></button><button className="danger-action" onClick={() => setDeleting(entry)} aria-label={`Eliminar ${setting.name(entry)}`}><Trash2 size={16} /></button></div></li>)}</ul><AbmFormModal key={String(editing?.id ?? "new")} open={editing !== null} resource={setting.title.slice(0, -1).toLowerCase()} mode={editing?.id ? "modificar" : "agregar"} initialValues={editing ?? {}} fields={setting.fields} onClose={() => setEditing(null)} onSubmit={submit} onError={(message) => notify(message, "error")} /><ConfirmModal open={deleting !== null} title="Eliminar configuración" body={`¿Querés eliminar “${deleting ? setting.name(deleting) : ""}”?`} confirmLabel="Sí, eliminar" onClose={() => setDeleting(null)} onConfirm={async () => { if (!deleting) return; const selected = deleting; setDeleting(null); try { await api(`${setting.endpoint}/${selected.id}`, { method: "DELETE" }); load(); notify("Configuración eliminada correctamente."); } catch (reason) { notify(requestError(reason), "error"); throw reason; } }} /></section>;
+}
+
+const saleChecklistFields: AbmField[] = [
+  { key: "etiqueta", label: "Ítem de checklist", required: true, wide: true },
+  { key: "orden", label: "Orden", type: "number", min: 0, required: true },
+  { key: "obligatorio", label: "Requerido para completar la venta", type: "select", required: true, options: [{ value: "true", label: "Sí, obligatorio" }, { value: "false", label: "No, opcional" }] },
+  { key: "activo", label: "Disponible para nuevos ingresos", type: "select", required: true, wide: true, options: [{ value: "true", label: "Activo" }, { value: "false", label: "Inactivo" }] },
+];
+
+function SaleChecklistSection({ notify }: { notify: Notify }) {
+  const [entries, setEntries] = useState<VentaChecklistPlantillaResponse[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [editing, setEditing] = useState<VentaChecklistPlantillaResponse | null>(null);
+  const [deleting, setDeleting] = useState<VentaChecklistPlantillaResponse | null>(null);
+  const load = () => void api<VentaChecklistPlantillaResponse[]>("/configuracion/ventas/checklist", {}, { includeDeleted: false }).then((next) => { setEntries(next); setLoadError(null); }).catch((reason) => { const message = requestError(reason); setLoadError(message); notify(message, "error"); });
+  useEffect(load, [notify, reloadKey]);
+  const submit = async (values: Record<string, string>) => {
+    const payload: VentaChecklistPlantillaRequest = {
+      etiqueta: values.etiqueta.trim(),
+      orden: parseIntegerInput(values.orden),
+      obligatorio: values.obligatorio === "true",
+      activo: values.activo === "true",
+    };
+    try {
+      await api(`/configuracion/ventas/checklist${editing?.id ? `/${editing.id}` : ""}`, { method: editing?.id ? "PUT" : "POST", body: JSON.stringify(payload) });
+      setEditing(null);
+      load();
+      notify("Plantilla de checklist de ventas guardada.");
+    } catch (reason) {
+      notify(requestError(reason), "error");
+    }
+  };
+  return <section className="panel config-section sale-checklist-config"><div className="config-head"><div><h2>Checklist de ventas</h2><p>Define el snapshot para las motos que ingresen a Ventas. No modifica fichas existentes.</p></div><button className="button secondary" disabled={entries === null || Boolean(loadError)} onClick={() => setEditing({ id: "", etiqueta: "", orden: entries?.length ?? 0, obligatorio: true, activo: true, createdAt: "", updatedAt: "" })}><Plus size={16} />Agregar</button></div>{loadError ? <EmptyState title="No se pudo cargar la plantilla" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((value) => value + 1)}>Reintentar</button>} /> : entries === null ? <div className="table-loading" role="status">Cargando plantilla...</div> : entries.length ? <ul className="config-list sale-template-list">{entries.map((entry) => <li key={entry.id}><div><strong>{entry.etiqueta}</strong><small>Orden {entry.orden} · {entry.obligatorio ? "Obligatorio" : "Opcional"} · {entry.activo ? "Activo" : "Inactivo"}</small></div><div className="table-actions"><button onClick={() => setEditing(entry)} aria-label={`Editar ítem de venta ${entry.etiqueta}`}><Edit3 size={16} /></button><button className="danger-action" onClick={() => setDeleting(entry)} aria-label={`Eliminar ítem de venta ${entry.etiqueta}`}><Trash2 size={16} /></button></div></li>)}</ul> : <div className="config-empty"><strong>La plantilla está vacía</strong><p>Las fichas de venta nuevas no incluirán ítems hasta que agregues uno. No se inventa una lista por defecto.</p></div>}<AbmFormModal key={editing?.id || "new-sale-checklist"} open={editing !== null} resource="ítem de checklist de ventas" mode={editing?.id ? "modificar" : "agregar"} initialValues={editing ?? {}} fields={saleChecklistFields} onClose={() => setEditing(null)} onSubmit={submit} onError={(message) => notify(message, "error")} /><ConfirmModal open={deleting !== null} title="Eliminar ítem de checklist" body={`El ítem “${deleting?.etiqueta ?? ""}” dejará de formar parte de los futuros ingresos a Ventas. Las fichas ya creadas conservarán su snapshot.`} confirmLabel="Eliminar ítem" onClose={() => setDeleting(null)} onConfirm={async () => { if (!deleting) return; const selected = deleting; setDeleting(null); try { await api(`/configuracion/ventas/checklist/${selected.id}`, { method: "DELETE" }); load(); notify("Ítem de checklist eliminado."); } catch (reason) { notify(requestError(reason), "error"); throw reason; } }} /></section>;
 }
