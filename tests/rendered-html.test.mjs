@@ -91,6 +91,9 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /saldoPendientePresupuesto > 0/);
   assert.match(views, /La moto se entregará con un saldo pendiente de/);
   assert.doesNotMatch(stylesheet, /\.ficha-summary\s*\{[^}]*max-height/);
+  assert.match(views, /const estadoPagoPresupuesto: PagoStatus = montoCobradoPresupuesto <= 0 \? "No pagado" : saldoPendientePresupuesto <= 0 \? "Pagado" : "Parcial";/);
+  assert.match(views, /className="summary-economic-status"[\s\S]*?Estado de pago[\s\S]*?Presupuesto total[\s\S]*?Monto pagado[\s\S]*?Saldo pendiente/);
+  assert.match(stylesheet, /\.summary-economic-status \{[\s\S]*?border-top: 1px solid var\(--line\);[\s\S]*?border-bottom: 1px solid var\(--line\);/);
   assert.match(fichaForm, /<h2 className="form-section-title">Presupuesto<\/h2>/);
   assert.match(fichaForm, /const \[priceDrafts, setPriceDrafts\] = useState<Record<string, string>>\(\{\}\);/);
   assert.match(fichaForm, /onFocus=\{\(\) => setPriceDrafts/);

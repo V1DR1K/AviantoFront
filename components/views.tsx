@@ -674,6 +674,7 @@ export function FichaDetail({
   const totalPresupuesto = ficha.total + totalRepuestos;
   const montoCobradoPresupuesto = ficha.montoCobrado + repuestosActivos.reduce((sum, pedido) => sum + pedido.montoCobrado, 0);
   const saldoPendientePresupuesto = ficha.saldoPendiente + repuestosActivos.reduce((sum, pedido) => sum + pedido.saldoPendiente, 0);
+  const estadoPagoPresupuesto: PagoStatus = montoCobradoPresupuesto <= 0 ? "No pagado" : saldoPendientePresupuesto <= 0 ? "Pagado" : "Parcial";
   const trabajosPendientes = ficha.trabajos.some((item) => item.estadoTrabajo !== "Realizado" && item.estadoTrabajo !== "Cancelado");
   const entregaConSaldoPendiente = saldoPendientePresupuesto > 0;
   const saveService = async () => {
@@ -823,6 +824,14 @@ export function FichaDetail({
             <div><dt>Ingreso</dt><dd>{ficha.fechaIngreso ? date(ficha.fechaIngreso) : "—"}</dd></div>
             <div><dt>Entrega estimada</dt><dd>{ficha.fechaEntregaEstimada ? date(ficha.fechaEntregaEstimada) : "—"}</dd></div>
           </dl>
+          <section className="summary-economic-status" aria-labelledby={`ficha-${ficha.id}-economic-status`}>
+            <div className="summary-economic-status-head"><h4 id={`ficha-${ficha.id}-economic-status`}>Estado de pago</h4><StatusBadge status={estadoPagoPresupuesto} /></div>
+            <div className="budget-payment-balance" aria-label="Estado económico combinado de ficha y repuestos">
+              <div><span>Presupuesto total</span><strong>{paymentAmount(totalPresupuesto)}</strong></div>
+              <div><span>Monto pagado</span><strong>{paymentAmount(montoCobradoPresupuesto)}</strong></div>
+              <div><span>Saldo pendiente</span><strong>{paymentAmount(saldoPendientePresupuesto)}</strong></div>
+            </div>
+          </section>
           {ficha.observaciones && <section className="summary-group"><h4>Observaciones</h4><p className="summary-note">{ficha.observaciones}</p></section>}
           <section className="summary-work-list" aria-label="Trabajos de la ficha">
             <h4>Trabajos y servicios</h4>

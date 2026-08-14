@@ -1724,6 +1724,26 @@ td small {
 .summary-work-head strong { color: var(--ink); }
 .summary-work small { color: var(--muted); }
 .summary-work.cancelled { opacity: 0.55; text-decoration: line-through; }
+.summary-economic-status {
+  display: grid;
+  margin: 18px 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.summary-economic-status-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.summary-economic-status h4 {
+  margin: 0;
+  color: var(--navy-2);
+}
+.summary-economic-status .budget-payment-balance {
+  margin-bottom: 0;
+}
 .summary-empty,
 .summary-note {
   margin: 0;
