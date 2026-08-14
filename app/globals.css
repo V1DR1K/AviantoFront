@@ -1526,6 +1526,63 @@ td small {
 .summary-work-head strong { color: var(--ink); }
 .summary-work small { color: var(--muted); }
 .summary-work.cancelled { opacity: 0.55; text-decoration: line-through; }
+.ficha-summary {
+  max-height: calc(100vh - 44px);
+  overflow-y: auto;
+}
+.summary-empty,
+.summary-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.summary-note {
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-field);
+  background: var(--color-surface-subtle);
+  color: var(--color-label);
+}
+.summary-linked-orders {
+  display: grid;
+  gap: 12px;
+}
+.summary-linked-order {
+  display: grid;
+  gap: 7px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.summary-linked-order:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.summary-linked-order.cancelled,
+.summary-order-items .cancelled {
+  opacity: 0.58;
+}
+.summary-linked-order-head,
+.summary-order-items > div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.summary-order-items {
+  display: grid;
+  gap: 6px;
+}
+.summary-order-items > div {
+  padding-top: 6px;
+  border-top: 1px solid var(--color-border);
+  color: var(--muted);
+  font-size: 12px;
+}
+.summary-order-items strong {
+  color: var(--ink);
+  white-space: nowrap;
+}
 @keyframes line-item-in {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
@@ -2652,6 +2709,10 @@ td.table-actions {
   }
 }
 @media (max-width: 680px) {
+  .ficha-summary {
+    max-height: none;
+    overflow: visible;
+  }
   body {
     font-size: 16px;
   }

@@ -16,6 +16,7 @@ import type {
   PagoStatus,
   PageResponse,
   PhotoResponse,
+  RepuestoResponse,
   RevisionResponse,
   ServiceResponse,
   TallerResponse,
@@ -527,11 +528,19 @@ export function FichaDetail({
   const [selectedPaidWorkIds, setSelectedPaidWorkIds] = useState<string[]>([]);
   const [paymentSaving, setPaymentSaving] = useState(false);
   const [startWorkItem, setStartWorkItem] = useState<FichaTrabajoResponse | null>(null);
+  const [linkedRepuestos, setLinkedRepuestos] = useState<RepuestoResponse[]>([]);
   const load = () =>
     void api<FichaResponse>(`/fichas/${fichaKey}`)
       .then(setFicha)
       .catch((reason) => { setError(errorMessage(reason)); notify(errorMessage(reason), "error"); });
   useEffect(load, [fichaKey, notify]);
+  useEffect(() => {
+    let active = true;
+    void api<RepuestoResponse[]>(`/fichas/${fichaKey}/repuestos`)
+      .then((items) => { if (active) setLinkedRepuestos(items); })
+      .catch((reason) => { if (active) { setLinkedRepuestos([]); notify(errorMessage(reason), "error"); } });
+    return () => { active = false; };
+  }, [fichaKey, notify]);
   useEffect(() => {
     if (ficha?.estado === "En revisión")
       void api<RevisionResponse>(`/fichas/${fichaKey}/revision`)
@@ -646,6 +655,11 @@ export function FichaDetail({
     await update(`/fichas/${fichaKey}/trabajos/${item.id}/estado`, { estado: "Realizado" }, `item-${item.id}`, "Trabajo actualizado.");
   };
   const current = ficha.estado;
+  const subtotalTrabajos = ficha.trabajos.filter((item) => item.estadoTrabajo !== "Cancelado").reduce((sum, item) => sum + item.subtotal, 0);
+  const subtotalDespuesDescuento = Math.max(0, subtotalTrabajos - ficha.descuentoGlobal);
+  const ivaValor = ficha.iva ? ficha.total - subtotalDespuesDescuento : 0;
+  const totalRepuestos = linkedRepuestos.filter((pedido) => pedido.estado !== "Cancelado").reduce((sum, pedido) => sum + pedido.total, 0);
+  const totalPresupuesto = ficha.total + totalRepuestos;
   const saveService = async () => {
     if (!serviceKm) return notify("Ingresá el kilometraje del service.", "error");
     if (serviceSaving) return;
@@ -792,25 +806,45 @@ export function FichaDetail({
             )}
           </section>
         </div>
-        <aside className="summary">
-          <h3>Resumen monetario</h3>
+        <aside className="summary ficha-summary">
+          <h3>Resumen de ficha</h3>
+          <dl className="summary-facts">
+            <div><dt>Ficha</dt><dd>{ficha.numero}</dd></div>
+            <div><dt>Cliente</dt><dd>{ficha.cliente}</dd></div>
+            <div><dt>Moto</dt><dd>{ficha.moto}</dd></div>
+            <div><dt>Dominio</dt><dd>{ficha.patente}</dd></div>
+            <div><dt>Ingreso</dt><dd>{ficha.fechaIngreso ? date(ficha.fechaIngreso) : "—"}</dd></div>
+            <div><dt>Entrega estimada</dt><dd>{ficha.fechaEntregaEstimada ? date(ficha.fechaEntregaEstimada) : "—"}</dd></div>
+          </dl>
+          {ficha.observaciones && <section className="summary-group"><h4>Observaciones</h4><p className="summary-note">{ficha.observaciones}</p></section>}
           <section className="summary-work-list" aria-label="Trabajos de la ficha">
             <h4>Trabajos a realizar</h4>
             {ficha.trabajos.map((item) => (
               <div key={item.id} className={`summary-work${item.estadoTrabajo === "Cancelado" ? " cancelled" : ""}`}>
                 <div className="summary-work-head"><strong>{item.descripcion}</strong><strong>{money(item.subtotal)}</strong></div>
+                <div className="summary-work-total"><small>Precio {money(item.precioUnitario)}{item.descuento > 0 && ` · Descuento ${money(item.descuento)}`}</small><small>{item.estadoTrabajo}</small></div>
                 {item.observacionTrabajo && <small>{item.observacionTrabajo}</small>}
-                <div className="summary-work-total"><small>{item.estadoTrabajo}</small>{item.descuento > 0 && <small>Descuento {money(item.descuento)}</small>}</div>
               </div>
             ))}
-            <div className="summary-work-total"><span>Subtotal trabajos</span><strong>{money(ficha.trabajos.filter((item) => item.estadoTrabajo !== "Cancelado").reduce((sum, item) => sum + item.subtotal, 0))}</strong></div>
+            <div className="summary-work-total"><span>Subtotal trabajos</span><strong>{money(subtotalTrabajos)}</strong></div>
+          </section>
+          <section className="summary-group">
+            <h4>Pedidos de repuestos y accesorios</h4>
+            {linkedRepuestos.length ? <div className="summary-linked-orders">{linkedRepuestos.map((pedido) => (
+              <article key={pedido.id} className={`summary-linked-order${pedido.estado === "Cancelado" ? " cancelled" : ""}`}>
+                <div className="summary-linked-order-head"><strong>{pedido.numero}</strong><StatusBadge status={pedido.estado} /></div>
+                <small>{pedido.proveedor ? `Proveedor: ${pedido.proveedor}` : "Sin proveedor"}</small>
+                <div className="summary-order-items">{pedido.items.map((item) => <div key={item.id} className={item.estado === "Cancelado" ? "cancelled" : ""}><span>{item.descripcion} · {item.tipo} · {Number(item.cantidad)} u. · {item.estado}</span><strong>{money(item.subtotal)}</strong></div>)}</div>
+                {pedido.observaciones && <small>{pedido.observaciones}</small>}
+                <div className="summary-work-total"><span>Total pedido</span><strong>{pedido.estado === "Cancelado" ? "—" : money(pedido.total)}</strong></div>
+              </article>
+            ))}</div> : <p className="summary-empty">No hay pedidos vinculados a esta ficha.</p>}
           </section>
           <div><span>Descuento global</span><strong>{ficha.descuentoGlobal > 0 ? money(ficha.descuentoGlobal) : "—"}</strong></div>
-          <div><span>IVA</span><strong>{ficha.iva ? "Incluido" : "No aplica"}</strong></div>
-          <div><span>Ingreso</span><strong>{ficha.fechaIngreso ? date(ficha.fechaIngreso) : "—"}</strong></div>
-          <div><span>Entrega estimada</span><strong>{ficha.fechaEntregaEstimada ? date(ficha.fechaEntregaEstimada) : "—"}</strong></div>
-          <div><span>Entrega real</span><strong>{ficha.fechaEntregaReal ? date(ficha.fechaEntregaReal) : "—"}</strong></div>
-          <div className="total"><span>Total final</span><strong>{money(ficha.total)}</strong></div>
+          {ficha.iva && <div><span>IVA 21%</span><strong>{money(ivaValor)}</strong></div>}
+          <div><span>Total trabajos</span><strong>{money(ficha.total)}</strong></div>
+          <div><span>Total pedidos vinculados</span><strong>{money(totalRepuestos)}</strong></div>
+          <div className="total"><span>Total presupuesto</span><strong>{money(totalPresupuesto)}</strong></div>
         </aside>
       </section>
       <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)}>

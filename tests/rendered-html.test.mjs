@@ -62,6 +62,10 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /return !ingreso \|\|/);
   assert.match(views, /\["Pendiente", "En proceso", "En revisión", "Terminada", "Entregada"\]/);
   assert.match(views, /\/fichas\/\$\{ficha\.id\}\/entregar/);
+  assert.match(fichaForm, /Trabajos y servicios[\s\S]*?Pedidos vinculados[\s\S]*?Total presupuesto/);
+  assert.match(fichaForm, /\/fichas\/\$\{fichaKey\}\/repuestos/);
+  assert.match(views, /\/fichas\/\$\{fichaKey\}\/repuestos/);
+  assert.match(views, /Pedidos de repuestos y accesorios[\s\S]*?Total presupuesto/);
   assert.match(controller, /wiki:\s*"\/wiki"/);
   assert.match(shell, /id: "wiki", label: "Wiki"/);
   assert.match(wiki, /Disponible no significa en venta/);

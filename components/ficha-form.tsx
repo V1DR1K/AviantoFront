@@ -10,9 +10,10 @@ import type {
   FichaResponse,
   MotovehiculoResponse,
   PhotoResponse,
+  RepuestoResponse,
   TrabajoCatalogoResponse,
 } from "../lib/types";
-import { ConfirmModal, type Notify } from "./ui";
+import { ConfirmModal, StatusBadge, type Notify } from "./ui";
 
 type Line = {
   key: string;
@@ -105,6 +106,7 @@ export function FichaForm({
   const [descuentoGlobal, setDescuentoGlobal] = useState(0);
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
   const [existing, setExisting] = useState<PhotoResponse[]>([]);
+  const [linkedRepuestos, setLinkedRepuestos] = useState<RepuestoResponse[] | null>(() => fichaKey ? null : []);
   const [saving, setSaving] = useState(false);
   const [closeConfirmation, setCloseConfirmation] = useState(false);
   const [startWorkConfirmation, setStartWorkConfirmation] = useState<string | null>(null);
@@ -171,6 +173,14 @@ export function FichaForm({
         ),
       );
   }, [fichaKey, notify]);
+  useEffect(() => {
+    if (!fichaKey) return;
+    let active = true;
+    void api<RepuestoResponse[]>(`/fichas/${fichaKey}/repuestos`)
+      .then((items) => { if (active) setLinkedRepuestos(items); })
+      .catch(() => { if (active) setLinkedRepuestos([]); });
+    return () => { active = false; };
+  }, [fichaKey]);
 
   const vehicleId = currentVehicle?.id ?? "";
   const clientId = currentVehicle?.propietarioId ?? "";
@@ -197,6 +207,8 @@ export function FichaForm({
   const taxableSubtotal = Math.max(0, subtotal - descuentoGlobal);
   const ivaVal = iva ? taxableSubtotal * 0.21 : 0;
   const total = taxableSubtotal + ivaVal;
+  const repuestosTotal = (linkedRepuestos ?? []).filter((pedido) => pedido.estado !== "Cancelado").reduce((sum, pedido) => sum + pedido.total, 0);
+  const totalPresupuesto = total + repuestosTotal;
   const hasDraftContent =
     trabajos.length > 0 ||
     Boolean(notes) ||
@@ -538,30 +550,50 @@ export function FichaForm({
             )}
           </section>
         </div>
-        <aside className="summary">
+        <aside className="summary ficha-summary">
           <h2 className="form-section-title">Resumen de la ficha</h2>
-          <div>
-            <span>Moto</span>
-            <strong>
-              {currentVehicle
-                ? `${currentVehicle.marca} ${currentVehicle.modelo}`
-                : "Sin seleccionar"}
-            </strong>
-          </div>
-          <div>
-            <span>Patente</span>
-            <strong>{currentVehicle?.patente ?? "—"}</strong>
-          </div>
+          <dl className="summary-facts">
+            <div><dt>Cliente</dt><dd>{currentVehicle?.propietario ?? "Sin seleccionar"}</dd></div>
+            <div><dt>Moto</dt><dd>{currentVehicle ? `${currentVehicle.marca} ${currentVehicle.modelo}` : "Sin seleccionar"}</dd></div>
+            <div><dt>Dominio</dt><dd>{currentVehicle?.patente ?? "—"}</dd></div>
+            <div><dt>Ingreso</dt><dd>{fechaIngreso || "—"}</dd></div>
+            <div><dt>Entrega estimada</dt><dd>{fechaEntregaEstimada || "—"}</dd></div>
+          </dl>
+          <section className="summary-group">
+            <h3>Trabajos y servicios</h3>
+            <div className="summary-work-list" aria-label="Trabajos de la ficha">
+              {trabajos.length ? trabajos.map((trabajo) => (
+                <div key={trabajo.key} className={`summary-work${trabajo.estadoTrabajo === "Cancelado" ? " cancelled" : ""}`}>
+                  <div className="summary-work-head"><strong>{trabajo.descripcion || "Trabajo sin descripción"}</strong><strong>{money(Math.max(0, trabajo.precioUnitario - trabajo.descuento))}</strong></div>
+                  <div className="summary-work-total"><small>Precio {money(trabajo.precioUnitario)}{trabajo.descuento > 0 && ` · Desc. ${money(trabajo.descuento)}`}</small><small>{trabajo.estadoTrabajo ?? "Pendiente"}</small></div>
+                  {trabajo.observacionTrabajo && <small>{trabajo.observacionTrabajo}</small>}
+                </div>
+              )) : <p className="summary-empty">Agregá trabajos para ver su desglose.</p>}
+            </div>
+          </section>
+          {notes && <section className="summary-group"><h3>Observaciones</h3><p className="summary-note">{notes}</p></section>}
+          <section className="summary-group">
+            <h3>Pedidos vinculados</h3>
+            {linkedRepuestos === null ? <p className="summary-empty">Cargando pedidos vinculados…</p> : linkedRepuestos.length ? <div className="summary-linked-orders">{linkedRepuestos.map((pedido) => (
+              <article key={pedido.id} className={`summary-linked-order${pedido.estado === "Cancelado" ? " cancelled" : ""}`}>
+                <div className="summary-linked-order-head"><strong>{pedido.numero}</strong><StatusBadge status={pedido.estado} /></div>
+                <small>{pedido.proveedor ? `Proveedor: ${pedido.proveedor}` : "Sin proveedor"}</small>
+                <div className="summary-order-items">{pedido.items.map((item) => <div key={item.id} className={item.estado === "Cancelado" ? "cancelled" : ""}><span>{item.descripcion} · {item.tipo} · {Number(item.cantidad)} u. · {item.estado}</span><strong>{money(item.subtotal)}</strong></div>)}</div>
+                {pedido.observaciones && <small>{pedido.observaciones}</small>}
+                <div className="summary-work-total"><span>Total pedido</span><strong>{pedido.estado === "Cancelado" ? "—" : money(pedido.total)}</strong></div>
+              </article>
+            ))}</div> : <p className="summary-empty">Los pedidos de repuestos aparecerán aquí cuando se vinculen a esta ficha.</p>}
+          </section>
           <hr />
-           <div>
-             <span>Subtotal trabajos</span>
-             <strong>{money(subtotal)}</strong>
-           </div>
-           <label>
-             Descuento global
-             <input type="text" inputMode="decimal" value={descuentoGlobal ? priceInput(descuentoGlobal) : ""} onChange={(event) => setDescuentoGlobal(parsePrice(event.target.value))} />
-           </label>
-           {descuentoGlobal > 0 && <div><span>Después del descuento</span><strong>{money(Math.max(0, subtotal - descuentoGlobal))}</strong></div>}
+          <div>
+            <span>Subtotal trabajos</span>
+            <strong>{money(subtotal)}</strong>
+          </div>
+            <label>
+              Descuento global
+              <input type="text" inputMode="decimal" value={descuentoGlobal ? priceInput(descuentoGlobal) : ""} onChange={(event) => setDescuentoGlobal(parsePrice(event.target.value))} />
+            </label>
+            {descuentoGlobal > 0 && <div><span>Después del descuento</span><strong>{money(Math.max(0, subtotal - descuentoGlobal))}</strong></div>}
           <label className="iva-toggle">
             <input
               type="checkbox"
@@ -576,10 +608,9 @@ export function FichaForm({
               <strong>{money(ivaVal)}</strong>
             </div>
           )}
-          <div className="total">
-            <span>Total final</span>
-            <strong>{money(total)}</strong>
-          </div>
+          <div><span>Total trabajos</span><strong>{money(total)}</strong></div>
+          <div><span>Total pedidos vinculados</span><strong>{money(repuestosTotal)}</strong></div>
+          <div className="total"><span>Total presupuesto</span><strong>{money(totalPresupuesto)}</strong></div>
           <button
             className="button primary large"
             disabled={saving || !editable}
