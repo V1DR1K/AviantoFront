@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowDownUp, ArrowRightLeft, Download, Edit3, Eye, FileDown, Filter, LogOut, Plus, Trash2 } from "lucide-react";
+import { ArrowDownUp, ArrowRightLeft, Check, Download, Edit3, Eye, FileDown, Filter, LogOut, Plus, Trash2 } from "lucide-react";
 import { api, download, objectUrl } from "../lib/api";
 import { integerInput, money, parseIntegerInput } from "../lib/format";
 import { daysAgoInAr, formatDateInAr, todayInAr } from "../lib/dates";
@@ -32,6 +32,8 @@ const errorMessage = (reason: unknown) =>
   reason instanceof Error ? reason.message : "No fue posible cargar la información.";
 const tabKey = (estado: string) =>
   ({ "Ingresada Taller": "ingresada", "Pendiente": "pendiente", "En proceso": "en-proceso", "En revisión": "revision", "Terminada": "terminada", "Entregada": "entregada", "Cancelada": "cancelada", "En venta": "en-venta", "Transferencia en proceso": "transferencia", "Vendida": "vendida" } as Record<string, string>)[estado] ?? "estado";
+const workStateClass = (estado: TrabajoStatus) =>
+  estado === "Realizado" ? " is-completed" : estado === "Pendiente" ? " is-pending" : " is-cancelled";
 function Metric({ label, value, tone }: { label: string; value: string; tone: string }) {
   return <section className={`metric ${tone}`}><span>{label}</span><strong>{value}</strong><small>Período seleccionado</small></section>;
 }
@@ -465,10 +467,11 @@ function ItemRow({
   onStartWork: () => void;
 }) {
   return (
-    <div className={`line-item detail-work-item${!locked ? " can-mark" : ""}${canDelete ? " can-delete" : ""}${item.estadoTrabajo === "Cancelado" ? " muted" : ""}`}>
+    <div className={`line-item detail-work-item${workStateClass(item.estadoTrabajo)}${!locked ? " can-mark" : ""}${canDelete ? " can-delete" : ""}${item.estadoTrabajo === "Cancelado" ? " muted" : ""}`}>
       {!locked && (
-        <label className="line-check detail-line-check">
-          <input type="checkbox" aria-label={`Marcar ${item.descripcion} como realizado`} checked={item.estadoTrabajo === "Realizado"} disabled={item.estadoTrabajo === "Cancelado"} onChange={(event) => event.target.checked ? onStartWork() : onState("Pendiente")} />
+        <label className="line-check detail-line-check work-state-check">
+          <input className="work-state-input" type="checkbox" aria-label={`Marcar ${item.descripcion} como realizado`} checked={item.estadoTrabajo === "Realizado"} disabled={item.estadoTrabajo === "Cancelado"} onChange={(event) => event.target.checked ? onStartWork() : onState("Pendiente")} />
+          <span className="work-state-box" aria-hidden="true"><Check size={14} strokeWidth={3} /></span>
         </label>
       )}
       <div className="detail-work-copy">
@@ -843,9 +846,9 @@ export function FichaDetail({
           <section className="summary-work-list" aria-label="Trabajos de la ficha">
             <h4>Trabajos a realizar</h4>
             {ficha.trabajos.map((item) => (
-              <div key={item.id} className={`summary-work${item.estadoTrabajo === "Cancelado" ? " cancelled" : ""}`}>
-                <div className="summary-work-head"><strong>{item.descripcion}</strong><strong>{money(item.subtotal)}</strong></div>
-                <div className="summary-work-total"><small>Precio {money(item.precioUnitario)}{item.descuento > 0 && ` · Descuento ${money(item.descuento)}`}</small><small>{item.estadoTrabajo}</small></div>
+                <div key={item.id} className={`summary-work${workStateClass(item.estadoTrabajo)}${item.estadoTrabajo === "Cancelado" ? " cancelled" : ""}`}>
+                  <div className="summary-work-head"><strong>{item.descripcion}</strong><strong>{money(item.subtotal)}</strong></div>
+                  <div className="summary-work-total"><small>Precio {money(item.precioUnitario)}{item.descuento > 0 && ` · Descuento ${money(item.descuento)}`}</small><small className="work-state-label">{item.estadoTrabajo}</small></div>
                 {item.observacionTrabajo && <small>{item.observacionTrabajo}</small>}
               </div>
             ))}

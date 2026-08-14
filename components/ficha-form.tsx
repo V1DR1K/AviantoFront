@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Camera, Plus, Save, X } from "lucide-react";
+import { Camera, Check, Plus, Save, X } from "lucide-react";
 import { api, objectUrl } from "../lib/api";
 import { integerInput, money, parseIntegerInput, parsePrice, priceInput } from "../lib/format";
 import { todayInAr } from "../lib/dates";
@@ -29,6 +29,8 @@ type Line = {
 type PhotoDraft = { file: File; url: string };
 
 const today = todayInAr;
+const workStateClass = (estado: Line["estadoTrabajo"], realizado: boolean) =>
+  estado === "Cancelado" ? " is-cancelled" : estado === "Realizado" || realizado ? " is-completed" : " is-pending";
 const readAsBase64 = (file: File) =>
   new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -392,7 +394,7 @@ export function FichaForm({
              <h2 className="form-section-title">2. Trabajos a realizar</h2>
             <div className="line-items">
               {trabajos.map((trabajo) => (
-                 <div className={`line-item${workOpen === trabajo.key ? " is-work-open" : ""}`} key={trabajo.key}>
+                  <div className={`line-item${workStateClass(trabajo.estadoTrabajo, trabajo.realizado)}${workOpen === trabajo.key ? " is-work-open" : ""}`} key={trabajo.key}>
                   <label className="line-descr">
                     Descripción
                     <div className="autocomplete-field">
@@ -440,10 +442,11 @@ export function FichaForm({
                          : "A definir"}
                      </strong>
                    </div>
-                   <label className="line-check">
-                   <input
-                     type="checkbox"
-                     checked={trabajo.estadoTrabajo === "Realizado" || trabajo.realizado}
+                    <label className="line-check work-state-check">
+                    <input
+                      className="work-state-input"
+                      type="checkbox"
+                      checked={trabajo.estadoTrabajo === "Realizado" || trabajo.realizado}
                      disabled={trabajo.estadoTrabajo === "Cancelado"}
                        onChange={(event) => {
                            if (event.target.checked && loadedEstado === "Pendiente") {
@@ -452,9 +455,10 @@ export function FichaForm({
                          }
                          updateLine(trabajo.key, { realizado: event.target.checked, estadoTrabajo: event.target.checked ? "Realizado" : "Pendiente" });
                        }}
-                   />
-                   Realizado
-                  </label>
+                      />
+                    <span className="work-state-box" aria-hidden="true"><Check size={14} strokeWidth={3} /></span>
+                    Realizado
+                   </label>
                    <label className="line-observation">
                      Observación del trabajo
                      <textarea
@@ -563,9 +567,9 @@ export function FichaForm({
             <h3>Trabajos y servicios</h3>
             <div className="summary-work-list" aria-label="Trabajos de la ficha">
               {trabajos.length ? trabajos.map((trabajo) => (
-                <div key={trabajo.key} className={`summary-work${trabajo.estadoTrabajo === "Cancelado" ? " cancelled" : ""}`}>
+                <div key={trabajo.key} className={`summary-work${workStateClass(trabajo.estadoTrabajo, trabajo.realizado)}${trabajo.estadoTrabajo === "Cancelado" ? " cancelled" : ""}`}>
                   <div className="summary-work-head"><strong>{trabajo.descripcion || "Trabajo sin descripción"}</strong><strong>{money(Math.max(0, trabajo.precioUnitario - trabajo.descuento))}</strong></div>
-                  <div className="summary-work-total"><small>Precio {money(trabajo.precioUnitario)}{trabajo.descuento > 0 && ` · Desc. ${money(trabajo.descuento)}`}</small><small>{trabajo.estadoTrabajo ?? "Pendiente"}</small></div>
+                  <div className="summary-work-total"><small>Precio {money(trabajo.precioUnitario)}{trabajo.descuento > 0 && ` · Desc. ${money(trabajo.descuento)}`}</small><small className="work-state-label">{trabajo.estadoTrabajo === "Realizado" || trabajo.realizado ? "Realizado" : trabajo.estadoTrabajo ?? "Pendiente"}</small></div>
                   {trabajo.observacionTrabajo && <small>{trabajo.observacionTrabajo}</small>}
                 </div>
               )) : <p className="summary-empty">Agregá trabajos para ver su desglose.</p>}

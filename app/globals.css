@@ -1466,6 +1466,52 @@ td small {
   height: 20px;
   margin: 0;
 }
+.line-item .line-check .work-state-input,
+.order-form .line-item .line-check .work-state-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  opacity: 0;
+}
+.work-state-box {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border: 2px solid var(--red);
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+  color: transparent;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+.work-state-input:focus-visible + .work-state-box {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+.is-completed .work-state-box {
+  border-color: var(--green);
+  background: var(--green);
+  color: var(--color-surface);
+}
+.is-cancelled .work-state-box {
+  border-color: var(--line);
+  background: var(--color-surface-muted);
+}
+.detail-work-item.is-completed {
+  background: color-mix(in srgb, var(--green) 7%, var(--color-surface));
+}
+.detail-work-item.is-completed .detail-work-copy > span,
+.summary-work.is-completed .work-state-label {
+  color: var(--green);
+  font-weight: 750;
+}
+.summary-work.is-pending .work-state-label {
+  color: var(--red);
+  font-weight: 750;
+}
 .detail-work-item .danger-action {
   display: grid;
   grid-area: delete;
