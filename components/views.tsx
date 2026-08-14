@@ -464,18 +464,17 @@ function ItemRow({
   onStartWork: () => void;
 }) {
   return (
-    <div className={`line-item detail-work-item ${item.estadoTrabajo === "Cancelado" ? "muted" : ""}`}>
+    <div className={`line-item detail-work-item${!locked ? " can-mark" : ""}${canDelete ? " can-delete" : ""}${item.estadoTrabajo === "Cancelado" ? " muted" : ""}`}>
+      {!locked && (
+        <label className="line-check detail-line-check">
+          <input type="checkbox" aria-label={`Marcar ${item.descripcion} como realizado`} checked={item.estadoTrabajo === "Realizado"} disabled={item.estadoTrabajo === "Cancelado"} onChange={(event) => event.target.checked ? onStartWork() : onState("Pendiente")} />
+        </label>
+      )}
       <div className="detail-work-copy">
         <strong>{item.descripcion}</strong>
         <span>{money(Number(item.precioUnitario))}{item.descuento > 0 && ` · descuento ${money(Number(item.descuento))}`}{item.estadoTrabajo !== "Pendiente" && ` · ${item.estadoTrabajo}`}</span>
         {item.observacionTrabajo && <p className="work-observation">{item.observacionTrabajo}</p>}
       </div>
-      {!locked && (
-        <label className="line-check detail-line-check">
-          <input type="checkbox" checked={item.estadoTrabajo === "Realizado"} disabled={item.estadoTrabajo === "Cancelado"} onChange={(event) => event.target.checked ? onStartWork() : onState("Pendiente")} />
-          Realizado
-        </label>
-      )}
       {canDelete && <button type="button" className="danger-action" onClick={onDelete} aria-label={`Eliminar trabajo ${item.descripcion}`}><Trash2 size={17} /></button>}
     </div>
   );

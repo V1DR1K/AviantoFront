@@ -59,8 +59,12 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(ui, /emptyAction\?: ReactNode/);
   assert.match(views, /className="work-observation"/);
   assert.match(views, /className="line-items-list detail-work-list"/);
+  assert.match(views, /detail-work-item\$\{!locked \? " can-mark" : ""\}\$\{canDelete \? " can-delete" : ""\}/);
+  assert.match(views, /aria-label=\{`Marcar \$\{item\.descripcion\} como realizado`\}/);
   assert.match(stylesheet, /\.detail-work-list \{[\s\S]*?gap: 0;[\s\S]*?overflow: hidden;[\s\S]*?border: 1px solid var\(--line\);/);
   assert.match(stylesheet, /\.detail-work-list > \.detail-work-item \+ \.detail-work-item \{[\s\S]*?border-top: 1px solid var\(--line\);/);
+  assert.match(stylesheet, /\.detail-work-item\.can-mark\.can-delete \{[\s\S]*?grid-template-areas: "check content delete";/);
+  assert.match(stylesheet, /\.detail-work-item \.detail-line-check input \{[\s\S]*?width: 20px;[\s\S]*?height: 20px;/);
   assert.match(views, /Ingresada Taller[\s\S]*?Sin ficha/);
   assert.match(views, /return !ingreso \|\|/);
   assert.match(views, /\["Pendiente", "En proceso", "En revisión", "Terminada", "Entregada"\]/);

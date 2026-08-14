@@ -1418,9 +1418,26 @@ td small {
   border-color: var(--color-border-strong);
 }
 .detail-work-item {
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "content";
+  align-items: start;
+  gap: 12px;
+}
+.detail-work-item.can-mark {
+  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-areas: "check content";
+}
+.detail-work-item.can-delete {
+  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-areas: "content delete";
+}
+.detail-work-item.can-mark.can-delete {
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  grid-template-areas: "check content delete";
 }
 .detail-work-copy {
+  grid-area: content;
   min-width: 0;
 }
 .detail-work-copy > strong,
@@ -1433,14 +1450,33 @@ td small {
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
-.detail-work-item .detail-line-check,
-.detail-work-item .danger-action {
+.detail-work-item .detail-line-check {
+  display: grid;
+  grid-area: check;
+  place-items: center;
+  width: 44px;
+  height: 44px;
   min-width: 44px;
   min-height: 44px;
+  margin: 0;
+  padding: 0;
+}
+.detail-work-item .detail-line-check input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
 }
 .detail-work-item .danger-action {
   display: grid;
+  grid-area: delete;
   place-items: center;
+  justify-self: end;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
 }
 .line-item.revision-control {
   justify-content: space-between;
