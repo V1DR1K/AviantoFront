@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { parsePrice, priceDraft, priceInput } from "../lib/format.ts";
 
 async function render() {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -22,6 +23,13 @@ test("server-renders motorcom landing metadata", async () => {
   assert.match(html, /Cada moto tiene una historia/);
   assert.match(html, /Conocer motorcom/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview|SkeletonPreview/);
+});
+
+test("preserves large currency drafts until the field loses focus", () => {
+  assert.equal(priceDraft(100000), "100000");
+  assert.equal(priceInput("100000,50"), "100000,50");
+  assert.equal(parsePrice(priceInput("100000,50")), 100000.5);
+  assert.equal(priceInput(100000), "100.000");
 });
 
 test("keeps the application entrypoint, production scripts, and responsive operational controls", async () => {
@@ -80,6 +88,9 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /\["Pendiente", "En proceso", "En revisión", "Terminada", "Entregada"\]/);
   assert.match(views, /\/fichas\/\$\{ficha\.id\}\/entregar/);
   assert.match(fichaForm, /<h2 className="form-section-title">Presupuesto<\/h2>/);
+  assert.match(fichaForm, /const \[priceDrafts, setPriceDrafts\] = useState<Record<string, string>>\(\{\}\);/);
+  assert.match(fichaForm, /onFocus=\{\(\) => setPriceDrafts/);
+  assert.match(fichaForm, /onBlur=\{\(\) => setPriceDrafts/);
   assert.match(views, /<h3>Presupuesto<\/h3>/);
   assert.match(fichaForm, /Trabajos y servicios[\s\S]*?Repuestos y accesorios[\s\S]*?<BudgetBreakdown/);
   assert.match(budgetBreakdown, /Trabajos y servicios[\s\S]*?Repuestos y accesorios[\s\S]*?Subtotal[\s\S]*?IVA 21%[\s\S]*?Total presupuesto/);

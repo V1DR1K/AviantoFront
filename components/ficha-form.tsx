@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Check, Plus, Save, X } from "lucide-react";
 import { api, objectUrl } from "../lib/api";
-import { integerInput, money, parseIntegerInput, parsePrice, priceInput } from "../lib/format";
+import { integerInput, money, parseIntegerInput, parsePrice, priceDraft, priceInput } from "../lib/format";
 import { todayInAr } from "../lib/dates";
 import type {
   FichaRequest,
@@ -100,6 +100,7 @@ export function FichaForm({
   const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState("");
   const [kilometrajeIngreso, setKilometrajeIngreso] = useState("");
   const [trabajos, setTrabajos] = useState<Line[]>([]);
+  const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
   const [workQuery, setWorkQuery] = useState("");
   const [workOpen, setWorkOpen] = useState<string | null>(null);
   const [workSuggestions, setWorkSuggestions] = useState<TrabajoCatalogoResponse[]>([]);
@@ -422,15 +423,20 @@ export function FichaForm({
                    <label className="line-price">
                      Precio
                      <input
-                      type="text"
-                      inputMode="decimal"
-                      value={priceInput(trabajo.precioUnitario)}
-                      onChange={(event) =>
-                        updateLine(trabajo.key, {
-                          precioUnitario: parsePrice(event.target.value),
-                        })
-                      }
-                    />
+                       type="text"
+                       inputMode="decimal"
+                       value={priceDrafts[trabajo.key] ?? priceInput(trabajo.precioUnitario)}
+                       onFocus={() => setPriceDrafts((all) => ({ ...all, [trabajo.key]: all[trabajo.key] ?? priceDraft(trabajo.precioUnitario) }))}
+                       onChange={(event) => {
+                         setPriceDrafts((all) => ({ ...all, [trabajo.key]: event.target.value }));
+                         updateLine(trabajo.key, { precioUnitario: parsePrice(event.target.value) });
+                       }}
+                       onBlur={() => setPriceDrafts((all) => {
+                         const next = { ...all };
+                         delete next[trabajo.key];
+                         return next;
+                       })}
+                     />
                   </label>
                    <div className="line-total">
                      <span>Total</span>
