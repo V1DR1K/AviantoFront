@@ -87,6 +87,10 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /return !ingreso \|\|/);
   assert.match(views, /\["Pendiente", "En proceso", "En revisión", "Terminada", "Entregada"\]/);
   assert.match(views, /\/fichas\/\$\{ficha\.id\}\/entregar/);
+  assert.match(views, /Completá todos los trabajos pendientes antes de enviar la ficha a revisión/);
+  assert.match(views, /saldoPendientePresupuesto > 0/);
+  assert.match(views, /La moto se entregará con un saldo pendiente de/);
+  assert.doesNotMatch(stylesheet, /\.ficha-summary\s*\{[^}]*max-height/);
   assert.match(fichaForm, /<h2 className="form-section-title">Presupuesto<\/h2>/);
   assert.match(fichaForm, /const \[priceDrafts, setPriceDrafts\] = useState<Record<string, string>>\(\{\}\);/);
   assert.match(fichaForm, /onFocus=\{\(\) => setPriceDrafts/);

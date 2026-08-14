@@ -1724,10 +1724,6 @@ td small {
 .summary-work-head strong { color: var(--ink); }
 .summary-work small { color: var(--muted); }
 .summary-work.cancelled { opacity: 0.55; text-decoration: line-through; }
-.ficha-summary {
-  max-height: calc(100vh - 44px);
-  overflow-y: auto;
-}
 .summary-empty,
 .summary-note {
   margin: 0;
@@ -3125,10 +3121,6 @@ td.table-actions {
   }
 }
 @media (max-width: 680px) {
-  .ficha-summary {
-    max-height: none;
-    overflow: visible;
-  }
   body {
     font-size: 16px;
   }

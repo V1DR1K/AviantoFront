@@ -674,6 +674,8 @@ export function FichaDetail({
   const totalPresupuesto = ficha.total + totalRepuestos;
   const montoCobradoPresupuesto = ficha.montoCobrado + repuestosActivos.reduce((sum, pedido) => sum + pedido.montoCobrado, 0);
   const saldoPendientePresupuesto = ficha.saldoPendiente + repuestosActivos.reduce((sum, pedido) => sum + pedido.saldoPendiente, 0);
+  const trabajosPendientes = ficha.trabajos.some((item) => item.estadoTrabajo !== "Realizado" && item.estadoTrabajo !== "Cancelado");
+  const entregaConSaldoPendiente = saldoPendientePresupuesto > 0;
   const saveService = async () => {
     if (!serviceKm) return notify("Ingresá el kilometraje del service.", "error");
     if (serviceSaving) return;
@@ -708,11 +710,11 @@ export function FichaDetail({
    if (current === "Pendiente")
      bottomActions.push({ key: "iniciar", label: "Comenzar trabajo", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "En proceso" }, "estado-en-proceso", "Ficha marcada en proceso.") });
    else if (current === "En proceso")
-     bottomActions.push({ key: "revision", label: "Enviar a revisión", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "En revisión" }, "estado-revision", "Ficha enviada a revisión.") });
+     bottomActions.push({ key: "revision", label: "Enviar a revisión", className: "primary", onClick: () => trabajosPendientes ? notify("Completá todos los trabajos pendientes antes de enviar la ficha a revisión.", "warning") : void update(`/fichas/${ficha.id}/estado`, { estado: "En revisión" }, "estado-revision", "Ficha enviada a revisión.") });
   else if (current === "En revisión")
     bottomActions.push({ key: "aprobar", label: "Aprobar revisión", className: "primary", onClick: openDelivery });
   else if (current === "Terminada")
-    bottomActions.push({ key: "entregar", label: "Entregar moto", className: "primary", onClick: () => onConfirm({ title: "Entregar moto", body: "La moto quedará entregada al cliente y se cerrará el circuito de Taller.", confirmLabel: "Entregar moto", successMessage: "Moto entregada al cliente.", action: () => api<FichaResponse>(`/fichas/${ficha.id}/entregar`, { method: "POST" }).then(setFicha) }) });
+    bottomActions.push({ key: "entregar", label: "Entregar moto", className: "primary", onClick: () => onConfirm({ title: entregaConSaldoPendiente ? "Entregar moto con saldo pendiente" : "Entregar moto", body: entregaConSaldoPendiente ? `La moto se entregará con un saldo pendiente de ${paymentAmount(saldoPendientePresupuesto)} entre la ficha y los repuestos activos. Podés registrar pagos después de la entrega.` : "La moto quedará entregada al cliente y se cerrará el circuito de Taller.", confirmLabel: entregaConSaldoPendiente ? "Entregar con saldo pendiente" : "Entregar moto", successMessage: entregaConSaldoPendiente ? "Moto entregada con saldo pendiente." : "Moto entregada al cliente.", variant: entregaConSaldoPendiente ? "danger" : "success", action: () => api<FichaResponse>(`/fichas/${ficha.id}/entregar`, { method: "POST" }).then(setFicha) }) });
    else if (current === "Entregada")
      bottomActions.push({ key: "service", label: "Registrar service", className: "primary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setServiceDate(todayInAr()); setServiceOpen(true); } });
    if (current === "En proceso" || current === "En revisión")
