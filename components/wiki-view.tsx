@@ -35,7 +35,7 @@ const motoStates: StateEntry[] = [
   {
     status: "En proceso",
     meaning: "El Taller está ejecutando al menos una tarea de la ficha.",
-    enables: "Completar tareas, volver a Pendiente o enviar la ficha a revisión.",
+    enables: "Completar tareas, volver a Pendiente o, cuando todas estén resueltas, enviar manualmente la ficha a revisión.",
   },
   {
     status: "En revisión",
@@ -74,7 +74,7 @@ const motoStates: StateEntry[] = [
 
 const fichaStates: StateEntry[] = [
   { status: "Pendiente", meaning: "La ficha fue creada y espera el inicio de los trabajos.", enables: "Editar la ficha o comenzar el trabajo." },
-  { status: "En proceso", meaning: "El trabajo de la ficha está en ejecución.", enables: "Completar tareas, volver a Pendiente o enviar a revisión." },
+  { status: "En proceso", meaning: "El trabajo de la ficha está en ejecución.", enables: "Completar tareas, volver a Pendiente o, cuando todas estén resueltas, enviar manualmente a revisión." },
   { status: "En revisión", meaning: "La ficha espera la validación de sus controles de calidad.", enables: "Aprobar la revisión o devolverla a proceso." },
   { status: "Terminada", meaning: "La revisión fue aprobada y la ficha quedó cerrada para edición operativa.", enables: "Entregar la moto al cliente." },
   { status: "Entregada", meaning: "La entrega fue registrada y el trabajo finalizó completamente.", enables: "Consultar el historial y registrar un service si corresponde." },

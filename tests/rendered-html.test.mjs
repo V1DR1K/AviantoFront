@@ -73,8 +73,10 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(fichaForm, /\/fichas\/\$\{fichaKey\}\/repuestos/);
   assert.match(views, /\/fichas\/\$\{fichaKey\}\/repuestos/);
   assert.match(views, /Pedidos de repuestos y accesorios[\s\S]*?Total presupuesto/);
+  assert.match(views, /Enviar a revisión/);
   assert.match(controller, /wiki:\s*"\/wiki"/);
   assert.match(shell, /id: "wiki", label: "Wiki"/);
+  assert.match(wiki, /enviar manualmente la ficha a revisión/);
   assert.match(wiki, /Disponible no significa en venta/);
   assert.match(wiki, /Transferencia en proceso/);
 });
