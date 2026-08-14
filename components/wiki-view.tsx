@@ -88,9 +88,9 @@ const workStates: StateEntry[] = [
 ];
 
 const paymentStates: StateEntry[] = [
-  { status: "No pagado", meaning: "No hay ítems cobrados.", enables: "Registrar un pago total o parcial." },
-  { status: "Parcial", meaning: "Se cobraron algunos ítems, pero no todos los aplicables.", enables: "Editar la selección de ítems cobrados o completar el pago." },
-  { status: "Pagado", meaning: "Todos los ítems aplicables están cobrados.", enables: "Revertir el registro si fue necesario." },
+  { status: "No pagado", meaning: "No hay trabajos no cancelados cobrados.", enables: "Registrar un pago total o parcial, aun antes de realizar los trabajos." },
+  { status: "Parcial", meaning: "Se cobraron algunos trabajos no cancelados, aunque sigan pendientes.", enables: "Editar la selección de trabajos cobrados o completar el pago." },
+  { status: "Pagado", meaning: "Todos los trabajos no cancelados están cobrados.", enables: "Revertir el registro si fue necesario." },
 ];
 
 const revisionStates: StateEntry[] = [
@@ -198,7 +198,7 @@ export function WikiView() {
           </section>
 
           <section className="panel wiki-section" id="trabajos">
-            <div className="wiki-section-title"><ClipboardCheck size={21} aria-hidden="true" /><div><h2>Trabajos y pagos</h2><p>Los trabajos componen una ficha; el cobro puede registrarse sobre todos o parte de sus ítems.</p></div></div>
+            <div className="wiki-section-title"><ClipboardCheck size={21} aria-hidden="true" /><div><h2>Trabajos y pagos</h2><p>Los trabajos no cancelados pueden cobrarse antes, durante o después de realizarlos; el pago no modifica el avance de la ficha.</p></div></div>
             <h3>Estados de trabajo</h3>
             <StateList entries={workStates} />
             <h3>Estados de pago</h3>

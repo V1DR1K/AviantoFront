@@ -85,6 +85,9 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /\/fichas\/\$\{fichaKey\}\/repuestos/);
   assert.match(views, /Pedidos de repuestos y accesorios[\s\S]*?<BudgetBreakdown/);
   assert.match(views, /Enviar a revisión/);
+  assert.match(views, /const isPayableTrabajo = \(item: FichaTrabajoResponse\) => item\.estadoTrabajo !== "Cancelado";/);
+  assert.match(views, /Seleccioná los trabajos no cancelados que fueron pagados/);
+  assert.match(views, /Todos los trabajos no cancelados se marcarán como Pagados, aunque estén pendientes/);
   assert.match(views, /className="line-items-list revision-control-list"/);
   assert.match(views, /aria-label=\{`Marcar \$\{control\.control\} como revisado`\}/);
   assert.match(views, /observacion: control\.observacion \?\? ""/);
@@ -99,4 +102,5 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(wiki, /observación opcional/);
   assert.match(wiki, /Disponible no significa en venta/);
   assert.match(wiki, /Transferencia en proceso/);
+  assert.match(wiki, /Los trabajos no cancelados pueden cobrarse antes, durante o después de realizarlos/);
 });
