@@ -761,7 +761,7 @@ export function FichaDetail({
               </button>
             </div>
             <p className="observation">{ficha.observaciones || "Sin observaciones."}</p>
-             {current !== "En revisión" && <div className="line-items-list">
+             {current !== "En revisión" && <div className="line-items-list detail-work-list">
                {ficha.trabajos.map((item) => (
                 <ItemRow
                   key={item.id}

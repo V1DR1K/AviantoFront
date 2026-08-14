@@ -1609,6 +1609,24 @@ td small {
   padding: 1em;
   border-bottom: 1px solid black;
 }
+.detail-work-list {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+.detail-work-list > .detail-work-item {
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  animation: none;
+}
+.detail-work-list > .detail-work-item + .detail-work-item {
+  border-top: 1px solid var(--line);
+}
 .flow-step.current,
 .flow-step.done,
 .status {
