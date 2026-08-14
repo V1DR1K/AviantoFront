@@ -26,6 +26,7 @@ import type {
   TrabajoStatus,
 } from "../lib/types";
 import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
+import { BudgetBreakdown } from "./budget-breakdown";
 
 const date = formatDateInAr;
 const errorMessage = (reason: unknown) =>
@@ -833,7 +834,7 @@ export function FichaDetail({
           </section>
         </div>
         <aside className="summary ficha-summary">
-          <h3>Resumen de ficha</h3>
+          <h3>Presupuesto</h3>
           <dl className="summary-facts">
             <div><dt>Ficha</dt><dd>{ficha.numero}</dd></div>
             <div><dt>Cliente</dt><dd>{ficha.cliente}</dd></div>
@@ -844,7 +845,7 @@ export function FichaDetail({
           </dl>
           {ficha.observaciones && <section className="summary-group"><h4>Observaciones</h4><p className="summary-note">{ficha.observaciones}</p></section>}
           <section className="summary-work-list" aria-label="Trabajos de la ficha">
-            <h4>Trabajos a realizar</h4>
+            <h4>Trabajos y servicios</h4>
             {ficha.trabajos.map((item) => (
                 <div key={item.id} className={`summary-work${workStateClass(item.estadoTrabajo)}${item.estadoTrabajo === "Cancelado" ? " cancelled" : ""}`}>
                   <div className="summary-work-head"><strong>{item.descripcion}</strong><strong>{money(item.subtotal)}</strong></div>
@@ -852,7 +853,6 @@ export function FichaDetail({
                 {item.observacionTrabajo && <small>{item.observacionTrabajo}</small>}
               </div>
             ))}
-            <div className="summary-work-total"><span>Subtotal trabajos</span><strong>{money(subtotalTrabajos)}</strong></div>
           </section>
           <section className="summary-group">
             <h4>Pedidos de repuestos y accesorios</h4>
@@ -866,11 +866,13 @@ export function FichaDetail({
               </article>
             ))}</div> : <p className="summary-empty">No hay pedidos vinculados a esta ficha.</p>}
           </section>
-          <div><span>Descuento global</span><strong>{ficha.descuentoGlobal > 0 ? money(ficha.descuentoGlobal) : "—"}</strong></div>
-          {ficha.iva && <div><span>IVA 21%</span><strong>{money(ivaValor)}</strong></div>}
-          <div><span>Total trabajos</span><strong>{money(ficha.total)}</strong></div>
-          <div><span>Total pedidos vinculados</span><strong>{money(totalRepuestos)}</strong></div>
-          <div className="total"><span>Total presupuesto</span><strong>{money(totalPresupuesto)}</strong></div>
+          <BudgetBreakdown
+            subtotalTrabajos={subtotalTrabajos}
+            totalRepuestos={totalRepuestos}
+            descuentoGlobal={ficha.descuentoGlobal}
+            iva={ivaValor}
+            totalPresupuesto={totalPresupuesto}
+          />
         </aside>
       </section>
       <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)}>

@@ -14,6 +14,7 @@ import type {
   TrabajoCatalogoResponse,
 } from "../lib/types";
 import { ConfirmModal, StatusBadge, type Notify } from "./ui";
+import { BudgetBreakdown } from "./budget-breakdown";
 
 type Line = {
   key: string;
@@ -555,7 +556,7 @@ export function FichaForm({
           </section>
         </div>
         <aside className="summary ficha-summary">
-          <h2 className="form-section-title">Resumen de la ficha</h2>
+          <h2 className="form-section-title">Presupuesto</h2>
           <dl className="summary-facts">
             <div><dt>Cliente</dt><dd>{currentVehicle?.propietario ?? "Sin seleccionar"}</dd></div>
             <div><dt>Moto</dt><dd>{currentVehicle ? `${currentVehicle.marca} ${currentVehicle.modelo}` : "Sin seleccionar"}</dd></div>
@@ -577,7 +578,7 @@ export function FichaForm({
           </section>
           {notes && <section className="summary-group"><h3>Observaciones</h3><p className="summary-note">{notes}</p></section>}
           <section className="summary-group">
-            <h3>Pedidos vinculados</h3>
+            <h3>Repuestos y accesorios</h3>
             {linkedRepuestos === null ? <p className="summary-empty">Cargando pedidos vinculados…</p> : linkedRepuestos.length ? <div className="summary-linked-orders">{linkedRepuestos.map((pedido) => (
               <article key={pedido.id} className={`summary-linked-order${pedido.estado === "Cancelado" ? " cancelled" : ""}`}>
                 <div className="summary-linked-order-head"><strong>{pedido.numero}</strong><StatusBadge status={pedido.estado} /></div>
@@ -588,16 +589,6 @@ export function FichaForm({
               </article>
             ))}</div> : <p className="summary-empty">Los pedidos de repuestos aparecerán aquí cuando se vinculen a esta ficha.</p>}
           </section>
-          <hr />
-          <div>
-            <span>Subtotal trabajos</span>
-            <strong>{money(subtotal)}</strong>
-          </div>
-            <label>
-              Descuento global
-              <input type="text" inputMode="decimal" value={descuentoGlobal ? priceInput(descuentoGlobal) : ""} onChange={(event) => setDescuentoGlobal(parsePrice(event.target.value))} />
-            </label>
-            {descuentoGlobal > 0 && <div><span>Después del descuento</span><strong>{money(Math.max(0, subtotal - descuentoGlobal))}</strong></div>}
           <label className="iva-toggle">
             <input
               type="checkbox"
@@ -606,15 +597,14 @@ export function FichaForm({
             />
             Aplicar IVA 21%
           </label>
-          {iva && (
-            <div>
-              <span>IVA</span>
-              <strong>{money(ivaVal)}</strong>
-            </div>
-          )}
-          <div><span>Total trabajos</span><strong>{money(total)}</strong></div>
-          <div><span>Total pedidos vinculados</span><strong>{money(repuestosTotal)}</strong></div>
-          <div className="total"><span>Total presupuesto</span><strong>{money(totalPresupuesto)}</strong></div>
+          <BudgetBreakdown
+            subtotalTrabajos={subtotal}
+            totalRepuestos={repuestosTotal}
+            descuentoGlobal={descuentoGlobal}
+            iva={ivaVal}
+            totalPresupuesto={totalPresupuesto}
+            descuentoControl={<input type="text" inputMode="decimal" value={descuentoGlobal ? priceInput(descuentoGlobal) : ""} onChange={(event) => setDescuentoGlobal(parsePrice(event.target.value))} />}
+          />
           <button
             className="button primary large"
             disabled={saving || !editable}

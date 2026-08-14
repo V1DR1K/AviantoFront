@@ -25,7 +25,7 @@ test("server-renders motorcom landing metadata", async () => {
 });
 
 test("keeps the application entrypoint, production scripts, and responsive operational controls", async () => {
-  const [page, loginPage, layout, stylesheet, packageJson, controller, fichaForm, intakeView, ui, views, wiki, shell] = await Promise.all([
+  const [page, loginPage, layout, stylesheet, packageJson, controller, fichaForm, intakeView, ui, views, wiki, shell, budgetBreakdown] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -38,6 +38,7 @@ test("keeps the application entrypoint, production scripts, and responsive opera
     readFile(new URL("../components/views.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/wiki-view.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/app-shell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/budget-breakdown.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page, /LandingPage/);
   assert.match(loginPage, /AppController/);
@@ -74,10 +75,15 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /return !ingreso \|\|/);
   assert.match(views, /\["Pendiente", "En proceso", "En revisión", "Terminada", "Entregada"\]/);
   assert.match(views, /\/fichas\/\$\{ficha\.id\}\/entregar/);
-  assert.match(fichaForm, /Trabajos y servicios[\s\S]*?Pedidos vinculados[\s\S]*?Total presupuesto/);
+  assert.match(fichaForm, /<h2 className="form-section-title">Presupuesto<\/h2>/);
+  assert.match(views, /<h3>Presupuesto<\/h3>/);
+  assert.match(fichaForm, /Trabajos y servicios[\s\S]*?Repuestos y accesorios[\s\S]*?<BudgetBreakdown/);
+  assert.match(budgetBreakdown, /Trabajos y servicios[\s\S]*?Repuestos y accesorios[\s\S]*?Subtotal[\s\S]*?IVA 21%[\s\S]*?Total presupuesto/);
+  assert.match(stylesheet, /\.budget-breakdown \{[\s\S]*?margin-top: 18px;/);
+  assert.match(stylesheet, /\.budget-total \{[\s\S]*?margin-top: 10px;/);
   assert.match(fichaForm, /\/fichas\/\$\{fichaKey\}\/repuestos/);
   assert.match(views, /\/fichas\/\$\{fichaKey\}\/repuestos/);
-  assert.match(views, /Pedidos de repuestos y accesorios[\s\S]*?Total presupuesto/);
+  assert.match(views, /Pedidos de repuestos y accesorios[\s\S]*?<BudgetBreakdown/);
   assert.match(views, /Enviar a revisión/);
   assert.match(views, /className="line-items-list revision-control-list"/);
   assert.match(views, /aria-label=\{`Marcar \$\{control\.control\} como revisado`\}/);

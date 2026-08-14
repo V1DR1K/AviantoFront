@@ -1064,6 +1064,43 @@ td small {
 .summary .total strong {
   font-size: 23px;
 }
+.budget-breakdown {
+  margin-top: 18px;
+}
+.budget-breakdown-lines {
+  display: grid;
+  gap: 3px;
+}
+.budget-breakdown-row,
+.budget-total,
+.summary label.budget-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+.budget-breakdown-row {
+  padding: 5px 0;
+  color: var(--muted);
+}
+.budget-breakdown-row strong {
+  color: var(--ink);
+}
+.budget-breakdown-row.budget-discount {
+  color: var(--warning);
+}
+.budget-breakdown-row.budget-discount strong {
+  color: var(--warning);
+}
+.summary .budget-breakdown-row input {
+  width: 108px;
+  min-height: 36px;
+  padding: 7px 9px;
+  text-align: right;
+}
+.budget-total {
+  margin-top: 10px;
+}
 .summary .button {
   margin-top: 10px;
 }
