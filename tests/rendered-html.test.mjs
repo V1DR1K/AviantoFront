@@ -145,6 +145,8 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(wiki, /Transferencia en proceso/);
   assert.match(wiki, /Cada pago registra un importe exacto/);
   assert.match(wiki, /historiales de pago separados/);
+  assert.match(wiki, /El comprador es prospectivo hasta el cierre/);
+  assert.match(wiki, /Cancelar una transferencia devuelve la moto a En venta/);
 });
 
 test("keeps the sale ficha workflow, read-only transfer registry, and sale checklist contract wired to rendered routes", async () => {

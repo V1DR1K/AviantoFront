@@ -55,14 +55,14 @@ const motoStates: StateEntry[] = [
   },
   {
     status: "En venta",
-    meaning: "La moto ingresó al circuito de Ventas y está disponible para realizar la transferencia comercial.",
-    enables: "Iniciar una transferencia a otro cliente.",
+    meaning: "La moto ingresó al circuito de Ventas y tiene una ficha comercial activa. El propietario actual sigue siendo el vendedor.",
+    enables: "Seleccionar un comprador prospectivo y completar el checklist de venta.",
     note: "Es el único estado que representa disponibilidad comercial para vender.",
   },
   {
     status: "Transferencia en proceso",
-    meaning: "Se registró un nuevo titular y la operación comercial espera su confirmación final.",
-    enables: "Completar la venta. Solo Administración puede hacerlo.",
+    meaning: "La transferencia está en gestión, pero el vendedor conserva la titularidad hasta completar la venta.",
+    enables: "Programar la cita, confirmar la asistencia, completar o cancelar la transferencia. Solo Administración puede hacerlo.",
   },
   {
     status: "Vendida",
@@ -91,6 +91,18 @@ const paymentStates: StateEntry[] = [
   { status: "No pagado", meaning: "No hay pagos vigentes registrados en el documento.", enables: "Registrar un importe, con fecha y medio de pago opcional." },
   { status: "Parcial", meaning: "Los pagos vigentes cubren una parte del total del documento.", enables: "Registrar otro importe o anular un movimiento incorrecto." },
   { status: "Pagado", meaning: "Los pagos vigentes cubren el total del documento.", enables: "Consultar el historial o anular un movimiento si fue necesario." },
+];
+
+const saleFichaStates: StateEntry[] = [
+  { status: "En venta", meaning: "La ficha comercial está abierta y conserva el vendedor original como titular actual.", enables: "Seleccionar comprador prospectivo y realizar el checklist." },
+  { status: "Transferencia en proceso", meaning: "Se inició la gestión de transferencia para el comprador prospectivo, sin cambio de titularidad todavía.", enables: "Programar cita, confirmar asistencia, completar o cancelar la gestión." },
+  { status: "Vendida", meaning: "La venta se completó con sus requisitos y el comprador pasó a ser titular de la moto.", enables: "Consultar la trazabilidad; no admite nuevas modificaciones." },
+];
+
+const saleChecklistStates: StateEntry[] = [
+  { status: "Pendiente", meaning: "El requisito de venta todavía no fue resuelto.", enables: "Marcarlo como Realizado." },
+  { status: "Realizado", meaning: "El requisito fue cumplido y queda auditado con usuario y fecha.", enables: "Contribuir al inicio y cierre de la venta si es obligatorio." },
+  { status: "No aplica", meaning: "El requisito opcional no corresponde a esta operación.", enables: "Excluirlo sin bloquear el avance." },
 ];
 
 const revisionStates: StateEntry[] = [
@@ -152,6 +164,7 @@ export function WikiView() {
           <a href="#conceptos">Conceptos base</a>
           <a href="#circuitos">Circuitos operativos</a>
           <a href="#motos">Estados de la moto</a>
+          <a href="#ventas">Ficha de venta</a>
           <a href="#fichas">Estados de fichas</a>
           <a href="#trabajos">Trabajos y pagos</a>
           <a href="#revision">Revisión y controles</a>
@@ -183,13 +196,23 @@ export function WikiView() {
             <div className="wiki-flow-block">
               <h3>Ventas</h3>
               <Flow label="Circuito de Ventas" steps={["Disponible", "En venta", "Transferencia en proceso", "Vendida"]} />
-              <p>Una moto Entregada también puede volver a ingresar a Taller o iniciar el circuito de Ventas.</p>
+              <p>La ficha de venta se crea al ingresar la moto. Una transferencia cancelada vuelve a En venta y conserva su auditoría; una moto Vendida no puede reingresarse.</p>
             </div>
           </section>
 
           <section className="panel wiki-section" id="motos">
             <div className="wiki-section-title"><Bike size={21} aria-hidden="true" /><div><h2>Estados de la moto</h2><p>Reflejan la ubicación operativa y el punto exacto del circuito de Taller o Ventas.</p></div></div>
             <StateList entries={motoStates} />
+          </section>
+
+          <section className="panel wiki-section" id="ventas">
+            <div className="wiki-section-title"><ClipboardCheck size={21} aria-hidden="true" /><div><h2>Ficha de venta y transferencia</h2><p>La ficha comercial concentra comprador, requisitos, cita y cierre para que la titularidad no cambie antes de tiempo.</p></div></div>
+            <h3>Estados de la ficha de venta</h3>
+            <StateList entries={saleFichaStates} />
+            <h3>Checklist de venta</h3>
+            <StateList entries={saleChecklistStates} />
+            <p className="wiki-payment-note">Administración mantiene la plantilla de checklist. Al ingresar una moto a Ventas, la ficha toma una copia de los ítems activos; los cambios posteriores de la plantilla no alteran esa venta. Los ítems obligatorios deben quedar Realizados; solo los opcionales admiten No aplica.</p>
+            <div className="wiki-callout"><ShieldCheck size={22} aria-hidden="true" /><p><strong>El comprador es prospectivo hasta el cierre.</strong> Para completar la venta se requiere comprador, checklist obligatorio completo, cita con fecha, horario y lugar, y asistencia confirmada. Recién entonces cambia la titularidad.</p></div>
           </section>
 
           <section className="panel wiki-section" id="fichas">
@@ -230,7 +253,9 @@ export function WikiView() {
               <li>Terminada significa trabajo aprobado; Entregada significa moto retirada por el cliente.</li>
               <li>Una moto Vendida no puede volver a ingresarse.</li>
               <li>Los estados Cancelada y Entregada conservan el historial: no eliminan las operaciones previas.</li>
-              <li>Las transferencias y el cierre de una venta corresponden a usuarios de Administración.</li>
+              <li>Operario puede actualizar el checklist mientras la ficha está En venta; Administración gestiona comprador, transferencia, cita, asistencia, cancelación y cierre.</li>
+              <li>Cancelar una transferencia devuelve la moto a En venta, libera el comprador prospectivo y conserva el registro en auditoría.</li>
+              <li>La titularidad solo cambia al completar la venta; una cita o asistencia no la modifica por sí sola.</li>
             </ul>
           </section>
         </div>
