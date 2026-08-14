@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { CircleDollarSign } from "lucide-react";
 import { api } from "../lib/api";
 import { parsePrice, paymentAmount, priceInput } from "../lib/format";
 import { formatDateInAr, formatDateTimeInAr, todayInAr } from "../lib/dates";
@@ -42,6 +42,9 @@ export function PaymentLedger({
   const [paymentToAnnul, setPaymentToAnnul] = useState<PagoResponse | null>(null);
   const endpoint = `/${resource}/${documentId}/pagos`;
   const cancelled = documentState === "Cancelada" || documentState === "Cancelado";
+  const settled = !cancelled && saldoPendiente <= 0;
+  const canRegister = !cancelled && !settled;
+  const registerLabel = cancelled ? "Documento cancelado" : settled ? "Saldo cubierto" : "Registrar pago";
 
   const loadPayments = async () => {
     try {
@@ -110,18 +113,18 @@ export function PaymentLedger({
   };
 
   return (
-    <section className="payment-ledger" aria-labelledby={`${resource}-${documentId}-payments`}>
+    <section className="panel payment-ledger" aria-labelledby={`${resource}-${documentId}-payments`}>
       <div className="payment-ledger-head">
-        <div><h4 id={`${resource}-${documentId}-payments`}>Pagos</h4><StatusBadge status={estadoPago} /></div>
-        <button type="button" className="button secondary payment-register" disabled={cancelled} onClick={() => setFormOpen(true)}><Plus size={16} />Registrar pago</button>
+        <div><h2 id={`${resource}-${documentId}-payments`}>Pagos</h2><StatusBadge status={estadoPago} /></div>
+        <button type="button" className="button primary payment-register" disabled={!canRegister} onClick={() => setFormOpen(true)}><CircleDollarSign size={18} />{registerLabel}</button>
       </div>
       <div className="payment-balance" aria-label="Balance de pagos del documento">
         <div><span>Total</span><strong>{paymentAmount(total)}</strong></div>
         <div><span>Cobrado</span><strong>{paymentAmount(montoCobrado)}</strong></div>
         <div><span>Saldo pendiente</span><strong>{paymentAmount(saldoPendiente)}</strong></div>
       </div>
-      {cancelled && <p className="payment-notice">Documento cancelado: no admite nuevos pagos.</p>}
-      <div className="payment-history-head"><h5>Historial</h5><span>{payments ? `${payments.length} registro${payments.length === 1 ? "" : "s"}` : "Cargando..."}</span></div>
+      {cancelled ? <p className="payment-notice">Documento cancelado: no admite nuevos pagos.</p> : settled && <p className="payment-notice payment-settled">Saldo cubierto: no admite nuevos pagos.</p>}
+      <div className="payment-history-head"><h3>Historial de pagos</h3><span>{payments ? `${payments.length} registro${payments.length === 1 ? "" : "s"}` : "Cargando..."}</span></div>
       {historyError ? <div className="payment-history-error" role="alert"><span>No se pudo cargar el historial.</span><button type="button" className="button secondary" onClick={() => void loadPayments()}>Reintentar</button></div> : payments === null ? <p className="payment-history-loading" role="status">Cargando pagos...</p> : payments.length ? (
         <ol className="payment-history">
           {payments.map((payment) => (

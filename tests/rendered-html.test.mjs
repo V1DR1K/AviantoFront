@@ -89,8 +89,8 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /\/fichas\/\$\{fichaKey\}\/repuestos/);
   assert.match(views, /Pedidos de repuestos y accesorios[\s\S]*?<BudgetBreakdown/);
   assert.match(views, /Enviar a revisión/);
-  assert.match(views, /<PaymentLedger resource="fichas"/);
-  assert.match(repuestosView, /<PaymentLedger resource="repuestos"/);
+  assert.match(views, /<\/ol>[\s\S]*?<PaymentLedger resource="fichas"[\s\S]*?<section className="detail-grid">/);
+  assert.match(repuestosView, /className="detail-title"[\s\S]*?<PaymentLedger resource="repuestos"[\s\S]*?<section className="detail-grid">/);
   assert.doesNotMatch(views, /selectedPaidWorkIds|\/pago"/);
   assert.doesNotMatch(repuestosView, /selectedPaidItemIds|\/pago"/);
   assert.match(paymentLedger, /const endpoint = `\/\$\{resource\}\/\$\{documentId\}\/pagos`;/);
@@ -100,8 +100,12 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(paymentLedger, /parsePrice\(amount\)/);
   assert.match(paymentLedger, /paymentAmount\(total\)/);
   assert.match(paymentLedger, /Documento cancelado: no admite nuevos pagos/);
+  assert.match(paymentLedger, /className="panel payment-ledger"/);
+  assert.match(paymentLedger, /className="button primary payment-register"/);
+  assert.match(paymentLedger, /Saldo cubierto: no admite nuevos pagos/);
   assert.match(paymentLedger, /title="Anular pago"/);
   assert.match(stylesheet, /\.payment-form-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+  assert.match(stylesheet, /\.payment-balance \{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
   assert.match(budgetBreakdown, /Cobrado \(ficha \+ repuestos\)[\s\S]*?Saldo pendiente \(ficha \+ repuestos\)/);
   assert.match(types, /montoCobrado: number;[\s\S]*?saldoPendiente: number;/);
   assert.match(types, /export interface PagoResponse \{[\s\S]*?medioPago\?: PaymentMethod \| null;[\s\S]*?anulado: boolean;/);

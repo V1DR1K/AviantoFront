@@ -1786,10 +1786,8 @@ td small {
 }
 .payment-ledger {
   display: grid;
-  gap: 13px;
-  margin-top: 20px;
-  padding-top: 19px;
-  border-top: 1px solid var(--line);
+  gap: 16px;
+  margin: 0 0 20px;
 }
 .payment-ledger .button {
   margin-top: 0;
@@ -1808,21 +1806,21 @@ td small {
   align-items: center;
   gap: 7px;
 }
-.payment-ledger h4,
-.payment-history-head h5 {
+.payment-ledger h2,
+.payment-history-head h3 {
   margin: 0;
   color: var(--navy-2);
 }
-.payment-ledger h4 {
-  font-size: 15px;
+.payment-ledger h2 {
+  font-size: 18px;
 }
 .payment-register {
   min-height: 40px;
-  padding: 8px 10px;
-  font-size: 13px;
+  padding: 9px 13px;
 }
 .payment-balance {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -1836,7 +1834,7 @@ td small {
   font-size: 13px;
 }
 .payment-balance > div + div {
-  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
 }
 .payment-balance > div:last-child strong {
   color: var(--navy);
@@ -1851,10 +1849,15 @@ td small {
   font-size: 13px;
   font-weight: 700;
 }
+.payment-notice.payment-settled {
+  border-color: color-mix(in srgb, var(--green) 55%, var(--color-surface));
+  background: color-mix(in srgb, var(--green) 7%, var(--color-surface));
+  color: var(--green);
+}
 .payment-history-head {
   padding-top: 3px;
 }
-.payment-history-head h5 {
+.payment-history-head h3 {
   font-size: 12px;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -4319,6 +4322,13 @@ td.table-actions {
   .payment-ledger-head {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .payment-balance {
+    grid-template-columns: 1fr;
+  }
+  .payment-balance > div + div {
+    border-top: 1px solid var(--line);
+    border-left: 0;
   }
   .payment-register {
     width: 100%;
