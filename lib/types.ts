@@ -2,6 +2,7 @@ export type FichaStatus = "Pendiente" | "En proceso" | "En revisión" | "Termina
 export type MotoSection = "Taller" | "Venta";
 export type MotoStatus = "Disponible" | "Ingresada Taller" | "Pendiente" | "En proceso" | "En revisión" | "Terminada" | "Entregada" | "En venta" | "Transferencia en proceso" | "Vendida";
 export type PagoStatus = "No pagado" | "Parcial" | "Pagado";
+export type PaymentMethod = "Efectivo" | "Transferencia" | "Débito" | "Crédito" | "Mercado Pago" | "Otro";
 export type TrabajoStatus = "Pendiente" | "Realizado" | "Cancelado";
 export type RepuestoItemType = "REPUESTO" | "ACCESORIO";export type RepuestoItemState = "Pendiente de pedir" | "Pedido" | "Recibido" | "Entregado" | "Cancelado";
 export type RepuestoState = "En curso" | "Completado" | "Cancelado";
@@ -129,7 +130,6 @@ export interface FichaTrabajoResponse {
   observacionTrabajo?: string | null;
   completadoAt?: string | null;
   completadoPor?: string | null;
-  pagado: boolean;
 }
 export interface PhotoResponse {
   id: string;
@@ -162,12 +162,13 @@ export interface FichaResponse {
   fechaEntregaReal?: string | null;
   kilometrajeIngreso?: number | null;
   observaciones?: string | null;
-  pagado: boolean;
   descuentoGlobal: number;
   iva: boolean;
   estado: FichaStatus;
   estadoPago: PagoStatus;
   total: number;
+  montoCobrado: number;
+  saldoPendiente: number;
   creadoEn: string;
   trabajos: FichaTrabajoResponse[];
   fotos: PhotoResponse[];
@@ -261,7 +262,6 @@ export interface RepuestoItemResponse {
   subtotal: number;
   estado: RepuestoItemState;
   observaciones?: string | null;
-  pagado: boolean;
 }
 export interface RepuestoRequest {
   motoVehiculoId: string;
@@ -284,10 +284,20 @@ export interface RepuestoResponse {
   estado: RepuestoState;
   estadoPago: PagoStatus;
   total: number;
+  montoCobrado: number;
+  saldoPendiente: number;
   proveedor?: string | null;
   observaciones?: string | null;
   items: RepuestoItemResponse[];
   creadoEn: string;
+}
+export interface PagoResponse {
+  id: string;
+  monto: number;
+  fecha: string;
+  medioPago?: PaymentMethod | null;
+  anulado: boolean;
+  anuladoAt?: string | null;
 }
 export interface ControlRequest {
   nombre: string;

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowDownUp, ArrowRightLeft, Check, Download, Edit3, Eye, FileDown, Filter, LogOut, Plus, Trash2 } from "lucide-react";
 import { api, download, objectUrl } from "../lib/api";
-import { integerInput, money, parseIntegerInput } from "../lib/format";
+import { integerInput, money, parseIntegerInput, paymentAmount } from "../lib/format";
 import { daysAgoInAr, formatDateInAr, todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
@@ -27,6 +27,7 @@ import type {
 } from "../lib/types";
 import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 import { BudgetBreakdown } from "./budget-breakdown";
+import { PaymentLedger } from "./payment-ledger";
 
 const date = formatDateInAr;
 const errorMessage = (reason: unknown) =>
@@ -35,7 +36,6 @@ const tabKey = (estado: string) =>
   ({ "Ingresada Taller": "ingresada", "Pendiente": "pendiente", "En proceso": "en-proceso", "En revisión": "revision", "Terminada": "terminada", "Entregada": "entregada", "Cancelada": "cancelada", "En venta": "en-venta", "Transferencia en proceso": "transferencia", "Vendida": "vendida" } as Record<string, string>)[estado] ?? "estado";
 const workStateClass = (estado: TrabajoStatus) =>
   estado === "Realizado" ? " is-completed" : estado === "Pendiente" ? " is-pending" : " is-cancelled";
-const isPayableTrabajo = (item: FichaTrabajoResponse) => item.estadoTrabajo !== "Cancelado";
 function Metric({ label, value, tone }: { label: string; value: string; tone: string }) {
   return <section className={`metric ${tone}`}><span>{label}</span><strong>{value}</strong><small>Período seleccionado</small></section>;
 }
@@ -532,16 +532,24 @@ export function FichaDetail({
   const [revisionNoteControl, setRevisionNoteControl] = useState<RevisionControlResponse | null>(null);
   const [revisionNote, setRevisionNote] = useState("");
   const [revisionNoteSaving, setRevisionNoteSaving] = useState(false);
-  const [paymentOpen, setPaymentOpen] = useState(false);
-  const [selectedPaidWorkIds, setSelectedPaidWorkIds] = useState<string[]>([]);
-  const [paymentSaving, setPaymentSaving] = useState(false);
   const [startWorkItem, setStartWorkItem] = useState<FichaTrabajoResponse | null>(null);
   const [linkedRepuestos, setLinkedRepuestos] = useState<RepuestoResponse[]>([]);
-  const load = () =>
+  const load = async () => {
+    try {
+      setFicha(await api<FichaResponse>(`/fichas/${fichaKey}`));
+      setError(null);
+    } catch (reason) {
+      setError(errorMessage(reason));
+      notify(errorMessage(reason), "error");
+    }
+  };
+  useEffect(() => {
+    let active = true;
     void api<FichaResponse>(`/fichas/${fichaKey}`)
-      .then(setFicha)
-      .catch((reason) => { setError(errorMessage(reason)); notify(errorMessage(reason), "error"); });
-  useEffect(load, [fichaKey, notify]);
+      .then((next) => { if (active) { setFicha(next); setError(null); } })
+      .catch((reason) => { if (active) { setError(errorMessage(reason)); notify(errorMessage(reason), "error"); } });
+    return () => { active = false; };
+  }, [fichaKey, notify]);
   useEffect(() => {
     let active = true;
     void api<RepuestoResponse[]>(`/fichas/${fichaKey}/repuestos`)
@@ -628,35 +636,6 @@ export function FichaDetail({
       setRevisionNoteSaving(false);
     }
   };
-  const openPartialPayment = () => {
-    if (!ficha) return;
-    setSelectedPaidWorkIds(ficha.trabajos.filter((item) => isPayableTrabajo(item) && item.pagado).map((item) => item.id));
-    setPaymentOpen(true);
-  };
-  const savePartialPayment = async () => {
-    if (!ficha || paymentSaving) return;
-    setPaymentSaving(true);
-    try {
-      const eligibleCount = ficha.trabajos.filter(isPayableTrabajo).length;
-      const estadoPago = !selectedPaidWorkIds.length ? "No pagado" : selectedPaidWorkIds.length === eligibleCount ? "Pagado" : "Parcial";
-      const next = await api<FichaResponse>(`/fichas/${ficha.id}/pago`, { method: "PATCH", body: JSON.stringify({ estadoPago, itemIds: selectedPaidWorkIds }) });
-      setFicha(next); setPaymentOpen(false);
-    } catch (reason) { setError(errorMessage(reason)); throw reason; }
-    finally { setPaymentSaving(false); }
-  };
-  const confirmPartialPayment = () => {
-    const eligibleCount = ficha?.trabajos.filter(isPayableTrabajo).length ?? 0;
-    const nextStatus = !selectedPaidWorkIds.length ? "No pagado" : selectedPaidWorkIds.length === eligibleCount ? "Pagado" : "Parcial";
-    setPaymentOpen(false);
-    onConfirm({
-      title: "Guardar pago parcial",
-      body: `La ficha quedará con el estado de pago ${nextStatus}. El cambio se registrará en auditoría.`,
-      confirmLabel: "Guardar pago",
-      successMessage: `Pago actualizado a ${nextStatus}.`,
-      variant: "success",
-      action: savePartialPayment,
-    });
-  };
   if (!ficha)
     return (
       <div className="page">
@@ -690,8 +669,11 @@ export function FichaDetail({
   const subtotalTrabajos = ficha.trabajos.filter((item) => item.estadoTrabajo !== "Cancelado").reduce((sum, item) => sum + item.subtotal, 0);
   const subtotalDespuesDescuento = Math.max(0, subtotalTrabajos - ficha.descuentoGlobal);
   const ivaValor = ficha.iva ? ficha.total - subtotalDespuesDescuento : 0;
-  const totalRepuestos = linkedRepuestos.filter((pedido) => pedido.estado !== "Cancelado").reduce((sum, pedido) => sum + pedido.total, 0);
+  const repuestosActivos = linkedRepuestos.filter((pedido) => pedido.estado !== "Cancelado");
+  const totalRepuestos = repuestosActivos.reduce((sum, pedido) => sum + pedido.total, 0);
   const totalPresupuesto = ficha.total + totalRepuestos;
+  const montoCobradoPresupuesto = ficha.montoCobrado + repuestosActivos.reduce((sum, pedido) => sum + pedido.montoCobrado, 0);
+  const saldoPendientePresupuesto = ficha.saldoPendiente + repuestosActivos.reduce((sum, pedido) => sum + pedido.saldoPendiente, 0);
   const saveService = async () => {
     if (!serviceKm) return notify("Ingresá el kilometraje del service.", "error");
     if (serviceSaving) return;
@@ -733,14 +715,6 @@ export function FichaDetail({
     bottomActions.push({ key: "entregar", label: "Entregar moto", className: "primary", onClick: () => onConfirm({ title: "Entregar moto", body: "La moto quedará entregada al cliente y se cerrará el circuito de Taller.", confirmLabel: "Entregar moto", successMessage: "Moto entregada al cliente.", action: () => api<FichaResponse>(`/fichas/${ficha.id}/entregar`, { method: "POST" }).then(setFicha) }) });
    else if (current === "Entregada")
      bottomActions.push({ key: "service", label: "Registrar service", className: "primary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setServiceDate(todayInAr()); setServiceOpen(true); } });
-    if (current !== "Cancelada") {
-      if (ficha.estadoPago === "Pagado")
-        bottomActions.push({ key: "pago-no", label: "Marcar como no pagada", className: "secondary", onClick: () => onConfirm({ title: "Revertir pago", body: "La ficha volverá al estado No pagado. Esta acción quedará registrada en auditoría.", confirmLabel: "Marcar como no pagada", successMessage: "Pago marcado como no pagado.", variant: "success", action: () => update(`/fichas/${ficha.id}/pago`, { estadoPago: "No pagado" }, "pago-no", "Pago marcado como no pagado.") }) });
-      else {
-        bottomActions.push({ key: "pago", label: "Marcar como pagada", className: "secondary", onClick: () => onConfirm({ title: "Confirmar pago", body: "Todos los trabajos no cancelados se marcarán como Pagados, aunque estén pendientes. El cambio quedará registrado en auditoría.", confirmLabel: "Marcar como pagada", successMessage: "Pago marcado como pagado.", variant: "success", action: () => update(`/fichas/${ficha.id}/pago`, { estadoPago: "Pagado" }, "pago-pagado", "Pago marcado como completado.") }) });
-        bottomActions.push({ key: "pago-parcial", label: ficha.estadoPago === "Parcial" ? "Editar pago parcial" : "Pago parcial", className: "secondary", onClick: openPartialPayment });
-      }
-    }
    if (current === "En proceso" || current === "En revisión")
        bottomActions.push({ key: "retroceder", label: "Volver un paso atrás", className: "secondary", onClick: () => onConfirm({ title: "Volver un paso atrás", body: `La ficha volverá de ${current} a ${current === "En revisión" ? "En proceso" : "Pendiente"}. El cambio quedará registrado en auditoría.`, confirmLabel: "Volver un paso atrás", successMessage: "Ficha retrocedida un paso.", action: () => update(`/fichas/${ficha.id}/estado`, { estado: current === "En revisión" ? "En proceso" : "Pendiente" }, "retroceder", "Ficha retrocedida un paso.") }) });
   if (current !== "Terminada" && current !== "Entregada" && current !== "Cancelada")
@@ -861,11 +835,12 @@ export function FichaDetail({
             <h4>Pedidos de repuestos y accesorios</h4>
             {linkedRepuestos.length ? <div className="summary-linked-orders">{linkedRepuestos.map((pedido) => (
               <article key={pedido.id} className={`summary-linked-order${pedido.estado === "Cancelado" ? " cancelled" : ""}`}>
-                <div className="summary-linked-order-head"><strong>{pedido.numero}</strong><StatusBadge status={pedido.estado} /></div>
+                <div className="summary-linked-order-head"><strong>{pedido.numero}</strong><div className="summary-linked-order-status"><StatusBadge status={pedido.estado} /><StatusBadge status={pedido.estadoPago} /></div></div>
                 <small>{pedido.proveedor ? `Proveedor: ${pedido.proveedor}` : "Sin proveedor"}</small>
                 <div className="summary-order-items">{pedido.items.map((item) => <div key={item.id} className={item.estado === "Cancelado" ? "cancelled" : ""}><span>{item.descripcion} · {item.tipo} · {Number(item.cantidad)} u. · {item.estado}</span><strong>{money(item.subtotal)}</strong></div>)}</div>
                 {pedido.observaciones && <small>{pedido.observaciones}</small>}
                 <div className="summary-work-total"><span>Total pedido</span><strong>{pedido.estado === "Cancelado" ? "—" : money(pedido.total)}</strong></div>
+                {pedido.estado !== "Cancelado" && <div className="summary-payment-amounts"><span>Cobrado <strong>{paymentAmount(pedido.montoCobrado)}</strong></span><span>Saldo <strong>{paymentAmount(pedido.saldoPendiente)}</strong></span></div>}
               </article>
             ))}</div> : <p className="summary-empty">No hay pedidos vinculados a esta ficha.</p>}
           </section>
@@ -875,7 +850,10 @@ export function FichaDetail({
             descuentoGlobal={ficha.descuentoGlobal}
             iva={ivaValor}
             totalPresupuesto={totalPresupuesto}
+            montoCobradoPresupuesto={montoCobradoPresupuesto}
+            saldoPendientePresupuesto={saldoPendientePresupuesto}
           />
+          <PaymentLedger resource="fichas" documentId={ficha.id} documentState={ficha.estado} estadoPago={ficha.estadoPago} total={ficha.total} montoCobrado={ficha.montoCobrado} saldoPendiente={ficha.saldoPendiente} onDocumentChange={load} notify={notify} />
         </aside>
       </section>
       <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)}>
@@ -894,22 +872,6 @@ export function FichaDetail({
           <button type="button" className="button secondary" onClick={() => setCloseOpen(false)}>Cancelar</button>
           <button type="button" className="button primary" disabled={Boolean(pending)} onClick={confirmDelivery}>Aprobar revisión</button>
         </div>
-      </Dialog>
-      <Dialog open={paymentOpen} title="Registrar pago parcial" onClose={() => setPaymentOpen(false)} dirty={selectedPaidWorkIds.length > 0}>
-        <p>Seleccioná los trabajos no cancelados que fueron pagados. Podés registrarlos aunque sigan pendientes.</p>
-        <div className="line-items-list">{ficha.trabajos.filter(isPayableTrabajo).map((item) => <label key={item.id} className="line-check"><input type="checkbox" checked={selectedPaidWorkIds.includes(item.id)} onChange={(event) => {
-           if (!event.target.checked && item.pagado) {
-             onConfirm({ title: "Desmarcar trabajo pagado", body: `“${item.descripcion}” ya fue marcado y persistido como pagado. ¿Estás seguro de que querés desmarcarlo?`, confirmLabel: "Desmarcar como pagado", successMessage: "Trabajo desmarcado del pago.", action: () => setSelectedPaidWorkIds((ids) => ids.filter((id) => id !== item.id)) });
-             return;
-           }
-           setSelectedPaidWorkIds((ids) => event.target.checked ? [...ids, item.id] : ids.filter((id) => id !== item.id));
-         }} />{item.descripcion}<strong>{money(item.subtotal)}</strong></label>)}</div>
-        {!ficha.trabajos.some(isPayableTrabajo) && <p>No hay trabajos no cancelados para seleccionar.</p>}
-        <div className="modal-actions"><button type="button" className="button secondary" onClick={() => {
-           const persistedIds = ficha.trabajos.filter((item) => isPayableTrabajo(item) && item.pagado && selectedPaidWorkIds.includes(item.id)).map((item) => item.id);
-           if (!persistedIds.length) { setSelectedPaidWorkIds([]); return; }
-           onConfirm({ title: "Desmarcar trabajos pagados", body: "Hay trabajos que ya fueron marcados y persistidos como pagados. ¿Estás seguro de que querés desmarcarlos todos?", confirmLabel: "Desmarcar pagos", successMessage: "Trabajos desmarcados del pago.", action: () => setSelectedPaidWorkIds([]) });
-         }}>No pagar ninguno</button><button type="button" className="button secondary" onClick={() => setPaymentOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={paymentSaving} onClick={confirmPartialPayment}>{paymentSaving ? "Guardando..." : "Guardar pago"}</button></div>
       </Dialog>
       <Dialog open={revisionNoteControl !== null} title="Observación de revisión" onClose={closeRevisionNote} dirty={revisionNote !== (revisionNoteControl?.observacion ?? "")}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveRevisionNote(); }}>

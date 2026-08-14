@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { money } from "../lib/format";
+import { money, paymentAmount } from "../lib/format";
 
 export function BudgetBreakdown({
   subtotalTrabajos,
@@ -10,6 +10,8 @@ export function BudgetBreakdown({
   iva,
   totalPresupuesto,
   descuentoControl,
+  montoCobradoPresupuesto,
+  saldoPendientePresupuesto,
 }: {
   subtotalTrabajos: number;
   totalRepuestos: number;
@@ -17,6 +19,8 @@ export function BudgetBreakdown({
   iva: number;
   totalPresupuesto: number;
   descuentoControl?: ReactNode;
+  montoCobradoPresupuesto?: number;
+  saldoPendientePresupuesto?: number;
 }) {
   const subtotal = Math.max(0, subtotalTrabajos - descuentoGlobal) + totalRepuestos;
   return (
@@ -29,6 +33,12 @@ export function BudgetBreakdown({
         {iva > 0 && <div className="budget-breakdown-row"><span>IVA 21%</span><strong>{money(iva)}</strong></div>}
       </div>
       <div className="budget-total total"><span>Total presupuesto</span><strong>{money(totalPresupuesto)}</strong></div>
+      {montoCobradoPresupuesto !== undefined && saldoPendientePresupuesto !== undefined && (
+        <div className="budget-payment-balance" aria-label="Saldo combinado de ficha y repuestos">
+          <div><span>Cobrado (ficha + repuestos)</span><strong>{paymentAmount(montoCobradoPresupuesto)}</strong></div>
+          <div><span>Saldo pendiente (ficha + repuestos)</span><strong>{paymentAmount(saldoPendientePresupuesto)}</strong></div>
+        </div>
+      )}
     </section>
   );
 }

@@ -15,6 +15,7 @@ import type {
   RepuestoState,
 } from "../lib/types";
 import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
+import { PaymentLedger } from "./payment-ledger";
 
 const date = formatDateInAr;
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
@@ -257,9 +258,6 @@ export function RepuestoDetail({
   const [repuesto, setRepuesto] = useState<RepuestoResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [paymentOpen, setPaymentOpen] = useState(false);
-  const [selectedPaidItemIds, setSelectedPaidItemIds] = useState<string[]>([]);
-  const [paymentSaving, setPaymentSaving] = useState(false);
   const [confirmation, setConfirmation] = useState<{
     title: string;
     body: string;
@@ -267,38 +265,28 @@ export function RepuestoDetail({
     successMessage: string;
     action: () => Promise<unknown>;
   } | null>(null);
-  const load = () => void api<RepuestoResponse>(`/repuestos/${repuestoId}`).then(setRepuesto).catch((reason) => { setError(errorMessage(reason)); notify(errorMessage(reason), "error"); });
-  useEffect(load, [repuestoId, notify]);
+  const load = async () => {
+    try {
+      setRepuesto(await api<RepuestoResponse>(`/repuestos/${repuestoId}`));
+      setError(null);
+    } catch (reason) {
+      setError(errorMessage(reason));
+      notify(errorMessage(reason), "error");
+    }
+  };
+  useEffect(() => {
+    let active = true;
+    void api<RepuestoResponse>(`/repuestos/${repuestoId}`)
+      .then((next) => { if (active) { setRepuesto(next); setError(null); } })
+      .catch((reason) => { if (active) { setError(errorMessage(reason)); notify(errorMessage(reason), "error"); } });
+    return () => { active = false; };
+  }, [repuestoId, notify]);
   if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><EmptyState title="No se pudo cargar el pedido" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={load}>Reintentar</button>} /></div>;
   if (!repuesto) return <div className="page">Cargando…</div>;
   const locked = repuesto.estado === "Cancelado" || repuesto.estado === "Completado";
   const nextItemStates = (state: RepuestoItemState) => state === "Pendiente de pedir" ? ["Pedido", "Cancelado"] : state === "Pedido" ? ["Recibido", "Cancelado"] : state === "Recibido" ? ["Entregado", "Cancelado"] : [];
   const setItemState = async (itemId: string, estado: RepuestoItemState) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/items/${itemId}/estado`, { method: "PATCH", body: JSON.stringify({ estado }) }); setRepuesto(next); notify(`Ítem marcado como ${estado}.`); } catch (reason) { notify(errorMessage(reason), "error"); } finally { setPending(false); } };
   const patch = async (path: string, body: Record<string, string>) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(path, { method: "PATCH", body: JSON.stringify(body) }); setRepuesto(next); return next; } catch (reason) { notify(errorMessage(reason), "error"); throw reason; } finally { setPending(false); } };
-  const openPartialPayment = () => { setSelectedPaidItemIds(repuesto.items.filter((item) => item.estado !== "Cancelado" && item.pagado).map((item) => item.id)); setPaymentOpen(true); };
-  const savePartialPayment = async () => {
-    if (paymentSaving) return;
-    setPaymentSaving(true);
-    try {
-      const eligibleCount = repuesto.items.filter((item) => item.estado !== "Cancelado").length;
-      const estadoPago = !selectedPaidItemIds.length ? "No pagado" : selectedPaidItemIds.length === eligibleCount ? "Pagado" : "Parcial";
-      const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/pago`, { method: "PATCH", body: JSON.stringify({ estadoPago, itemIds: selectedPaidItemIds }) });
-      setRepuesto(next); setPaymentOpen(false);
-    } catch (reason) { notify(errorMessage(reason), "error"); throw reason; }
-    finally { setPaymentSaving(false); }
-  };
-  const confirmPartialPayment = () => {
-    const eligibleCount = repuesto?.items.filter((item) => item.estado !== "Cancelado").length ?? 0;
-    const nextStatus = !selectedPaidItemIds.length ? "No pagado" : selectedPaidItemIds.length === eligibleCount ? "Pagado" : "Parcial";
-    setPaymentOpen(false);
-    setConfirmation({
-      title: "Guardar pago parcial",
-      body: `El pedido quedará con el estado de pago ${nextStatus}. El cambio se registrará en auditoría.`,
-      confirmLabel: "Guardar pago",
-      successMessage: `Pago actualizado a ${nextStatus}.`,
-      action: savePartialPayment,
-    });
-  };
   return (
     <div className="page">
       <button className="back" onClick={onBack}>← Volver a repuestos</button>
@@ -341,29 +329,9 @@ export function RepuestoDetail({
               ))}
             </div>
           </div>
-          <div className="summary-group">
-            <h4>Pago</h4>
-            <div className="summary-actions">
-              {repuesto.estadoPago === "Pagado" ? <button className="button secondary large" disabled={pending} onClick={() => setConfirmation({ title: "Revertir pago", body: `El pedido ${repuesto.numero} volverá a No pagado.`, confirmLabel: "Marcar como no pagado", successMessage: "Pago marcado como no pagado.", action: async () => { const next = await patch(`/repuestos/${repuesto.id}/pago`, { estadoPago: "No pagado" }); if (!next) throw new Error("No se pudo actualizar el pago."); } })}>Pago: No pagado</button> : <><button className="button primary large" disabled={pending} onClick={() => setConfirmation({ title: "Confirmar pago", body: `El pedido ${repuesto.numero} se marcará como Pagado.`, confirmLabel: "Marcar como pagado", successMessage: "Pago marcado como pagado.", action: async () => { const next = await patch(`/repuestos/${repuesto.id}/pago`, { estadoPago: "Pagado" }); if (!next) throw new Error("No se pudo actualizar el pago."); } })}>Pago: Pagado</button><button className="button secondary large" disabled={pending} onClick={openPartialPayment}>Pago: {repuesto.estadoPago === "Parcial" ? "Editar parcial" : "Parcial"}</button></>}
-            </div>
-          </div>
+          <PaymentLedger resource="repuestos" documentId={repuesto.id} documentState={repuesto.estado} estadoPago={repuesto.estadoPago} total={repuesto.total} montoCobrado={repuesto.montoCobrado} saldoPendiente={repuesto.saldoPendiente} onDocumentChange={load} notify={notify} />
         </aside>
       </section>
-       <Dialog open={paymentOpen} title="Registrar pago parcial" onClose={() => setPaymentOpen(false)} dirty={selectedPaidItemIds.length > 0}>
-        <p>Seleccioná los ítems no cancelados que fueron pagados.</p>
-        <div className="line-items-list">{repuesto.items.filter((item) => item.estado !== "Cancelado").map((item) => <label key={item.id} className="line-check"><input type="checkbox" checked={selectedPaidItemIds.includes(item.id)} onChange={(event) => {
-           if (!event.target.checked && item.pagado) {
-             setConfirmation({ title: "Desmarcar ítem pagado", body: `"${item.descripcion}" ya fue marcado y persistido como pagado. ¿Estás seguro de que querés desmarcarlo?`, confirmLabel: "Desmarcar como pagado", successMessage: "Ítem desmarcado del pago.", action: async () => { setSelectedPaidItemIds((ids) => ids.filter((id) => id !== item.id)); } });
-             return;
-           }
-           setSelectedPaidItemIds((ids) => event.target.checked ? [...ids, item.id] : ids.filter((id) => id !== item.id));
-         }} />{item.descripcion}<strong>{money(item.subtotal)}</strong></label>)}</div>
-        <div className="modal-actions"><button type="button" className="button secondary" onClick={() => {
-           const persistedIds = repuesto.items.filter((item) => item.estado !== "Cancelado" && item.pagado && selectedPaidItemIds.includes(item.id)).map((item) => item.id);
-           if (!persistedIds.length) { setSelectedPaidItemIds([]); return; }
-           setConfirmation({ title: "Desmarcar ítems pagados", body: "Hay ítems que ya fueron marcados y persistidos como pagados. ¿Estás seguro de que querés desmarcarlos todos?", confirmLabel: "Desmarcar pagos", successMessage: "Ítems desmarcados del pago.", action: async () => { setSelectedPaidItemIds([]); } });
-         }}>No pagar ninguno</button><button type="button" className="button secondary" onClick={() => setPaymentOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={paymentSaving} onClick={confirmPartialPayment}>{paymentSaving ? "Guardando..." : "Guardar pago"}</button></div>
-      </Dialog>
       <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; setConfirmation(null); if (!request) return; return request.action().then(() => notify(request.successMessage)).catch((reason) => { notify(errorMessage(reason), "error"); throw reason; }); }} />
     </div>
   );

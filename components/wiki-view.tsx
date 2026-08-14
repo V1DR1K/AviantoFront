@@ -88,9 +88,9 @@ const workStates: StateEntry[] = [
 ];
 
 const paymentStates: StateEntry[] = [
-  { status: "No pagado", meaning: "No hay trabajos no cancelados cobrados.", enables: "Registrar un pago total o parcial, aun antes de realizar los trabajos." },
-  { status: "Parcial", meaning: "Se cobraron algunos trabajos no cancelados, aunque sigan pendientes.", enables: "Editar la selección de trabajos cobrados o completar el pago." },
-  { status: "Pagado", meaning: "Todos los trabajos no cancelados están cobrados.", enables: "Revertir el registro si fue necesario." },
+  { status: "No pagado", meaning: "No hay pagos vigentes registrados en el documento.", enables: "Registrar un importe, con fecha y medio de pago opcional." },
+  { status: "Parcial", meaning: "Los pagos vigentes cubren una parte del total del documento.", enables: "Registrar otro importe o anular un movimiento incorrecto." },
+  { status: "Pagado", meaning: "Los pagos vigentes cubren el total del documento.", enables: "Consultar el historial o anular un movimiento si fue necesario." },
 ];
 
 const revisionStates: StateEntry[] = [
@@ -198,11 +198,12 @@ export function WikiView() {
           </section>
 
           <section className="panel wiki-section" id="trabajos">
-            <div className="wiki-section-title"><ClipboardCheck size={21} aria-hidden="true" /><div><h2>Trabajos y pagos</h2><p>Los trabajos no cancelados pueden cobrarse antes, durante o después de realizarlos; el pago no modifica el avance de la ficha.</p></div></div>
+            <div className="wiki-section-title"><ClipboardCheck size={21} aria-hidden="true" /><div><h2>Trabajos y pagos</h2><p>Cada pago registra un importe exacto y no modifica el avance de la ficha.</p></div></div>
             <h3>Estados de trabajo</h3>
             <StateList entries={workStates} />
             <h3>Estados de pago</h3>
             <StateList entries={paymentStates} />
+            <p className="wiki-payment-note">La ficha y cada pedido de repuestos conservan historiales de pago separados, aunque estén vinculados al mismo presupuesto. Un pago anulado sigue visible para auditoría y los documentos cancelados no admiten nuevos pagos.</p>
           </section>
 
           <section className="panel wiki-section" id="revision">

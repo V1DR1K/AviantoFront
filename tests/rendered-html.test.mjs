@@ -25,7 +25,7 @@ test("server-renders motorcom landing metadata", async () => {
 });
 
 test("keeps the application entrypoint, production scripts, and responsive operational controls", async () => {
-  const [page, loginPage, layout, stylesheet, packageJson, controller, fichaForm, intakeView, ui, views, wiki, shell, budgetBreakdown] = await Promise.all([
+  const [page, loginPage, layout, stylesheet, packageJson, controller, fichaForm, intakeView, ui, views, wiki, shell, budgetBreakdown, repuestosView, paymentLedger, types, apiContract] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -39,6 +39,10 @@ test("keeps the application entrypoint, production scripts, and responsive opera
     readFile(new URL("../components/wiki-view.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/app-shell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/budget-breakdown.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/repuestos-view.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/payment-ledger.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/types.ts", import.meta.url), "utf8"),
+    readFile(new URL("../docs/api-contract.md", import.meta.url), "utf8"),
   ]);
   assert.match(page, /LandingPage/);
   assert.match(loginPage, /AppController/);
@@ -85,9 +89,24 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /\/fichas\/\$\{fichaKey\}\/repuestos/);
   assert.match(views, /Pedidos de repuestos y accesorios[\s\S]*?<BudgetBreakdown/);
   assert.match(views, /Enviar a revisión/);
-  assert.match(views, /const isPayableTrabajo = \(item: FichaTrabajoResponse\) => item\.estadoTrabajo !== "Cancelado";/);
-  assert.match(views, /Seleccioná los trabajos no cancelados que fueron pagados/);
-  assert.match(views, /Todos los trabajos no cancelados se marcarán como Pagados, aunque estén pendientes/);
+  assert.match(views, /<PaymentLedger resource="fichas"/);
+  assert.match(repuestosView, /<PaymentLedger resource="repuestos"/);
+  assert.doesNotMatch(views, /selectedPaidWorkIds|\/pago"/);
+  assert.doesNotMatch(repuestosView, /selectedPaidItemIds|\/pago"/);
+  assert.match(paymentLedger, /const endpoint = `\/\$\{resource\}\/\$\{documentId\}\/pagos`;/);
+  assert.match(paymentLedger, /method: "POST"/);
+  assert.match(paymentLedger, /\/anular/);
+  assert.match(paymentLedger, /priceInput\(amount\)/);
+  assert.match(paymentLedger, /parsePrice\(amount\)/);
+  assert.match(paymentLedger, /paymentAmount\(total\)/);
+  assert.match(paymentLedger, /Documento cancelado: no admite nuevos pagos/);
+  assert.match(paymentLedger, /title="Anular pago"/);
+  assert.match(stylesheet, /\.payment-form-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+  assert.match(budgetBreakdown, /Cobrado \(ficha \+ repuestos\)[\s\S]*?Saldo pendiente \(ficha \+ repuestos\)/);
+  assert.match(types, /montoCobrado: number;[\s\S]*?saldoPendiente: number;/);
+  assert.match(types, /export interface PagoResponse \{[\s\S]*?medioPago\?: PaymentMethod \| null;[\s\S]*?anulado: boolean;/);
+  assert.match(apiContract, /GET\/POST \/fichas\/\{id\}\/pagos/);
+  assert.match(apiContract, /POST \/repuestos\/\{id\}\/pagos\/\{pagoId\}\/anular/);
   assert.match(views, /className="line-items-list revision-control-list"/);
   assert.match(views, /aria-label=\{`Marcar \$\{control\.control\} como revisado`\}/);
   assert.match(views, /observacion: control\.observacion \?\? ""/);
@@ -102,5 +121,6 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(wiki, /observación opcional/);
   assert.match(wiki, /Disponible no significa en venta/);
   assert.match(wiki, /Transferencia en proceso/);
-  assert.match(wiki, /Los trabajos no cancelados pueden cobrarse antes, durante o después de realizarlos/);
+  assert.match(wiki, /Cada pago registra un importe exacto/);
+  assert.match(wiki, /historiales de pago separados/);
 });
