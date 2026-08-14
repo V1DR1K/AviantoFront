@@ -74,9 +74,18 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /\/fichas\/\$\{fichaKey\}\/repuestos/);
   assert.match(views, /Pedidos de repuestos y accesorios[\s\S]*?Total presupuesto/);
   assert.match(views, /Enviar a revisión/);
+  assert.match(views, /className="line-items-list revision-control-list"/);
+  assert.match(views, /aria-label=\{`Marcar \$\{control\.control\} como revisado`\}/);
+  assert.match(views, /observacion: control\.observacion \?\? ""/);
+  assert.match(views, /Agregar observación/);
+  assert.match(views, /title="Observación de revisión"/);
+  assert.match(views, /if \(await updateControl\(revisionNoteControl\.id, \{ estado: revisionNoteControl\.estado, observacion: revisionNote \}\)\) setRevisionNoteControl\(null\);/);
+  assert.match(stylesheet, /\.revision-control-list > \.revision-control \{[\s\S]*?grid-template-areas: "check content note";/);
+  assert.match(stylesheet, /\.revision-check input \{[\s\S]*?width: 20px;[\s\S]*?height: 20px;/);
   assert.match(controller, /wiki:\s*"\/wiki"/);
   assert.match(shell, /id: "wiki", label: "Wiki"/);
   assert.match(wiki, /enviar manualmente la ficha a revisión/);
+  assert.match(wiki, /observación opcional/);
   assert.match(wiki, /Disponible no significa en venta/);
   assert.match(wiki, /Transferencia en proceso/);
 });

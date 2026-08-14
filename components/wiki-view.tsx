@@ -100,7 +100,7 @@ const revisionStates: StateEntry[] = [
 
 const revisionControlStates: StateEntry[] = [
   { status: "Pendiente", meaning: "Un control individual todavía necesita revisión.", enables: "Marcarlo como Revisado o No aplica." },
-  { status: "Revisado", meaning: "El control individual fue validado.", enables: "Cerrar la revisión cuando todos los controles estén resueltos." },
+  { status: "Revisado", meaning: "El control individual fue validado.", enables: "Agregar una observación opcional si hace falta y cerrar la revisión cuando todos los controles estén resueltos." },
   { status: "No aplica", meaning: "El control no corresponde a esta ficha.", enables: "Excluirlo sin bloquear la aprobación." },
 ];
 

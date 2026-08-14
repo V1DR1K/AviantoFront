@@ -17,6 +17,7 @@ import type {
   PageResponse,
   PhotoResponse,
   RepuestoResponse,
+  RevisionControlResponse,
   RevisionResponse,
   ServiceResponse,
   TallerResponse,
@@ -523,6 +524,9 @@ export function FichaDetail({
   const [priorServices, setPriorServices] = useState<ServiceResponse[]>([]);
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [revision, setRevision] = useState<RevisionResponse | null>(null);
+  const [revisionNoteControl, setRevisionNoteControl] = useState<RevisionControlResponse | null>(null);
+  const [revisionNote, setRevisionNote] = useState("");
+  const [revisionNoteSaving, setRevisionNoteSaving] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [selectedPaidWorkIds, setSelectedPaidWorkIds] = useState<string[]>([]);
   const [paymentSaving, setPaymentSaving] = useState(false);
@@ -588,13 +592,37 @@ export function FichaDetail({
       action: aprobarRevision,
     });
   };
-  const updateControl = (controlId: string, body: Record<string, string>) =>
-    void api<RevisionResponse>(`/fichas/${fichaKey}/revision/controles/${controlId}`, {
-      method: "PATCH",
-      body: JSON.stringify(body),
-    })
-      .then((next) => { setRevision(next); notify("Control de revisión actualizado."); })
-      .catch((reason) => { setError(errorMessage(reason)); notify(errorMessage(reason), "error"); });
+  const updateControl = async (controlId: string, body: Record<string, string>) => {
+    try {
+      const next = await api<RevisionResponse>(`/fichas/${fichaKey}/revision/controles/${controlId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      setRevision(next);
+      notify("Control de revisión actualizado.");
+      return true;
+    } catch (reason) {
+      setError(errorMessage(reason));
+      notify(errorMessage(reason), "error");
+      return false;
+    }
+  };
+  const openRevisionNote = (control: RevisionControlResponse) => {
+    setRevisionNoteControl(control);
+    setRevisionNote(control.observacion ?? "");
+  };
+  const closeRevisionNote = () => {
+    if (!revisionNoteSaving) setRevisionNoteControl(null);
+  };
+  const saveRevisionNote = async () => {
+    if (!revisionNoteControl || revisionNoteSaving) return;
+    setRevisionNoteSaving(true);
+    try {
+      if (await updateControl(revisionNoteControl.id, { estado: revisionNoteControl.estado, observacion: revisionNote })) setRevisionNoteControl(null);
+    } finally {
+      setRevisionNoteSaving(false);
+    }
+  };
   const openPartialPayment = () => {
     if (!ficha) return;
     setSelectedPaidWorkIds(ficha.trabajos.filter((item) => item.estadoTrabajo === "Realizado" && item.pagado).map((item) => item.id));
@@ -781,24 +809,20 @@ export function FichaDetail({
                   <span className="muted">{revision.estado === "APROBADA" ? `Aprobada${revision.forzada ? " (forzada)" : ""}${revision.aprobadoAt ? ` · ${date(revision.aprobadoAt)}` : ""}` : "Controles pendientes"}</span>
                 </div>
                 {revision.estado !== "APROBADA" && (
-                  <div className="line-items-list">
+                  <div className="line-items-list revision-control-list">
                      {revision.controles.map((control) => (
-                      <div key={control.id} className="line-item revision-control">
-                        <div>
-                          <strong>{control.control}</strong>
-                          <span>{control.categorias}{control.obligatorio ? " · Obligatorio" : ""}</span>
-                        </div>
-                          <label className="detail-line-check"><input type="checkbox" checked={control.estado === "Revisado"} onChange={(event) => void updateControl(control.id, { estado: event.target.checked ? "Revisado" : "Pendiente" })} />{control.estado === "No aplica" ? "No aplica" : "Revisado"}</label>
-                        {control.estado === "Revisado" && (
-                          <input
-                            type="text"
-                            placeholder="Observación"
-                            defaultValue={control.observacion ?? ""}
-                            onBlur={(event) => void updateControl(control.id, { estado: control.estado, observacion: event.target.value })}
-                          />
-                        )}
-                      </div>
-                    ))}
+                       <div key={control.id} className="line-item revision-control">
+                         <label className="revision-check">
+                            <input type="checkbox" aria-label={`Marcar ${control.control} como revisado`} checked={control.estado === "Revisado"} onChange={(event) => void updateControl(control.id, { estado: event.target.checked ? "Revisado" : "Pendiente", observacion: control.observacion ?? "" })} />
+                         </label>
+                         <div className="revision-control-copy">
+                           <strong>{control.control}</strong>
+                           <span>{control.categorias}{control.obligatorio ? " · Obligatorio" : ""}</span>
+                           {control.estado === "No aplica" && <small>No aplica</small>}
+                         </div>
+                         <button type="button" className="revision-note-trigger" onClick={() => openRevisionNote(control)}>{control.observacion ? "Editar observación" : "Agregar observación"}</button>
+                       </div>
+                     ))}
                   </div>
                 )}
               </section>
@@ -878,6 +902,13 @@ export function FichaDetail({
            if (!persistedIds.length) { setSelectedPaidWorkIds([]); return; }
            onConfirm({ title: "Desmarcar trabajos pagados", body: "Hay trabajos que ya fueron marcados y persistidos como pagados. ¿Estás seguro de que querés desmarcarlos todos?", confirmLabel: "Desmarcar pagos", successMessage: "Trabajos desmarcados del pago.", action: () => setSelectedPaidWorkIds([]) });
          }}>No pagar ninguno</button><button type="button" className="button secondary" onClick={() => setPaymentOpen(false)}>Cancelar</button><button type="button" className="button primary" disabled={paymentSaving} onClick={confirmPartialPayment}>{paymentSaving ? "Guardando..." : "Guardar pago"}</button></div>
+      </Dialog>
+      <Dialog open={revisionNoteControl !== null} title="Observación de revisión" onClose={closeRevisionNote} dirty={revisionNote !== (revisionNoteControl?.observacion ?? "")}>
+        <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveRevisionNote(); }}>
+          <p>Control: <strong>{revisionNoteControl?.control}</strong></p>
+          <label>Observación<textarea value={revisionNote} onChange={(event) => setRevisionNote(event.target.value)} placeholder="Detalle opcional de la revisión" /></label>
+          <div className="modal-actions"><button type="button" className="button secondary" disabled={revisionNoteSaving} onClick={closeRevisionNote}>Cancelar</button><button className="button primary" disabled={revisionNoteSaving}>{revisionNoteSaving ? "Guardando..." : "Guardar observación"}</button></div>
+        </form>
       </Dialog>
       <ConfirmModal open={startWorkItem !== null} title="Iniciar trabajo" body="Esta ficha se marcará como En proceso si realizás un trabajo." confirmLabel="Marcar en proceso" variant="success" onClose={() => setStartWorkItem(null)} onConfirm={startWork} />
     </div>
