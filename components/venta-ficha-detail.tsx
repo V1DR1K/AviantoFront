@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowRightLeft, CalendarClock, Check, CheckCircle2, ClipboardCheck, UserRound } from "lucide-react";
+import { ArrowRightLeft, CalendarClock, Check, ClipboardCheck, UserRound } from "lucide-react";
 import { api } from "../lib/api";
 import { formatDateInAr, todayInAr } from "../lib/dates";
 import type { AutocompleteResponse, VentaChecklistItemState, VentaFichaResponse } from "../lib/types";
@@ -103,9 +103,9 @@ export function VentaFichaDetail({
   const cancelledTransfer = ficha.transferencia?.canceladaAt ? ficha.transferencia : null;
   const appointmentReady = Boolean(transfer?.citaFecha && transfer.citaHora && transfer.citaLugar);
   const attendanceReady = Boolean(transfer?.asistenciaAt);
-  const steps = ["En venta", "Transferencia en proceso", "Vendida"] as const;
-  const currentStep = cancelled ? -1 : steps.indexOf(ficha.estado);
   const canStartTransfer = canAdmin && !sold && !cancelled && !transfer && Boolean(ficha.compradorId) && checklistReady;
+  const steps = ["Carpeta", "Comprador", "Iniciar transferencia", "Turno / proceso"] as const;
+  const currentStep = cancelled ? -1 : sold ? steps.length : transfer ? 3 : ficha.compradorId ? 2 : checklistReady ? 1 : 0;
   const confirmAttendance = () => {
     if (transfer?.citaFecha && transfer.citaHora && new Date(`${transfer.citaFecha}T${transfer.citaHora}`).getTime() > Date.now()) {
       notify("La asistencia se habilita cuando termine la cita programada.", "warning");
@@ -157,15 +157,15 @@ export function VentaFichaDetail({
         </div>
       </div>
 
-      <ol className="flow-steps sale-flow" aria-label="Progreso de la venta">
+      <ol className="flow-steps sale-flow" aria-label="Etapas de la carpeta de transferencia">
         {steps.map((step, index) => <li key={step} className={`flow-step${index < currentStep ? " done" : ""}${index === currentStep ? " current" : ""}`}><span>{index < currentStep ? "✓" : index + 1}</span><strong>{step}</strong></li>)}
       </ol>
 
-      <section className="sale-gates" aria-label="Estado de requisitos para la venta">
+      <section className="sale-gates" aria-label="Estado de las etapas de la carpeta">
+        <div className={checklistReady ? "is-ready" : ""}><ClipboardCheck size={17} aria-hidden="true" /><span>Carpeta</span><strong>{checklistReady ? "Completa" : "Incompleta"}</strong></div>
         <div className={ficha.compradorId ? "is-ready" : ""}><UserRound size={17} aria-hidden="true" /><span>Comprador</span><strong>{ficha.comprador ? "Seleccionado" : "Pendiente"}</strong></div>
-        <div className={checklistReady ? "is-ready" : ""}><ClipboardCheck size={17} aria-hidden="true" /><span>Checklist obligatorio</span><strong>{checklistReady ? "Completo" : `${completedRequired}/${requiredItems.length} completo`}</strong></div>
-        <div className={appointmentReady ? "is-ready" : ""}><CalendarClock size={17} aria-hidden="true" /><span>Cita</span><strong>{appointmentReady ? "Programada" : "Pendiente"}</strong></div>
-        <div className={attendanceReady ? "is-ready" : ""}><CheckCircle2 size={17} aria-hidden="true" /><span>Asistencia</span><strong>{attendanceReady ? "Confirmada" : "Pendiente"}</strong></div>
+        <div className={transfer ? "is-ready" : ""}><ArrowRightLeft size={17} aria-hidden="true" /><span>Iniciar transferencia</span><strong>{transfer ? "Iniciada" : "Pendiente"}</strong></div>
+        <div className={sold ? "is-ready" : ""}><CalendarClock size={17} aria-hidden="true" /><span>Turno / proceso</span><strong>{sold ? "Finalizado" : transfer ? "En proceso" : "Pendiente"}</strong></div>
       </section>
 
       <section className="detail-grid venta-detail-grid">
@@ -173,23 +173,23 @@ export function VentaFichaDetail({
            {cancelled && <p className="form-notice sale-final-audit">Ficha cancelada{ficha.canceladaAt ? ` el ${appointmentDate(ficha.canceladaAt)}` : ""}{ficha.canceladaPor ? ` por ${ficha.canceladaPor}` : ""}. Motivo: {ficha.canceladaMotivo || "Sin detalle"}.</p>}
            <section className="panel sale-checklist-panel">
             <div className="panel-head">
-              <div><h2>Checklist de venta</h2><p>Es el snapshot de la plantilla activa al ingresar la moto a Ventas.</p></div>
+              <div><h2>Carpeta de transferencia</h2><p>Documentación, papeles y requisitos obligatorios para avanzar con la transferencia.</p></div>
               <span className="sale-progress" aria-live="polite">{requiredItems.length ? `${completedRequired} de ${requiredItems.length} obligatorios` : "Sin ítems obligatorios"}</span>
             </div>
-            {ficha.items.length ? <div className="sale-checklist" role="list" aria-label="Ítems del checklist de venta">
+            {ficha.items.length ? <div className="sale-checklist" role="list" aria-label="Requisitos de la carpeta de transferencia">
               {ficha.items.map((item) => {
                  const editable = !sold && !cancelled && !inTransfer;
                 const complete = item.estado === "Realizado";
                 return <div className={`sale-checklist-item${complete ? " is-complete" : ""}`} key={item.id} role="listitem">
                   <label className="sale-check-toggle">
-                    <input type="checkbox" checked={complete} disabled={!editable || Boolean(pending)} aria-label={`Marcar ${item.etiqueta} como realizado`} onChange={(event) => void updateFicha(`item-${item.id}`, `/ventas/${ficha.id}/items/${item.id}`, { method: "PATCH", body: JSON.stringify({ estado: event.target.checked ? "Realizado" : "Pendiente" }) }, "Checklist de venta actualizado.")} />
+                    <input type="checkbox" checked={complete} disabled={!editable || Boolean(pending)} aria-label={`Marcar ${item.etiqueta} como realizado`} onChange={(event) => void updateFicha(`item-${item.id}`, `/ventas/${ficha.id}/items/${item.id}`, { method: "PATCH", body: JSON.stringify({ estado: event.target.checked ? "Realizado" : "Pendiente" }) }, "Carpeta de transferencia actualizada.")} />
                     <span aria-hidden="true"><Check size={14} strokeWidth={3} /></span>
                   </label>
                   <div className="sale-check-copy"><strong>{item.etiqueta}</strong><small>{item.obligatorio ? "Obligatorio" : "Opcional"}{item.realizadoPor ? ` · Realizado por ${item.realizadoPor}` : ""}</small></div>
-                  <SelectField value={item.estado} onChange={(estado) => void updateFicha(`item-${item.id}`, `/ventas/${ficha.id}/items/${item.id}`, { method: "PATCH", body: JSON.stringify({ estado }) }, "Checklist de venta actualizado.")} options={(item.obligatorio ? checklistStates.filter((estado) => estado !== "No aplica") : checklistStates).map((estado) => ({ value: estado, label: estado }))} ariaLabel={`Estado de ${item.etiqueta}`} disabled={!editable || Boolean(pending)} />
+                  <SelectField value={item.estado} onChange={(estado) => void updateFicha(`item-${item.id}`, `/ventas/${ficha.id}/items/${item.id}`, { method: "PATCH", body: JSON.stringify({ estado }) }, "Carpeta de transferencia actualizada.")} options={(item.obligatorio ? checklistStates.filter((estado) => estado !== "No aplica") : checklistStates).map((estado) => ({ value: estado, label: estado }))} ariaLabel={`Estado de ${item.etiqueta}`} disabled={!editable || Boolean(pending)} />
                 </div>;
               })}
-            </div> : <div className="sale-empty-checklist"><EmptyState title="Sin ítems de checklist" body="La plantilla de checklist está vacía. Esta ficha no inventa documentos; podés configurarla para futuros ingresos desde Administración." /></div>}
+            </div> : <div className="sale-empty-checklist"><EmptyState title="Carpeta sin requisitos" body="No hay requisitos activos configurados. Administración puede agregarlos desde la sección Carpeta de transferencia." /></div>}
           </section>
 
           <section className="panel sale-transfer-panel">
@@ -211,7 +211,7 @@ export function VentaFichaDetail({
             <strong>{ficha.comprador ?? "Sin seleccionar"}</strong>
              {!sold && !cancelled && canAdmin && !transfer && <div className="sale-buyer-picker"><AutocompleteField value={buyerQuery} onChange={(value) => { setBuyerQuery(value); setSelectedBuyer(null); }} onSelect={(buyer) => { setSelectedBuyer(buyer); setBuyerQuery(buyer.label); }} onClear={() => setSelectedBuyer(null)} selected={selectedBuyer} loadOptions={loadClientOptions} minChars={2} placeholder="Buscar cliente" ariaLabel="Buscar comprador prospectivo" /><button className="button secondary" disabled={!selectedBuyer || Boolean(pending)} onClick={() => void saveBuyer()}>Guardar comprador</button></div>}
           </section>
-           <section className="sale-finalization"><h4>Para completar la venta</h4><ul><li className={ficha.compradorId ? "complete" : ""}>Comprador seleccionado</li><li className={checklistReady ? "complete" : ""}>Checklist obligatorio completo</li><li className={appointmentReady ? "complete" : ""}>Cita con fecha, horario y lugar</li><li className={attendanceReady ? "complete" : ""}>Asistencia confirmada</li></ul>{canAdmin && !sold && !cancelled && <button className="button primary large" disabled={!inTransfer || !ficha.compradorId || !checklistReady || !appointmentReady || !attendanceReady || Boolean(pending)} onClick={() => setConfirmation({ title: "Completar venta", body: `La moto ${ficha.patente} pasará a Vendida y ${ficha.comprador ?? "el comprador"} será su nuevo titular. Esta acción queda auditada.`, confirmLabel: "Completar venta", action: () => updateFicha("complete", `/ventas/${ficha.id}/completar`, { method: "POST" }, "Venta completada.") })}>Completar venta</button>}</section>
+            <section className="sale-finalization"><h4>Para completar la venta</h4><ul><li className={ficha.compradorId ? "complete" : ""}>Comprador seleccionado</li><li className={checklistReady ? "complete" : ""}>Carpeta completa</li><li className={appointmentReady ? "complete" : ""}>Turno con fecha, horario y lugar</li><li className={attendanceReady ? "complete" : ""}>Asistencia confirmada</li></ul>{canAdmin && !sold && !cancelled && <button className="button primary large" disabled={!inTransfer || !ficha.compradorId || !checklistReady || !appointmentReady || !attendanceReady || Boolean(pending)} onClick={() => setConfirmation({ title: "Completar venta", body: `La moto ${ficha.patente} pasará a Vendida y ${ficha.comprador ?? "el comprador"} será su nuevo titular. Esta acción queda auditada.`, confirmLabel: "Completar venta", action: () => updateFicha("complete", `/ventas/${ficha.id}/completar`, { method: "POST" }, "Venta completada.") })}>Completar venta</button>}</section>
         </aside>
       </section>
 

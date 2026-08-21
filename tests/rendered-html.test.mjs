@@ -173,8 +173,9 @@ test("keeps the sale ficha workflow, read-only transfer registry, and sale check
   assert.match(sales, /api<PageResponse<VentaFichaResponse>>\("\/ventas"/);
   assert.match(sales, /Abrir ficha/);
   assert.doesNotMatch(sales, /venta\/completar/);
-  assert.match(saleDetail, /Checklist de venta/);
-  assert.match(saleDetail, /La plantilla de checklist está vacía\. Esta ficha no inventa documentos/);
+  assert.match(saleDetail, /Carpeta de transferencia/);
+  assert.match(saleDetail, /Carpeta sin requisitos/);
+  assert.match(saleDetail, /steps = \["Carpeta", "Comprador", "Iniciar transferencia", "Turno \/ proceso"\]/);
   assert.match(saleDetail, /Comprador prospectivo/);
   assert.match(saleDetail, /\/ventas\/\$\{ficha\.id\}\/transferencia\/cita/);
   assert.match(saleDetail, /\/ventas\/\$\{ficha\.id\}\/transferencia\/cancelar/);
@@ -190,7 +191,7 @@ test("keeps the sale ficha workflow, read-only transfer registry, and sale check
   assert.match(transfers, /onOpenSale\(transfer\.fichaVentaId!\)/);
   assert.match(transfers, /canceladaAt \? "Cancelada"/);
   assert.doesNotMatch(transfers, /Nueva transferencia|Editar transferencia|Eliminar transferencia/);
-  assert.match(admin, /Checklist de ventas/);
+  assert.match(admin, /Carpeta de transferencia/);
   assert.match(admin, /"\/configuracion\/ventas\/checklist"/);
   assert.match(intake, /Solo Administración puede ingresar una moto a Ventas/);
   assert.match(types, /export interface VentaFichaResponse/);

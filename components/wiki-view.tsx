@@ -209,10 +209,10 @@ export function WikiView() {
             <div className="wiki-section-title"><ClipboardCheck size={21} aria-hidden="true" /><div><h2>Ficha de venta y transferencia</h2><p>La ficha comercial concentra comprador, requisitos, cita y cierre para que la titularidad no cambie antes de tiempo.</p></div></div>
             <h3>Estados de la ficha de venta</h3>
             <StateList entries={saleFichaStates} />
-            <h3>Checklist de venta</h3>
+            <h3>Carpeta de transferencia</h3>
             <StateList entries={saleChecklistStates} />
-            <p className="wiki-payment-note">Administración mantiene la plantilla de checklist. Al ingresar una moto a Ventas, la ficha toma una copia de los ítems activos; los cambios posteriores de la plantilla no alteran esa venta. Los ítems obligatorios deben quedar Realizados; solo los opcionales admiten No aplica.</p>
-            <div className="wiki-callout"><ShieldCheck size={22} aria-hidden="true" /><p><strong>El comprador es prospectivo hasta el cierre.</strong> Para completar la venta se requiere comprador, checklist obligatorio completo, cita con fecha, horario y lugar, y asistencia confirmada. Recién entonces cambia la titularidad.</p></div>
+            <p className="wiki-payment-note">Administración mantiene los requisitos de la carpeta. Las fichas abiertas incorporan los requisitos activos que todavía no tengan; los ítems ya trabajados conservan su estado. Los ítems obligatorios deben quedar Realizados; solo los opcionales admiten No aplica.</p>
+            <div className="wiki-callout"><ShieldCheck size={22} aria-hidden="true" /><p><strong>El comprador es prospectivo hasta el cierre.</strong> Para completar la venta se requiere comprador, carpeta completa, turno con fecha, horario y lugar, y asistencia confirmada. Recién entonces cambia la titularidad.</p></div>
           </section>
 
           <section className="panel wiki-section" id="fichas">
