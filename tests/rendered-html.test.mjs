@@ -65,7 +65,9 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(stylesheet, /@media \(max-width: 680px\) \{[\s\S]*?\.order-form input,[\s\S]*?\.order-form select,[\s\S]*?\.order-form textarea \{[\s\S]*?font-size: 16px;/);
   assert.match(packageJson, /"build"/);
   assert.match(controller, /perfiles|fichas|repuestos/);
-  assert.match(fichaForm, /className="line-observation"[\s\S]*?<textarea[\s\S]*?observacionTrabajo/);
+  assert.match(fichaForm, /line-observation[\s\S]*?observacionTrabajo/);
+  assert.match(fichaForm, /expandedObservations[\s\S]*?(Agregar observación[\s\S]*?Editar observación|Editar observación[\s\S]*?Agregar observación)/);
+  assert.match(fichaForm, /className="form-section-heading"[\s\S]*?Agregar trabajo/);
   assert.match(intakeView, /<AutocompleteField[\s\S]*?loadOptions=\{loadClientOptions\}[\s\S]*?minChars=\{2\}[\s\S]*?emptyAction=/);
   assert.match(intakeView, /"\/clientes\/autocomplete"/);
   assert.doesNotMatch(intakeView, /api<PageResponse<ClienteResponse>>\("\/clientes"/);
@@ -182,9 +184,15 @@ test("keeps the sale ficha workflow, read-only transfer registry, and sale check
   assert.match(saleDetail, /item\.obligatorio \? checklistStates\.filter\(\(estado\) => estado !== "No aplica"\)/);
   assert.match(saleDetail, /\/ventas\/\$\{ficha\.id\}\/completar/);
   assert.match(motoDetail, /label: "Venta"/);
+  assert.match(motoDetail, /className="detail-title moto-detail-title"/);
+  assert.match(motoDetail, /className="moto-detail-identity"/);
+  assert.match(motoDetail, /className="detail-stack moto-detail-actions"/);
   assert.match(motoDetail, /Abrir ficha de venta/);
   assert.doesNotMatch(motoDetail, /venta\/completar/);
   assert.match(profiles, /Abrir ficha de venta/);
+  assert.match(profiles, /useState\("updatedAt"\)/);
+  assert.match(profiles, /useState<"ASC" \| "DESC">\("DESC"\)/);
+  assert.match(profiles, /sortBy !== "updatedAt"/);
   assert.doesNotMatch(profiles, /venta\/completar/);
   assert.match(transfers, /Registro de solo lectura conectado a las fichas de venta/);
   assert.match(transfers, /fichaVentaId/);
@@ -200,6 +208,10 @@ test("keeps the sale ficha workflow, read-only transfer registry, and sale check
   assert.match(types, /canceladaAt\?: string \| null;/);
   assert.match(stylesheet, /\.sale-gates \{[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/);
   assert.match(stylesheet, /@media \(max-width: 680px\) \{[\s\S]*?\.sale-checklist-item \{[\s\S]*?grid-template-columns: 44px minmax\(0, 1fr\);/);
+  assert.match(stylesheet, /\.moto-detail-title \{[\s\S]*?display: grid;[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/);
+  assert.match(stylesheet, /\.moto-detail-actions > \.button,[\s\S]*?\.moto-detail-actions > \.detail-note \{[\s\S]*?width: 100%;/);
+  assert.match(stylesheet, /\.ficha-form-layout > \.form-stack,[\s\S]*?overflow-y: auto;[\s\S]*?overscroll-behavior: contain;/);
+  assert.match(stylesheet, /\.form-section-heading \{[\s\S]*?justify-content: space-between;/);
   assert.match(apiContract, /GET \/ventas/);
   assert.match(apiContract, /VentaFichaResponse/);
   assert.match(apiContract, /registro de solo lectura/i);

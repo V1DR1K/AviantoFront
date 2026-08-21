@@ -200,18 +200,18 @@ export function MotoDetail({
   return (
     <div className="page">
       <button className="back" onClick={onBack}>← Volver a perfiles</button>
-      <div className="detail-title">
-        <div>
+      <div className="detail-title moto-detail-title">
+        <div className="moto-detail-identity">
           <p>{moto.patente}</p>
           <h1>{moto.marca} {moto.modelo}</h1>
           <span>{moto.propietario ?? "Sin propietario"} · KM {moto.kilometraje ?? "—"}</span>
         </div>
-        <div className="detail-stack">
+        <div className="detail-stack moto-detail-actions">
           <StatusBadge status={moto.estado} />
              {moto.seccion === "Venta" ? <button className="button primary" onClick={onOpenVenta}><FileText size={17} />Abrir ficha de venta</button> : !moto.ingresada ? <button className="button secondary" onClick={() => onIntake(moto.patente)}><LogIn size={17} />Ingresar moto</button> : moto.estado === "Terminada" ? <span className="detail-note">Pendiente de entrega al cliente</span> : <span className="detail-note">La entrega se completa desde la ficha terminada</span>}
-             {moto.estado !== "Vendida" && (moto.seccion === "Venta" || canAdmin) && <button className="button secondary" onClick={openCircuitChange}><ArrowRightLeft size={17} />{moto.seccion === "Venta" ? "Pasar a Taller" : "Pasar a Ventas"}</button>}
-             <strong>{moto.anio ?? "—"}</strong>
-        </div>
+              {moto.estado !== "Vendida" && (moto.seccion === "Venta" || canAdmin) && <button className="button secondary" onClick={openCircuitChange}><ArrowRightLeft size={17} />{moto.seccion === "Venta" ? "Pasar a Taller" : "Pasar a Ventas"}</button>}
+              <strong className="moto-detail-year">Año {moto.anio ?? "—"}</strong>
+         </div>
       </div>
       <nav className="tabs">
         {tabs.map((item) => (

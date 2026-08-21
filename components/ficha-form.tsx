@@ -100,6 +100,7 @@ export function FichaForm({
   const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState("");
   const [kilometrajeIngreso, setKilometrajeIngreso] = useState("");
   const [trabajos, setTrabajos] = useState<Line[]>([]);
+  const [expandedObservations, setExpandedObservations] = useState<Set<string>>(() => new Set());
   const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
   const [workQuery, setWorkQuery] = useState("");
   const [workOpen, setWorkOpen] = useState<string | null>(null);
@@ -155,18 +156,18 @@ export function FichaForm({
         setIva(ficha.iva);
         setDescuentoGlobal(Number(ficha.descuentoGlobal ?? 0));
         setExisting(ficha.fotos);
-        setTrabajos(
-          ficha.trabajos.map((trabajo) => ({
-            key: crypto.randomUUID(),
-            id: trabajo.id,
-            descripcion: trabajo.descripcion,
-            precioUnitario: trabajo.precioUnitario,
-            descuento: trabajo.descuento,
-            realizado: trabajo.estadoTrabajo === "Realizado",
-            estadoTrabajo: trabajo.estadoTrabajo,
-            observacionTrabajo: trabajo.observacionTrabajo ?? "",
-          })),
-        );
+        const nextTrabajos = ficha.trabajos.map((trabajo) => ({
+          key: crypto.randomUUID(),
+          id: trabajo.id,
+          descripcion: trabajo.descripcion,
+          precioUnitario: trabajo.precioUnitario,
+          descuento: trabajo.descuento,
+          realizado: trabajo.estadoTrabajo === "Realizado",
+          estadoTrabajo: trabajo.estadoTrabajo,
+          observacionTrabajo: trabajo.observacionTrabajo ?? "",
+        }));
+        setTrabajos(nextTrabajos);
+        setExpandedObservations(new Set(nextTrabajos.filter((trabajo) => trabajo.observacionTrabajo?.trim()).map((trabajo) => trabajo.key)));
       })
       .catch((reason) =>
         notify(
@@ -235,6 +236,13 @@ export function FichaForm({
     setTrabajos((all) =>
       all.map((line) => (line.key === key ? { ...line, ...changes } : line)),
     );
+  const toggleObservation = (key: string) =>
+    setExpandedObservations((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   const normalizedWork = (value: string) => value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
   const chooseTrabajo = (key: string, trabajo: TrabajoCatalogoResponse, force = false) => {
     const duplicate = trabajos.some((line) => line.key !== key && normalizedWork(line.descripcion) === normalizedWork(trabajo.descripcion));
@@ -343,7 +351,7 @@ export function FichaForm({
     }
   };
   return (
-    <section className="order-form">
+    <section className="order-form ficha-form-page">
       <div className="page-heading">
         <div>
           <h1>
@@ -371,7 +379,7 @@ export function FichaForm({
            editar fichas en &quot;Pendiente&quot; o &quot;En proceso&quot;.
         </p>
       )}
-        <div className="form-layout">
+        <div className="form-layout ficha-form-layout">
         <div className="form-stack">
          <section className="panel moto-data-card ficha-moto-card">
               <h2 className="form-section-title">1. Datos de la moto</h2>
@@ -392,9 +400,12 @@ export function FichaForm({
                <label>Kilometraje ingreso<input type="text" inputMode="numeric" value={integerInput(kilometrajeIngreso)} onChange={(event) => setKilometrajeIngreso(event.target.value)} placeholder="KM actual" /></label>
              </div>
             </section>
-          <section className="form-section">
-             <h2 className="form-section-title">2. Trabajos a realizar</h2>
-            <div className="line-items">
+           <section className="form-section">
+             <div className="form-section-heading">
+               <h2 className="form-section-title">2. Trabajos a realizar</h2>
+               <button className="text-button section-add-button" type="button" onClick={() => addTrabajo()}><Plus size={17} />Agregar trabajo</button>
+             </div>
+             <div className="line-items">
               {trabajos.map((trabajo) => (
                   <div className={`line-item${workStateClass(trabajo.estadoTrabajo, trabajo.realizado)}${workOpen === trabajo.key ? " is-work-open" : ""}`} key={trabajo.key}>
                   <label className="line-descr">
@@ -466,19 +477,21 @@ export function FichaForm({
                     <span className="work-state-box" aria-hidden="true"><Check size={14} strokeWidth={3} /></span>
                     Realizado
                    </label>
-                   <label className="line-observation">
-                     Observación del trabajo
-                     <textarea
-                       rows={2}
-                       value={trabajo.observacionTrabajo ?? ""}
-                       onChange={(event) =>
-                         updateLine(trabajo.key, {
-                           observacionTrabajo: event.target.value,
-                         })
-                       }
-                       placeholder="Ej.: revisar transmisión antes de entregar"
-                     />
-                   </label>
+                    <div className={`line-observation${expandedObservations.has(trabajo.key) ? " is-expanded" : ""}`}>
+                      <div className="line-observation-head">
+                        <span>Observación del trabajo</span>
+                        <button type="button" className="line-observation-toggle" aria-expanded={expandedObservations.has(trabajo.key)} aria-controls={`work-observation-${trabajo.key}`} onClick={() => toggleObservation(trabajo.key)}>
+                          {expandedObservations.has(trabajo.key) ? "Contraer" : trabajo.observacionTrabajo?.trim() ? "Editar observación" : "Agregar observación"}
+                        </button>
+                      </div>
+                      {expandedObservations.has(trabajo.key) ? <textarea
+                        id={`work-observation-${trabajo.key}`}
+                        rows={2}
+                        value={trabajo.observacionTrabajo ?? ""}
+                        onChange={(event) => updateLine(trabajo.key, { observacionTrabajo: event.target.value })}
+                        placeholder="Ej.: revisar transmisión antes de entregar"
+                      /> : trabajo.observacionTrabajo?.trim() ? <p className="line-observation-preview">{trabajo.observacionTrabajo}</p> : null}
+                    </div>
                    <button
                      type="button"
                      className="line-delete"
@@ -495,15 +508,7 @@ export function FichaForm({
                 </div>
               ))}
             </div>
-            <button
-              className="text-button"
-              type="button"
-              onClick={() => addTrabajo()}
-            >
-              <Plus size={17} />
-              Agregar trabajo
-            </button>
-          </section>
+           </section>
           <section className="form-section">
              <h2 className="form-section-title">3. Fotos y observaciones</h2>
             <label>
