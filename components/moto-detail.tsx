@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDownUp, Eye, FileText, Filter, LogIn, Plus, Settings2 } from "lucide-react";
+import { ArrowDownUp, ArrowRightLeft, Eye, FileText, Filter, LogIn, Plus, Settings2 } from "lucide-react";
 import { api } from "../lib/api";
 import { integerInput, money, parseIntegerInput } from "../lib/format";
 import { todayInAr } from "../lib/dates";
@@ -36,6 +36,7 @@ export function MotoDetail({
   onNewFicha,
   onNewRepuesto,
   onIntake,
+  canAdmin,
   notify,
 }: {
   id: string;
@@ -47,6 +48,7 @@ export function MotoDetail({
   onNewFicha: (prefill: { motoId: string; clienteId?: string | null }) => void;
   onNewRepuesto: (prefill: { motoId: string; clienteId?: string | null }) => void;
   onIntake: (plate?: string) => void;
+  canAdmin: boolean;
   notify: Notify;
 }) {
   const [tab, setTab] = useState<"general" | "client" | "services" | "fichas" | "repuestos" | "venta">(initialTab ?? "general");
@@ -89,6 +91,9 @@ export function MotoDetail({
   const [configMonths, setConfigMonths] = useState("");
   const [configNotes, setConfigNotes] = useState("");
   const [configSaving, setConfigSaving] = useState(false);
+  const [circuitTarget, setCircuitTarget] = useState<"TALLER" | "VENTA" | null>(null);
+  const [circuitReason, setCircuitReason] = useState("");
+  const [circuitSaving, setCircuitSaving] = useState(false);
 
   const load = () =>
     void api<MotovehiculoResponse>(`/motovehiculos/${id}`)
@@ -157,6 +162,30 @@ export function MotoDetail({
     setConfigNotes(moto?.serviceObservaciones ?? "");
     setConfigOpen(true);
   };
+  const openCircuitChange = () => {
+    if (!moto || moto.estado === "Vendida") return;
+    setCircuitTarget(moto.seccion === "Venta" ? "TALLER" : "VENTA");
+    setCircuitReason("");
+  };
+  const saveCircuitChange = async () => {
+    if (!circuitTarget || !circuitReason.trim() || circuitSaving) return;
+    setCircuitSaving(true);
+    try {
+      const next = await api<MotovehiculoResponse>(`/motovehiculos/${id}/circuito`, {
+        method: "PATCH",
+        body: JSON.stringify({ seccion: circuitTarget, motivo: circuitReason.trim() }),
+      });
+      setMoto(next);
+      setCircuitTarget(null);
+      setCircuitReason("");
+      setTab("general");
+      notify(circuitTarget === "TALLER" ? "La moto volvió al circuito Taller." : "La moto pasó al circuito Ventas.");
+    } catch (reason) {
+      notify(errorMessage(reason), "error");
+    } finally {
+      setCircuitSaving(false);
+    }
+  };
   if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><EmptyState title="No se pudo cargar la moto" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={load}>Reintentar</button>} /></div>;
   if (!moto) return <div className="page"><div className="table-loading" role="status">Cargando moto...</div></div>;
 
@@ -179,8 +208,9 @@ export function MotoDetail({
         </div>
         <div className="detail-stack">
           <StatusBadge status={moto.estado} />
-            {moto.seccion === "Venta" ? <button className="button primary" onClick={onOpenVenta}><FileText size={17} />Abrir ficha de venta</button> : !moto.ingresada ? <button className="button secondary" onClick={() => onIntake(moto.patente)}><LogIn size={17} />Ingresar moto</button> : moto.estado === "Terminada" ? <span className="detail-note">Pendiente de entrega al cliente</span> : <span className="detail-note">La entrega se completa desde la ficha terminada</span>}
-          <strong>{moto.anio ?? "—"}</strong>
+             {moto.seccion === "Venta" ? <button className="button primary" onClick={onOpenVenta}><FileText size={17} />Abrir ficha de venta</button> : !moto.ingresada ? <button className="button secondary" onClick={() => onIntake(moto.patente)}><LogIn size={17} />Ingresar moto</button> : moto.estado === "Terminada" ? <span className="detail-note">Pendiente de entrega al cliente</span> : <span className="detail-note">La entrega se completa desde la ficha terminada</span>}
+             {moto.estado !== "Vendida" && (moto.seccion === "Venta" || canAdmin) && <button className="button secondary" onClick={openCircuitChange}><ArrowRightLeft size={17} />{moto.seccion === "Venta" ? "Pasar a Taller" : "Pasar a Ventas"}</button>}
+             <strong>{moto.anio ?? "—"}</strong>
         </div>
       </div>
       <nav className="tabs">
@@ -298,6 +328,13 @@ export function MotoDetail({
           <label>Periodo en meses<input type="text" inputMode="numeric" value={integerInput(configMonths)} onChange={(event) => setConfigMonths(event.target.value)} placeholder="Ej: 6" /></label>
           <label>Observaciones<input type="text" value={configNotes} onChange={(event) => setConfigNotes(event.target.value)} /></label>
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setConfigOpen(false)}>Cancelar</button><button className="button primary" disabled={configSaving}>{configSaving ? "Guardando..." : "Guardar"}</button></div>
+        </form>
+      </Dialog>
+      <Dialog open={circuitTarget !== null} title={circuitTarget === "TALLER" ? "Pasar moto a Taller" : "Pasar moto a Ventas"} onClose={() => { if (!circuitSaving) setCircuitTarget(null); }} dirty={Boolean(circuitReason)}>
+        <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveCircuitChange(); }}>
+          <p className="form-notice">El cambio conserva la ficha y el historial. La ficha de venta quedará marcada como cancelada cuando la moto vuelva a Taller.</p>
+          <label className="form-field-wide">Motivo del cambio<textarea value={circuitReason} maxLength={500} onChange={(event) => setCircuitReason(event.target.value)} placeholder="Ej.: se seleccionó el circuito incorrecto al ingresar la moto" required /></label>
+          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setCircuitTarget(null)} disabled={circuitSaving}>Cancelar</button><button className="button primary" disabled={!circuitReason.trim() || circuitSaving}>{circuitSaving ? "Guardando..." : "Confirmar cambio"}</button></div>
         </form>
       </Dialog>
     </div>

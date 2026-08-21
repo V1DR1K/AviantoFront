@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Dialog, SelectField, type SelectOption } from "../ui";
-import { integerInput, parseIntegerInput, priceInput } from "../../lib/format";
+import { integerInput, parseIntegerInput, priceInput, yearInput } from "../../lib/format";
 import type { ClienteResponse, MarcaMotoResponse } from "../../lib/types";
 
 export type AbmField = {
@@ -42,10 +42,10 @@ export function AbmFormModal({
   const valueFor = (field: AbmField) => {
     const value = values[field.key] ?? initial[field.key];
     if (field.type === "currency") return priceInput(value as number | string | null | undefined);
-    if (field.type === "number") return integerInput(value as number | string | null | undefined);
+    if (field.type === "number") return field.key === "anio" ? yearInput(value as number | string | null | undefined) : integerInput(value as number | string | null | undefined);
     return String(value ?? "");
   };
-  const baselineFor = (field: AbmField) => field.type === "number" ? integerInput(initial[field.key] as number | string | null | undefined) : field.type === "currency" ? priceInput(initial[field.key]) : String(initial[field.key] ?? "");
+  const baselineFor = (field: AbmField) => field.type === "number" ? (field.key === "anio" ? yearInput(initial[field.key] as number | string | null | undefined) : integerInput(initial[field.key] as number | string | null | undefined)) : field.type === "currency" ? priceInput(initial[field.key]) : String(initial[field.key] ?? "");
   const dirty = fields.some((field) => valueFor(field) !== baselineFor(field));
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -185,7 +185,7 @@ export function VehicleAbmModal({
         },
         { key: "modelo", label: "Modelo", required: true },
         { key: "patente", label: "Patente", required: true },
-        { key: "anio", label: "Año", type: "number", min: 1950, max: 2030 },
+         { key: "anio", label: "Año", type: "number", min: 1900, max: 2100 },
         { key: "kilometraje", label: "Kilometraje", type: "number", min: 0 },
         { key: "observaciones", label: "Observaciones", type: "textarea", wide: true },
       ]}

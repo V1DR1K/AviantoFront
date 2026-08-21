@@ -8,7 +8,7 @@ export type RepuestoItemType = "REPUESTO" | "ACCESORIO";export type RepuestoItem
 export type RepuestoState = "En curso" | "Completado" | "Cancelado";
 export type RevisionState = "ABIERTA" | "APROBADA";
 export type RevisionControlState = "Pendiente" | "Revisado" | "No aplica";
-export type VentaFichaStatus = "En venta" | "Transferencia en proceso" | "Vendida";
+export type VentaFichaStatus = "En venta" | "Transferencia en proceso" | "Vendida" | "Cancelada";
 export type VentaChecklistItemState = "Pendiente" | "Realizado" | "No aplica";
 
 export interface PageRequest {
@@ -257,6 +257,9 @@ export interface VentaFichaResponse {
   obligatoriosCompletos: boolean;
   finalizadaAt?: string | null;
   finalizadaPor?: string | null;
+  canceladaAt?: string | null;
+  canceladaPor?: string | null;
+  canceladaMotivo?: string | null;
   items: VentaFichaItemResponse[];
   transferencia?: VentaTransferenciaResponse | null;
   creadaEn: string;

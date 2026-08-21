@@ -228,7 +228,7 @@ export function Dashboard({
   );
 }
 
-const salesStatuses: VentaFichaStatus[] = ["En venta", "Transferencia en proceso", "Vendida"];
+const salesStatuses: VentaFichaStatus[] = ["En venta", "Transferencia en proceso", "Vendida", "Cancelada"];
 const salesSortOptions = [
   { value: "createdAt", label: "Fecha de creación" },
   { value: "updatedAt", label: "Última actualización" },
@@ -280,7 +280,7 @@ export function VentasView({
          const required = sale.items.filter((item) => item.obligatorio);
          const completed = required.filter((item) => item.estado === "Realizado").length;
          const appointment = sale.transferencia?.citaFecha ? `${date(sale.transferencia.citaFecha)} · ${sale.transferencia.citaHora?.slice(0, 5) ?? "—"}` : "Sin cita";
-         return <tr key={sale.id}><td data-label="Ficha"><strong>{sale.numero}</strong><small>Actualizada {date(sale.actualizadaEn)}</small></td><td data-label="Moto"><strong>{sale.patente}</strong><small>{sale.moto}</small></td><td data-label={sale.estado === "Vendida" ? "Comprador final" : "Comprador prospectivo"}>{sale.comprador ?? "Sin comprador"}</td><td data-label="Checklist">{required.length ? `${completed}/${required.length} obligatorios` : "Sin ítems obligatorios"}<small>{sale.obligatoriosCompletos ? "Completo" : "Pendiente"}</small></td><td data-label="Cita">{appointment}<small>{sale.transferencia?.asistenciaAt ? "Asistencia confirmada" : sale.transferencia ? "Asistencia pendiente" : "Esperando transferencia"}</small></td><td data-label="Estado"><StatusBadge status={sale.estado} /></td><td className="table-actions sales-actions"><button className="row-action" onClick={() => onOpenSale(sale)}>Abrir ficha</button><button className="row-action" onClick={() => onOpenMoto(sale.motoId)}>Ver moto</button></td></tr>;
+          return <tr key={sale.id}><td data-label="Ficha"><strong>{sale.numero}</strong><small>Actualizada {date(sale.actualizadaEn)}</small></td><td data-label="Moto"><strong>{sale.patente}</strong><small>{sale.moto}</small></td><td data-label={sale.estado === "Vendida" ? "Comprador final" : sale.estado === "Cancelada" ? "Comprador registrado" : "Comprador prospectivo"}>{sale.comprador ?? "Sin comprador"}</td><td data-label="Checklist">{required.length ? `${completed}/${required.length} obligatorios` : "Sin ítems obligatorios"}<small>{sale.obligatoriosCompletos ? "Completo" : "Pendiente"}</small></td><td data-label="Cita">{appointment}<small>{sale.transferencia?.asistenciaAt ? "Asistencia confirmada" : sale.transferencia ? "Asistencia pendiente" : "Esperando transferencia"}</small></td><td data-label="Estado"><StatusBadge status={sale.estado} /></td><td className="table-actions sales-actions"><button className="row-action" onClick={() => onOpenSale(sale)}>Abrir ficha</button><button className="row-action" onClick={() => onOpenMoto(sale.motoId)}>Ver moto</button></td></tr>;
         })}</tbody></table> : loadError ? <EmptyState title="No se pudieron cargar las fichas de venta" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((value) => value + 1)}>Reintentar</button>} /> : result ? <EmptyState title={`Sin fichas ${emptyLabel}`} body={query ? "Probá con otra búsqueda." : "No hay fichas de venta dentro de los filtros seleccionados."} /> : <div className="table-loading" role="status">Cargando fichas de venta...</div>}
        <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
       </section>

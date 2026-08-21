@@ -19,6 +19,11 @@ export const integerInput = (value: number | string | null | undefined) => {
   const parsed = typeof value === "number" ? value : Number(String(value).replace(/\D/g, ""));
   return Number.isFinite(parsed) ? Math.trunc(parsed).toLocaleString("es-AR") : "";
 };
+export const yearInput = (value: number | string | null | undefined) => {
+  if (value === null || value === undefined || value === "") return "";
+  const parsed = typeof value === "number" ? value : Number(String(value).replace(/\D/g, ""));
+  return Number.isFinite(parsed) ? String(Math.trunc(parsed)) : "";
+};
 export const parseIntegerInput = (value: string) => {
   const normalized = value.trim().replace(/\D/g, "");
   return normalized ? Number(normalized) : 0;

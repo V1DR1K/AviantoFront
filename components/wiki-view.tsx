@@ -196,7 +196,7 @@ export function WikiView() {
             <div className="wiki-flow-block">
               <h3>Ventas</h3>
               <Flow label="Circuito de Ventas" steps={["Disponible", "En venta", "Transferencia en proceso", "Vendida"]} />
-              <p>La ficha de venta se crea al ingresar la moto. Una transferencia cancelada vuelve a En venta y conserva su auditoría; una moto Vendida no puede reingresarse.</p>
+              <p>La ficha de venta se crea al ingresar la moto. Una transferencia cancelada vuelve a En venta y conserva su auditoría; una ficha de venta cancelada conserva el motivo y la moto puede volver a Taller; una moto Vendida no puede reingresarse.</p>
             </div>
           </section>
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { parsePrice, priceDraft, priceInput } from "../lib/format.ts";
+import { parsePrice, priceDraft, priceInput, yearInput } from "../lib/format.ts";
 
 async function render() {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -30,6 +30,11 @@ test("preserves large currency drafts until the field loses focus", () => {
   assert.equal(priceInput("100000,50"), "100000,50");
   assert.equal(parsePrice(priceInput("100000,50")), 100000.5);
   assert.equal(priceInput(100000), "100.000");
+});
+
+test("keeps motorcycle years without locale thousands separators", () => {
+  assert.equal(yearInput(2025), "2025");
+  assert.equal(yearInput("2.025"), "2025");
 });
 
 test("keeps the application entrypoint, production scripts, and responsive operational controls", async () => {
@@ -198,4 +203,8 @@ test("keeps the sale ficha workflow, read-only transfer registry, and sale check
   assert.match(apiContract, /VentaFichaResponse/);
   assert.match(apiContract, /registro de solo lectura/i);
   assert.match(apiContract, /POST \/ventas\/\{id\}\/transferencia\/cancelar/);
+  assert.match(motoDetail, /\/motovehiculos\/\$\{id\}\/circuito/);
+  assert.match(motoDetail, /Motivo del cambio/);
+  assert.match(types, /"Cancelada"/);
+  assert.match(apiContract, /PATCH \/motovehiculos\/\{id\}\/circuito/);
 });
