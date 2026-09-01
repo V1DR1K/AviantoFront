@@ -489,13 +489,19 @@ export function FichaDetail({
   fichaKey,
   onBack,
   onConfirm,
+  onEdit,
   onOpenMoto,
+  onOpenRepuesto,
+  onNewRepuesto,
   notify,
 }: {
   fichaKey: string;
   onBack: () => void;
   onConfirm: (request: { title: string; body: string; confirmLabel: string; successMessage: string; variant?: "danger" | "success"; action: () => void | Promise<void> }) => void;
+  onEdit: () => void;
   onOpenMoto: (motoId: string, tab?: "services" | "fichas") => void;
+  onOpenRepuesto: (repuestoId: string) => void;
+  onNewRepuesto: (prefill: { motoId: string; clienteId?: string | null; fichaId: string }) => void;
   notify: Notify;
 }) {
   const [ficha, setFicha] = useState<FichaResponse | null>(null);
@@ -716,6 +722,7 @@ export function FichaDetail({
           <StatusBadge key={ficha.estado} status={ficha.estado} />
           <StatusBadge key={ficha.estadoPago} status={ficha.estadoPago} />
           <strong>{money(ficha.total)}</strong>
+          {(current === "Pendiente" || current === "En proceso") && <button className="button secondary" onClick={onEdit}><Edit3 size={17} />Editar ficha</button>}
         </div>
       </div>
       <ol className={`flow-steps${current === "Cancelada" ? " canceled" : ""}`}>
@@ -824,8 +831,8 @@ export function FichaDetail({
               </div>
             ))}
           </section>
-          <section className="summary-group">
-            <h4>Pedidos de repuestos y accesorios</h4>
+           <section className="summary-group">
+             <div className="summary-group-head"><h4>Pedidos de repuestos y accesorios</h4>{!locked && <button className="text-button" onClick={() => onNewRepuesto({ motoId: ficha.motoId, clienteId: ficha.clienteId, fichaId: ficha.id })}>Nuevo pedido</button>}</div>
             {linkedRepuestos.length ? <div className="summary-linked-orders">{linkedRepuestos.map((pedido) => (
               <article key={pedido.id} className={`summary-linked-order${pedido.estado === "Cancelado" ? " cancelled" : ""}`}>
                 <div className="summary-linked-order-head"><strong>{pedido.numero}</strong><div className="summary-linked-order-status"><StatusBadge status={pedido.estado} /><StatusBadge status={pedido.estadoPago} /></div></div>
@@ -834,6 +841,7 @@ export function FichaDetail({
                 {pedido.observaciones && <small>{pedido.observaciones}</small>}
                 <div className="summary-work-total"><span>Total pedido</span><strong>{pedido.estado === "Cancelado" ? "—" : money(pedido.total)}</strong></div>
                 {pedido.estado !== "Cancelado" && <div className="summary-payment-amounts"><span>Cobrado <strong>{paymentAmount(pedido.montoCobrado)}</strong></span><span>Saldo <strong>{paymentAmount(pedido.saldoPendiente)}</strong></span></div>}
+                <button className="text-button summary-linked-order-action" onClick={() => onOpenRepuesto(pedido.id)}>Abrir pedido</button>
               </article>
             ))}</div> : <p className="summary-empty">No hay pedidos vinculados a esta ficha.</p>}
           </section>

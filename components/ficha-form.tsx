@@ -116,6 +116,7 @@ export function FichaForm({
   const [closeConfirmation, setCloseConfirmation] = useState(false);
   const [startWorkConfirmation, setStartWorkConfirmation] = useState<string | null>(null);
   const photoInput = useRef<HTMLInputElement>(null);
+  const workInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const photoUrls = useRef(new Set<string>());
   const existingUrls = useRef<Record<string, string>>({});
 
@@ -220,11 +221,12 @@ export function FichaForm({
     photos.length > 0 ||
     Boolean(fechaEntregaEstimada) ||
     Boolean(kilometrajeIngreso);
-  const addTrabajo = (r?: Partial<Line>) =>
+  const addTrabajo = (r?: Partial<Line>) => {
+    const key = crypto.randomUUID();
     setTrabajos((previous) => [
       ...previous,
       {
-        key: crypto.randomUUID(),
+        key,
         descripcion: "",
         precioUnitario: 0,
         descuento: 0,
@@ -232,6 +234,8 @@ export function FichaForm({
         ...r,
       },
     ]);
+    requestAnimationFrame(() => workInputRefs.current[key]?.focus());
+  };
   const updateLine = (key: string, changes: Partial<Line>) =>
     setTrabajos((all) =>
       all.map((line) => (line.key === key ? { ...line, ...changes } : line)),
@@ -403,16 +407,17 @@ export function FichaForm({
            <section className="form-section">
              <div className="form-section-heading">
                <h2 className="form-section-title">2. Trabajos a realizar</h2>
-               <button className="text-button section-add-button" type="button" onClick={() => addTrabajo()}><Plus size={17} />Agregar trabajo</button>
-             </div>
-             <div className="line-items">
+                <button className="text-button section-add-button section-add-desktop" type="button" onClick={() => addTrabajo()}><Plus size={17} />Agregar trabajo</button>
+              </div>
+              <div className="line-items">
               {trabajos.map((trabajo) => (
                   <div className={`line-item${workStateClass(trabajo.estadoTrabajo, trabajo.realizado)}${workOpen === trabajo.key ? " is-work-open" : ""}`} key={trabajo.key}>
                   <label className="line-descr">
                     Descripción
                     <div className="autocomplete-field">
-                      <input
+                       <input
                         type="text"
+                        ref={(element) => { workInputRefs.current[trabajo.key] = element; }}
                         value={trabajo.descripcion}
                         readOnly={trabajo.catalogo}
                         onFocus={() => { if (trabajo.catalogo) return; setWorkOpen(trabajo.key); setWorkQuery(trabajo.descripcion); void api<TrabajoCatalogoResponse[]>("/configuracion/trabajos/autocomplete", {}, { q: trabajo.descripcion }).then(setWorkSuggestions).catch(() => setWorkSuggestions([])); }}
@@ -506,9 +511,10 @@ export function FichaForm({
                     <X size={18} />
                   </button>
                 </div>
-              ))}
-            </div>
-           </section>
+               ))}
+             </div>
+             <button className="text-button section-add-button section-add-mobile" type="button" onClick={() => addTrabajo()}><Plus size={17} />Agregar trabajo</button>
+            </section>
           <section className="form-section">
              <h2 className="form-section-title">3. Fotos y observaciones</h2>
             <label>

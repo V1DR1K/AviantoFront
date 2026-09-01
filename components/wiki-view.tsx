@@ -254,6 +254,8 @@ export function WikiView() {
               <li>Una moto Vendida no puede volver a ingresarse.</li>
               <li>Los estados Cancelada y Entregada conservan el historial: no eliminan las operaciones previas.</li>
               <li>Operario puede actualizar el checklist mientras la ficha está En venta; Administración gestiona comprador, transferencia, cita, asistencia, cancelación y cierre.</li>
+              <li>Operario y Administración pueden cambiar una moto entre Taller y Venta mientras no existan procesos operativos bloqueantes. El motivo queda registrado junto con usuario, fecha y circuitos de origen y destino.</li>
+              <li>El checkbox de un requisito alterna Pendiente y Realizado; el selector expresa esos estados y también permite No aplica cuando el requisito es opcional. Ambos actualizan el mismo requisito.</li>
               <li>Cancelar una transferencia devuelve la moto a En venta, libera el comprador prospectivo y conserva el registro en auditoría.</li>
               <li>La titularidad solo cambia al completar la venta; una cita o asistencia no la modifica por sí sola.</li>
             </ul>

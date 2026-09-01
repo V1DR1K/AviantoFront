@@ -31,7 +31,7 @@ export function RepuestosView({
 }: {
   onOpen: (repuesto: RepuestoResponse) => void;
   notify: Notify;
-  createPrefill?: { motoId: string; clienteId?: string | null } | null;
+  createPrefill?: { motoId: string; clienteId?: string | null; fichaId?: string } | null;
   startCreate?: boolean;
   onPrefillHandled?: () => void;
 }) {
@@ -123,7 +123,7 @@ export function RepuestosView({
   );
 }
 
-function CreateRepuestoDialog({
+export function CreateRepuestoDialog({
   open,
   initial,
   prefill,
@@ -136,7 +136,7 @@ function CreateRepuestoDialog({
 }: {
   open: boolean;
   initial: RepuestoResponse | null;
-  prefill?: { motoId: string; clienteId?: string | null } | null;
+  prefill?: { motoId: string; clienteId?: string | null; fichaId?: string } | null;
   clients: ClienteResponse[];
   onLoadVehicles: (clienteId: string) => Promise<MotovehiculoResponse[]>;
   onClose: () => void;
@@ -149,7 +149,7 @@ function CreateRepuestoDialog({
   const [proveedor, setProveedor] = useState(initial?.proveedor ?? "");
   const [motoOptions, setMotoOptions] = useState<MotovehiculoResponse[]>([]);
   const [fichas, setFichas] = useState<FichaResponse[]>([]);
-  const [fichaId, setFichaId] = useState(initial?.fichaId ?? "");
+  const [fichaId, setFichaId] = useState(initial?.fichaId ?? prefill?.fichaId ?? "");
   const [rows, setRows] = useState<{ key: string; descripcion: string; tipo: string; cantidad: string; precio: string; estado?: string; fichaTrabajoId?: string }[]>(initial?.items.length
     ? initial.items.map((item) => ({ key: crypto.randomUUID(), descripcion: item.descripcion, tipo: item.tipo === "ACCESORIO" ? "Accesorio" : "Repuesto", cantidad: String(item.cantidad), precio: String(item.precio), estado: item.estado, fichaTrabajoId: item.fichaTrabajoId ?? undefined }))
     : [{ key: crypto.randomUUID(), descripcion: "", tipo: "Repuesto", cantidad: "1", precio: "" }]);
@@ -258,6 +258,8 @@ export function RepuestoDetail({
   const [repuesto, setRepuesto] = useState<RepuestoResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [clients, setClients] = useState<ClienteResponse[]>([]);
   const [confirmation, setConfirmation] = useState<{
     title: string;
     body: string;
@@ -281,6 +283,12 @@ export function RepuestoDetail({
       .catch((reason) => { if (active) { setError(errorMessage(reason)); notify(errorMessage(reason), "error"); } });
     return () => { active = false; };
   }, [repuestoId, notify]);
+  useEffect(() => {
+    if (!editOpen) return;
+    void api<PageResponse<ClienteResponse>>("/clientes", {}, { size: 100, activo: true })
+      .then((result) => setClients(result.content))
+      .catch((reason) => notify(errorMessage(reason), "error"));
+  }, [editOpen, notify]);
   if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><EmptyState title="No se pudo cargar el pedido" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={load}>Reintentar</button>} /></div>;
   if (!repuesto) return <div className="page">Cargando…</div>;
   const locked = repuesto.estado === "Cancelado" || repuesto.estado === "Completado";
@@ -292,7 +300,7 @@ export function RepuestoDetail({
       <button className="back" onClick={onBack}>← Volver a repuestos</button>
       <div className="detail-title">
         <div><p>{repuesto.numero}</p><h1>{repuesto.patente}</h1><span>{repuesto.cliente} · {date(repuesto.fecha)}</span></div>
-        <div className="detail-stack"><StatusBadge status={repuesto.estado} /><StatusBadge status={repuesto.estadoPago} /><strong>{money(repuesto.total)}</strong></div>
+        <div className="detail-stack"><StatusBadge status={repuesto.estado} /><StatusBadge status={repuesto.estadoPago} /><strong>{money(repuesto.total)}</strong>{!locked && <button className="button secondary" onClick={() => setEditOpen(true)}><Edit3 size={17} />Editar pedido</button>}</div>
       </div>
       <PaymentLedger resource="repuestos" documentId={repuesto.id} documentState={repuesto.estado} estadoPago={repuesto.estadoPago} total={repuesto.total} montoCobrado={repuesto.montoCobrado} saldoPendiente={repuesto.saldoPendiente} onDocumentChange={load} notify={notify} />
       <section className="detail-grid">
@@ -332,6 +340,20 @@ export function RepuestoDetail({
           </div>
         </aside>
       </section>
+      <CreateRepuestoDialog
+        key={`detail-edit-${repuesto.id}`}
+        open={editOpen}
+        initial={repuesto}
+        clients={clients}
+        notify={notify}
+        onLoadVehicles={async (clienteId) => {
+          const result = await api<PageResponse<MotovehiculoResponse>>("/motovehiculos", {}, { clienteId, size: 100, activo: true });
+          return result.content.filter((moto) => moto.ingresada && moto.seccion === "Taller");
+        }}
+        onClose={() => setEditOpen(false)}
+        onSaved={(next) => { setRepuesto(next); setEditOpen(false); }}
+        onError={(message) => notify(message, "error")}
+      />
       <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; setConfirmation(null); if (!request) return; return request.action().then(() => notify(request.successMessage)).catch((reason) => { notify(errorMessage(reason), "error"); throw reason; }); }} />
     </div>
   );

@@ -42,6 +42,7 @@ type RouteState = {
   repuestoId?: string;
   initialClientId?: string;
   initialMotoId?: string;
+  initialFichaId?: string;
   initialPlate?: string;
   intake?: boolean;
   returnTo?: string;
@@ -64,6 +65,7 @@ function routeState(pathname: string, search: string): RouteState {
   const tab = ["general", "client", "services", "fichas", "repuestos", "venta"].includes(requestedTab ?? "") ? requestedTab as RouteState["tab"] : undefined;
   const initialClientId = query.get("clienteId") || undefined;
   const initialMotoId = query.get("motoId") || undefined;
+  const initialFichaId = query.get("fichaId") || undefined;
   const initialPlate = query.get("dominio") || undefined;
 
   if (!segments.length) return { page: "dashboard" };
@@ -84,7 +86,7 @@ function routeState(pathname: string, search: string): RouteState {
   if (segments[0] === "fichas" && segments.length === 2) return { page: "fichas", fichaId: segments[1], returnTo };
   if (segments[0] === "fichas" && segments.length === 1) return { page: "orders" };
   if (segments[0] === "repuestos" && segments[1] === "nuevo" && segments.length === 2) {
-    return { page: "repuesto-create", initialClientId, initialMotoId, returnTo };
+    return { page: "repuesto-create", initialClientId, initialMotoId, initialFichaId, returnTo };
   }
   if (segments[0] === "repuestos" && segments.length === 2) return { page: "repuesto", repuestoId: segments[1], returnTo };
   if (segments[0] === "repuestos" && segments.length === 1) return { page: "repuestos" };
@@ -264,12 +266,14 @@ export function AppController() {
     params.set("returnTo", `/motos/${prefill.motoId}?tab=fichas`);
     navigate(`/fichas/nueva?${params}`);
   };
-  const createRepuestoForMoto = (prefill: { motoId: string; clienteId?: string | null }) => {
+  const createRepuestoForMoto = (prefill: { motoId: string; clienteId?: string | null; fichaId?: string }, returnTo = `/motos/${prefill.motoId}?tab=repuestos`) => {
     const params = new URLSearchParams({ motoId: prefill.motoId });
     if (prefill.clienteId) params.set("clienteId", prefill.clienteId);
-    params.set("returnTo", `/motos/${prefill.motoId}?tab=repuestos`);
+    if (prefill.fichaId) params.set("fichaId", prefill.fichaId);
+    params.set("returnTo", returnTo);
     navigate(`/repuestos/nuevo?${params}`);
   };
+  const openRepuestoById = (id: string, returnTo?: string) => openRepuesto({ id }, returnTo);
   const currentPage = ["audit", "settings", "trabajos"].includes(route.page) && session.user.rol !== "ADMINISTRACION" ? "dashboard" : route.page;
   let content: ReactNode;
   if (currentPage === "create") {
@@ -291,15 +295,15 @@ export function AppController() {
   } else if (currentPage === "orders") {
        content = <FichasView key={refreshKey} onNewOrder={() => navigate("/perfiles")} onSelect={(ficha) => openFicha(ficha, "/fichas")} onOpenMoto={(id) => openMoto(id, "/fichas")} onEdit={(ficha) => navigate(`/fichas/${ficha.id}/editar?returnTo=%2Ffichas`)} onDelete={(ficha) => setConfirmation({ title: "Eliminar ficha", body: `Vas a dar de baja la ficha ${ficha.numero}. El historial conservará el registro para auditoría.`, confirmLabel: "Eliminar ficha", successMessage: "Ficha eliminada correctamente.", action: () => api(`/fichas/${ficha.id}`, { method: "DELETE" }).then(() => setRefreshKey((key) => key + 1)) })} notify={notify} />;
   } else if (currentPage === "fichas" && route.fichaId) {
-      content = <FichaDetail fichaKey={route.fichaId} onBack={() => navigate(route.returnTo || "/fichas")} onConfirm={(request) => setConfirmation(request)} onOpenMoto={(id, tab) => openMoto(id, route.returnTo || `/fichas/${route.fichaId}`, tab ?? "fichas")} notify={notify} />;
+       content = <FichaDetail fichaKey={route.fichaId} onBack={() => navigate(route.returnTo || "/fichas")} onConfirm={(request) => setConfirmation(request)} onEdit={() => navigate(`/fichas/${route.fichaId}/editar?returnTo=${encodeURIComponent(route.returnTo || `/fichas/${route.fichaId}`)}`)} onOpenMoto={(id, tab) => openMoto(id, route.returnTo || `/fichas/${route.fichaId}`, tab ?? "fichas")} onOpenRepuesto={(id) => openRepuestoById(id, `/fichas/${route.fichaId}`)} onNewRepuesto={(prefill) => createRepuestoForMoto(prefill, `/fichas/${route.fichaId}`)} notify={notify} />;
   } else if (currentPage === "profile" && route.motoId) {
-       content = <MotoDetail key={`${pathname}?${urlSearch}`} id={route.motoId} initialTab={route.tab} onBack={() => navigate(route.returnTo || "/perfiles")} onOpenFicha={(ficha) => openFicha(ficha, `/motos/${route.motoId}?tab=fichas`)} onOpenRepuesto={(repuesto) => openRepuesto(repuesto, `/motos/${route.motoId}?tab=repuestos`)} onOpenVenta={() => openSaleForMoto(route.motoId!, route.returnTo || "/perfiles")} onNewFicha={createFichaForMoto} onNewRepuesto={createRepuestoForMoto} onIntake={(plate) => navigate(`/ingresar?returnTo=${encodeURIComponent(`/motos/${route.motoId}`)}&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} canAdmin={session.user.rol === "ADMINISTRACION"} notify={notify} />;
+        content = <MotoDetail key={`${pathname}?${urlSearch}`} id={route.motoId} initialTab={route.tab} onBack={() => navigate(route.returnTo || "/perfiles")} onOpenFicha={(ficha) => openFicha(ficha, `/motos/${route.motoId}?tab=fichas`)} onOpenRepuesto={(repuesto) => openRepuesto(repuesto, `/motos/${route.motoId}?tab=repuestos`)} onOpenVenta={() => openSaleForMoto(route.motoId!, route.returnTo || "/perfiles")} onNewFicha={createFichaForMoto} onNewRepuesto={createRepuestoForMoto} onIntake={(plate) => navigate(`/ingresar?returnTo=${encodeURIComponent(`/motos/${route.motoId}`)}&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} notify={notify} />;
   } else if (currentPage === "transfers") {
       content = <TransferenciasView initialMotoId={route.initialMotoId} onOpenMoto={(id) => openMoto(id, "/transferencias", "client")} onOpenSale={(id) => openSaleById(id, "/transferencias")} notify={notify} />;
   } else if (currentPage === "repuestos") {
      content = <RepuestosView onOpen={(repuesto) => openRepuesto(repuesto, "/repuestos")} notify={notify} />;
   } else if (currentPage === "repuesto-create") {
-    const prefill = route.initialMotoId ? { motoId: route.initialMotoId, clienteId: route.initialClientId } : null;
+      const prefill = route.initialMotoId ? { motoId: route.initialMotoId, clienteId: route.initialClientId, fichaId: route.initialFichaId } : null;
      content = <RepuestosView key={`${pathname}?${urlSearch}`} onOpen={(repuesto) => openRepuesto(repuesto, route.returnTo || "/repuestos")} notify={notify} startCreate createPrefill={prefill} onPrefillHandled={() => navigate(route.returnTo || "/repuestos")} />;
   } else if (currentPage === "repuesto" && route.repuestoId) {
      content = <RepuestoDetail repuestoId={route.repuestoId} onBack={() => navigate(route.returnTo || "/repuestos")} notify={notify} />;

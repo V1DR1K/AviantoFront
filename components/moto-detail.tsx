@@ -36,7 +36,6 @@ export function MotoDetail({
   onNewFicha,
   onNewRepuesto,
   onIntake,
-  canAdmin,
   notify,
 }: {
   id: string;
@@ -46,9 +45,8 @@ export function MotoDetail({
   onOpenRepuesto: (repuesto: RepuestoResponse) => void;
   onOpenVenta: () => void;
   onNewFicha: (prefill: { motoId: string; clienteId?: string | null }) => void;
-  onNewRepuesto: (prefill: { motoId: string; clienteId?: string | null }) => void;
+  onNewRepuesto: (prefill: { motoId: string; clienteId?: string | null; fichaId?: string }) => void;
   onIntake: (plate?: string) => void;
-  canAdmin: boolean;
   notify: Notify;
 }) {
   const [tab, setTab] = useState<"general" | "client" | "services" | "fichas" | "repuestos" | "venta">(initialTab ?? "general");
@@ -209,8 +207,8 @@ export function MotoDetail({
         <div className="detail-stack moto-detail-actions">
           <StatusBadge status={moto.estado} />
              {moto.seccion === "Venta" ? <button className="button primary" onClick={onOpenVenta}><FileText size={17} />Abrir ficha de venta</button> : !moto.ingresada ? <button className="button secondary" onClick={() => onIntake(moto.patente)}><LogIn size={17} />Ingresar moto</button> : moto.estado === "Terminada" ? <span className="detail-note">Pendiente de entrega al cliente</span> : <span className="detail-note">La entrega se completa desde la ficha terminada</span>}
-              {moto.estado !== "Vendida" && (moto.seccion === "Venta" || canAdmin) && <button className="button secondary" onClick={openCircuitChange}><ArrowRightLeft size={17} />{moto.seccion === "Venta" ? "Pasar a Taller" : "Pasar a Ventas"}</button>}
-              <strong className="moto-detail-year">Año {moto.anio ?? "—"}</strong>
+            {moto.estado !== "Vendida" && moto.ingresada && moto.seccion && <button className="button secondary" onClick={openCircuitChange}><ArrowRightLeft size={17} />{moto.seccion === "Venta" ? "Pasar a Taller" : "Pasar a Ventas"}</button>}
+            <strong className="moto-detail-year">Año {moto.anio ?? "—"}</strong>
          </div>
       </div>
       <nav className="tabs">
@@ -332,7 +330,7 @@ export function MotoDetail({
       </Dialog>
       <Dialog open={circuitTarget !== null} title={circuitTarget === "TALLER" ? "Pasar moto a Taller" : "Pasar moto a Ventas"} onClose={() => { if (!circuitSaving) setCircuitTarget(null); }} dirty={Boolean(circuitReason)}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveCircuitChange(); }}>
-          <p className="form-notice">El cambio conserva la ficha y el historial. La ficha de venta quedará marcada como cancelada cuando la moto vuelva a Taller.</p>
+          <p className="form-notice">El cambio conserva el historial. Solo se permite antes de iniciar procesos operativos: no debe haber ficha abierta, repuestos activos, pagos vigentes, transferencia activa ni venta finalizada. Al volver a Taller, la ficha de venta queda cancelada y auditada.</p>
           <label className="form-field-wide">Motivo del cambio<textarea value={circuitReason} maxLength={500} onChange={(event) => setCircuitReason(event.target.value)} placeholder="Ej.: se seleccionó el circuito incorrecto al ingresar la moto" required /></label>
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setCircuitTarget(null)} disabled={circuitSaving}>Cancelar</button><button className="button primary" disabled={!circuitReason.trim() || circuitSaving}>{circuitSaving ? "Guardando..." : "Confirmar cambio"}</button></div>
         </form>

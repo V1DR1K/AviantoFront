@@ -1503,6 +1503,8 @@ td small {
   }
   .ficha-form-layout > .ficha-summary {
     position: static;
+    padding-bottom: 56px;
+    scrollbar-gutter: stable;
   }
 }
 .form-section {
@@ -1868,6 +1870,14 @@ td small {
 .order-form .text-button:hover {
   background: var(--color-surface-subtle);
   border-color: var(--color-border-strong);
+}
+.section-add-mobile {
+  display: none;
+}
+.summary-linked-order-action {
+  width: 100%;
+  margin-top: 10px;
+  justify-content: center;
 }
 .detail-work-item {
   display: grid;
@@ -2596,6 +2606,20 @@ a.existing-photo {
   display: flex;
   flex-direction: column;
   margin-top: 17px;
+}
+.summary-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.summary-group-head .text-button {
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding: 3px 0;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 750;
 }
 .summary-group h4 {
   margin: 0 0 9px;
@@ -3945,6 +3969,13 @@ td.table-actions {
   .section-add-button {
     width: 100%;
     justify-content: center;
+  }
+  .section-add-desktop {
+    display: none;
+  }
+  .section-add-mobile {
+    display: inline-flex;
+    margin-top: 12px;
   }
   .order-form .line-item {
     grid-template-columns: minmax(0, 1fr) 70px;
