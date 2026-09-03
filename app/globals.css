@@ -646,7 +646,7 @@ nav.tabs button.active {
   margin: 0 0 10px;
 }
 .sales-actions {
-  min-width: 220px;
+  min-width: 88px;
 }
 .venta-ficha-page {
   max-width: 1440px;
@@ -1480,31 +1480,16 @@ td small {
 }
 @media (min-width: 1001px) {
   .ficha-form-page {
-    height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .ficha-form-page > .page-heading,
-  .ficha-form-page > .form-notice {
-    flex: 0 0 auto;
-  }
-  .ficha-form-page > .ficha-form-layout {
-    flex: 1 1 auto;
-    min-height: 0;
+    min-height: 100dvh;
   }
   .ficha-form-layout > .form-stack,
   .ficha-form-layout > .ficha-summary {
     min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-color: #aebfd0 #eef4f8;
-    scrollbar-width: thin;
+    overflow: visible;
   }
   .ficha-form-layout > .ficha-summary {
     position: static;
     padding-bottom: 56px;
-    scrollbar-gutter: stable;
   }
 }
 .form-section {
@@ -2038,6 +2023,13 @@ td small {
 .revision-control-copy > small {
   margin-top: 4px;
   color: var(--muted);
+}
+.revision-control-observation {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 .revision-note-trigger {
   grid-area: note;

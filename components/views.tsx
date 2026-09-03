@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowDownUp, Check, Download, Edit3, Eye, FileDown, Filter, Plus, Trash2 } from "lucide-react";
+import { ArrowDownUp, Download, Edit3, Eye, FileDown, FileText, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download, objectUrl } from "../lib/api";
 import { integerInput, money, parseIntegerInput, paymentAmount } from "../lib/format";
 import { daysAgoInAr, formatDateInAr, todayInAr } from "../lib/dates";
@@ -280,7 +280,7 @@ export function VentasView({
          const required = sale.items.filter((item) => item.obligatorio);
          const completed = required.filter((item) => item.estado === "Realizado").length;
          const appointment = sale.transferencia?.citaFecha ? `${date(sale.transferencia.citaFecha)} · ${sale.transferencia.citaHora?.slice(0, 5) ?? "—"}` : "Sin cita";
-           return <tr key={sale.id}><td data-label="Ficha"><strong>{sale.numero}</strong><small>Actualizada {date(sale.actualizadaEn)}</small></td><td data-label="Moto"><strong>{sale.patente}</strong><small>{sale.moto}</small></td><td data-label={sale.estado === "Vendida" ? "Comprador final" : sale.estado === "Cancelada" ? "Comprador registrado" : "Comprador prospectivo"}>{sale.comprador ?? "Sin comprador"}</td><td data-label="Carpeta">{required.length ? `${completed}/${required.length} obligatorios` : "Sin ítems obligatorios"}<small>{sale.obligatoriosCompletos ? "Completa" : "Incompleta"}</small></td><td data-label="Cita">{appointment}<small>{sale.transferencia?.asistenciaAt ? "Asistencia confirmada" : sale.transferencia ? "Asistencia pendiente" : "Esperando transferencia"}</small></td><td data-label="Estado"><StatusBadge status={sale.estado} /></td><td className="table-actions sales-actions"><button className="row-action" onClick={() => onOpenSale(sale)}>Abrir ficha</button><button className="row-action" onClick={() => onOpenMoto(sale.motoId)}>Ver moto</button></td></tr>;
+            return <tr key={sale.id}><td data-label="Ficha"><strong>{sale.numero}</strong><small>Actualizada {date(sale.actualizadaEn)}</small></td><td data-label="Moto"><strong>{sale.patente}</strong><small>{sale.moto}</small></td><td data-label={sale.estado === "Vendida" ? "Comprador final" : sale.estado === "Cancelada" ? "Comprador registrado" : "Comprador prospectivo"}>{sale.comprador ?? "Sin comprador"}</td><td data-label="Carpeta">{required.length ? `${completed}/${required.length} obligatorios` : "Sin ítems obligatorios"}<small>{sale.obligatoriosCompletos ? "Completa" : "Incompleta"}</small></td><td data-label="Cita">{appointment}<small>{sale.transferencia?.asistenciaAt ? "Asistencia confirmada" : sale.transferencia ? "Asistencia pendiente" : "Esperando transferencia"}</small></td><td data-label="Estado"><StatusBadge status={sale.estado} /></td><td className="table-actions sales-actions"><button onClick={() => onOpenSale(sale)} aria-label={`Abrir ficha de venta ${sale.numero}`}><FileText size={17} /></button><button onClick={() => onOpenMoto(sale.motoId)} aria-label={`Ver moto ${sale.patente}`}><Eye size={17} /></button></td></tr>;
         })}</tbody></table> : loadError ? <EmptyState title="No se pudieron cargar las fichas de venta" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((value) => value + 1)}>Reintentar</button>} /> : result ? <EmptyState title={`Sin fichas ${emptyLabel}`} body={query ? "Probá con otra búsqueda." : "No hay fichas de venta dentro de los filtros seleccionados."} /> : <div className="table-loading" role="status">Cargando fichas de venta...</div>}
        <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
       </section>
@@ -452,9 +452,8 @@ function ItemRow({
   return (
     <div className={`line-item detail-work-item${workStateClass(item.estadoTrabajo)}${!locked ? " can-mark" : ""}${canDelete ? " can-delete" : ""}${item.estadoTrabajo === "Cancelado" ? " muted" : ""}`}>
       {!locked && (
-        <label className="line-check detail-line-check work-state-check">
-          <input className="work-state-input" type="checkbox" aria-label={`Marcar ${item.descripcion} como realizado`} checked={item.estadoTrabajo === "Realizado"} disabled={item.estadoTrabajo === "Cancelado"} onChange={(event) => event.target.checked ? onStartWork() : onState("Pendiente")} />
-          <span className="work-state-box" aria-hidden="true"><Check size={14} strokeWidth={3} /></span>
+        <label className="revision-check detail-line-check">
+          <input type="checkbox" aria-label={`Marcar ${item.descripcion} como realizado`} checked={item.estadoTrabajo === "Realizado"} disabled={item.estadoTrabajo === "Cancelado"} onChange={(event) => event.target.checked ? onStartWork() : onState("Pendiente")} />
         </label>
       )}
       <div className="detail-work-copy">
@@ -792,6 +791,7 @@ export function FichaDetail({
                            <strong>{control.control}</strong>
                            <span>{control.categorias}{control.obligatorio ? " · Obligatorio" : ""}</span>
                            {control.estado === "No aplica" && <small>No aplica</small>}
+                           {control.observacion?.trim() ? <p className="revision-control-observation">{control.observacion}</p> : null}
                          </div>
                          <button type="button" className="revision-note-trigger" onClick={() => openRevisionNote(control)}>{control.observacion ? "Editar observación" : "Agregar observación"}</button>
                        </div>

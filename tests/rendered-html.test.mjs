@@ -38,7 +38,7 @@ test("keeps motorcycle years without locale thousands separators", () => {
 });
 
 test("keeps the application entrypoint, production scripts, and responsive operational controls", async () => {
-  const [page, loginPage, layout, stylesheet, packageJson, controller, fichaForm, intakeView, ui, views, wiki, shell, budgetBreakdown, repuestosView, paymentLedger, types, apiContract] = await Promise.all([
+  const [page, loginPage, layout, stylesheet, packageJson, controller, fichaForm, intakeView, ui, views, motoDetail, wiki, shell, budgetBreakdown, repuestosView, paymentLedger, types, apiContract] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -49,6 +49,7 @@ test("keeps the application entrypoint, production scripts, and responsive opera
     readFile(new URL("../components/intake-view.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/ui.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/views.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/moto-detail.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/wiki-view.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/app-shell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/budget-breakdown.tsx", import.meta.url), "utf8"),
@@ -81,7 +82,7 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /className="line-items-list detail-work-list"/);
   assert.match(views, /detail-work-item\$\{workStateClass\(item\.estadoTrabajo\)\}\$\{!locked \? " can-mark" : ""\}\$\{canDelete \? " can-delete" : ""\}/);
   assert.match(views, /aria-label=\{`Marcar \$\{item\.descripcion\} como realizado`\}/);
-  assert.match(views, /className="work-state-input"/);
+  assert.match(views, /className="revision-check detail-line-check"/);
   assert.match(fichaForm, /workStateClass\(trabajo\.estadoTrabajo, trabajo\.realizado\)/);
   assert.match(fichaForm, /className="work-state-label"/);
   assert.match(stylesheet, /\.detail-work-list \{[\s\S]*?gap: 0;[\s\S]*?overflow: hidden;[\s\S]*?border: 1px solid var\(--line\);/);
@@ -141,9 +142,13 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /observacion: control\.observacion \?\? ""/);
   assert.match(views, /Agregar observación/);
   assert.match(views, /title="Observación de revisión"/);
+  assert.match(views, /className="revision-control-observation"/);
   assert.match(views, /if \(await updateControl\(revisionNoteControl\.id, \{ estado: revisionNoteControl\.estado, observacion: revisionNote \}\)\) setRevisionNoteControl\(null\);/);
   assert.match(stylesheet, /\.revision-control-list > \.revision-control \{[\s\S]*?grid-template-areas: "check content note";/);
   assert.match(stylesheet, /\.revision-check input \{[\s\S]*?width: 20px;[\s\S]*?height: 20px;/);
+  assert.match(motoDetail, /setTab\("venta"\)[\s\S]*?Abrir ficha de venta/);
+  assert.match(motoDetail, /setTab\("fichas"\)[\s\S]*?Abrir ficha Taller/);
+  assert.match(views, /<FileText size=\{17\} \/>[\s\S]*?<Eye size=\{17\} \/>/);
   assert.match(controller, /wiki:\s*"\/wiki"/);
   assert.match(shell, /id: "wiki", label: "Wiki"/);
   assert.match(wiki, /enviar manualmente la ficha a revisión/);
@@ -210,7 +215,7 @@ test("keeps the sale ficha workflow, read-only transfer registry, and sale check
   assert.match(stylesheet, /@media \(max-width: 680px\) \{[\s\S]*?\.sale-checklist-item \{[\s\S]*?grid-template-columns: 44px minmax\(0, 1fr\);/);
   assert.match(stylesheet, /\.moto-detail-title \{[\s\S]*?display: grid;[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/);
   assert.match(stylesheet, /\.moto-detail-actions > \.button,[\s\S]*?\.moto-detail-actions > \.detail-note \{[\s\S]*?width: 100%;/);
-  assert.match(stylesheet, /\.ficha-form-layout > \.form-stack,[\s\S]*?overflow-y: auto;[\s\S]*?overscroll-behavior: contain;/);
+  assert.match(stylesheet, /\.ficha-form-layout > \.form-stack,[\s\S]*?overflow: visible;/);
   assert.match(stylesheet, /\.form-section-heading \{[\s\S]*?justify-content: space-between;/);
   assert.match(apiContract, /GET \/ventas/);
   assert.match(apiContract, /VentaFichaResponse/);
