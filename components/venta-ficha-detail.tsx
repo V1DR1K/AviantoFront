@@ -223,7 +223,7 @@ export function VentaFichaDetail({
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setAppointmentOpen(false)} disabled={Boolean(pending)}>Cancelar</button><button className="button primary" disabled={Boolean(pending)}>{pending === "appointment" ? "Guardando..." : "Guardar cita"}</button></div>
         </form>
       </Dialog>
-      <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} variant="success" onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; setConfirmation(null); return request?.action(); }} />
+       <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} variant={confirmation?.title === "Cancelar transferencia" ? "danger" : "success"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; if (!request) return; return request.action().then(() => setConfirmation(null)); }} />
     </div>
   );
 }

@@ -238,7 +238,7 @@ export function AppController() {
   useEffect(() => {
     if (route.invalid) router.replace("/app");
     if (session && route.page === "login") router.replace("/app");
-    if (session?.user.rol !== "ADMINISTRACION" && ["audit", "settings", "trabajos"].includes(route.page)) {
+    if (session?.user.rol !== "ADMINISTRACION" && ["audit", "settings", "trabajos", "catalog"].includes(route.page)) {
       router.replace("/app");
     }
   }, [route.invalid, route.page, router, session]);
@@ -248,7 +248,7 @@ export function AppController() {
 
   const navigate = (path: string) => router.push(path);
   const navigatePage = (page: string) => {
-    if (session.user.rol !== "ADMINISTRACION" && ["audit", "settings", "trabajos"].includes(page)) return navigate("/app");
+    if (session.user.rol !== "ADMINISTRACION" && ["audit", "settings", "trabajos", "catalog"].includes(page)) return navigate("/app");
     navigate(pathForPage(page));
   };
   const openFicha = (ficha: FichaResponse, returnTo?: string) => { const params = new URLSearchParams(); if (returnTo) params.set("returnTo", returnTo); navigate(`/fichas/${ficha.id}${params.size ? `?${params}` : ""}`); };
@@ -274,7 +274,7 @@ export function AppController() {
     navigate(`/repuestos/nuevo?${params}`);
   };
   const openRepuestoById = (id: string, returnTo?: string) => openRepuesto({ id }, returnTo);
-  const currentPage = ["audit", "settings", "trabajos"].includes(route.page) && session.user.rol !== "ADMINISTRACION" ? "dashboard" : route.page;
+   const currentPage = ["audit", "settings", "trabajos", "catalog"].includes(route.page) && session.user.rol !== "ADMINISTRACION" ? "dashboard" : route.page;
   let content: ReactNode;
   if (currentPage === "create") {
       content = route.initialMotoId ? <FichaForm key={`${pathname}?${urlSearch}`} initialMotoId={route.initialMotoId} onClose={() => navigate(route.returnTo || "/perfiles")} onSave={(ficha) => { notify("Ficha creada correctamente."); setRefreshKey((key) => key + 1); openFicha(ficha, route.returnTo); }} notify={notify} /> : <ProfilesView onIntake={(plate) => navigate(`/ingresar?returnTo=%2Fperfiles&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} onOpen={openMoto} onOpenSale={(id) => openSaleForMoto(id, "/perfiles")} notify={notify} />;
@@ -297,7 +297,7 @@ export function AppController() {
   } else if (currentPage === "fichas" && route.fichaId) {
        content = <FichaDetail fichaKey={route.fichaId} onBack={() => navigate(route.returnTo || "/fichas")} onConfirm={(request) => setConfirmation(request)} onEdit={() => navigate(`/fichas/${route.fichaId}/editar?returnTo=${encodeURIComponent(route.returnTo || `/fichas/${route.fichaId}`)}`)} onOpenMoto={(id, tab) => openMoto(id, route.returnTo || `/fichas/${route.fichaId}`, tab ?? "fichas")} onOpenRepuesto={(id) => openRepuestoById(id, `/fichas/${route.fichaId}`)} onNewRepuesto={(prefill) => createRepuestoForMoto(prefill, `/fichas/${route.fichaId}`)} notify={notify} />;
   } else if (currentPage === "profile" && route.motoId) {
-        content = <MotoDetail key={`${pathname}?${urlSearch}`} id={route.motoId} initialTab={route.tab} onBack={() => navigate(route.returnTo || "/perfiles")} onOpenFicha={(ficha) => openFicha(ficha, `/motos/${route.motoId}?tab=fichas`)} onOpenRepuesto={(repuesto) => openRepuesto(repuesto, `/motos/${route.motoId}?tab=repuestos`)} onNewFicha={createFichaForMoto} onNewRepuesto={createRepuestoForMoto} onIntake={(plate) => navigate(`/ingresar?returnTo=${encodeURIComponent(`/motos/${route.motoId}`)}&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} notify={notify} />;
+         content = <MotoDetail key={`${pathname}?${urlSearch}`} id={route.motoId} initialTab={route.tab} onBack={() => navigate(route.returnTo || "/perfiles")} onOpenFicha={(ficha) => openFicha(ficha, `/motos/${route.motoId}?tab=fichas`)} onOpenSale={(id) => openSaleById(id, `/motos/${route.motoId}?tab=venta`)} onOpenRepuesto={(repuesto) => openRepuesto(repuesto, `/motos/${route.motoId}?tab=repuestos`)} onNewFicha={createFichaForMoto} onNewRepuesto={createRepuestoForMoto} onIntake={(plate) => navigate(`/ingresar?returnTo=${encodeURIComponent(`/motos/${route.motoId}`)}&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} notify={notify} />;
   } else if (currentPage === "transfers") {
       content = <TransferenciasView initialMotoId={route.initialMotoId} onOpenMoto={(id) => openMoto(id, "/transferencias", "client")} onOpenSale={(id) => openSaleById(id, "/transferencias")} notify={notify} />;
   } else if (currentPage === "repuestos") {

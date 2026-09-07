@@ -8,7 +8,7 @@ import type { ClienteResponse, MarcaMotoResponse } from "../../lib/types";
 export type AbmField = {
   key: string;
   label: string;
-  type?: "text" | "email" | "tel" | "number" | "currency" | "textarea" | "select";
+  type?: "text" | "email" | "tel" | "password" | "number" | "currency" | "textarea" | "select";
   options?: readonly SelectOption[];
   required?: boolean;
   readOnly?: boolean;

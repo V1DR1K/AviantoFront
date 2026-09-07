@@ -67,8 +67,8 @@ const motoStates: StateEntry[] = [
   {
     status: "Vendida",
     meaning: "La venta se completó y la moto dejó de estar ingresada al negocio.",
-    enables: "Conservar la trazabilidad del historial y de la transferencia.",
-    note: "Es un estado terminal: no puede reingresarse.",
+    enables: "Conservar la trazabilidad y volver a ingresar la moto a Taller o a Ventas.",
+    note: "Una nueva operación conserva el historial de la venta anterior.",
   },
 ];
 
@@ -196,7 +196,7 @@ export function WikiView() {
             <div className="wiki-flow-block">
               <h3>Ventas</h3>
               <Flow label="Circuito de Ventas" steps={["Disponible", "En venta", "Transferencia en proceso", "Vendida"]} />
-              <p>La ficha de venta se crea al ingresar la moto. Una transferencia cancelada vuelve a En venta y conserva su auditoría; una ficha de venta cancelada conserva el motivo y la moto puede volver a Taller; una moto Vendida no puede reingresarse.</p>
+              <p>La ficha de venta se crea al ingresar la moto. Una transferencia cancelada vuelve a En venta y conserva su auditoría; una ficha de venta cancelada conserva el motivo y la moto puede volver a Taller. Una moto Vendida puede reingresar a Taller o iniciar una nueva ficha de Venta; la operación anterior conserva su historial.</p>
             </div>
           </section>
 
@@ -251,7 +251,7 @@ export function WikiView() {
               <li>Una moto no puede estar Disponible y En venta al mismo tiempo.</li>
               <li>Una moto sólo puede tener una ficha de Taller abierta.</li>
               <li>Terminada significa trabajo aprobado; Entregada significa moto retirada por el cliente.</li>
-              <li>Una moto Vendida no puede volver a ingresarse.</li>
+              <li>Una moto Vendida puede volver a ingresar a Taller o iniciar una nueva ficha de Venta; la venta anterior conserva su trazabilidad.</li>
               <li>Los estados Cancelada y Entregada conservan el historial: no eliminan las operaciones previas.</li>
               <li>Operario puede actualizar el checklist mientras la ficha está En venta; Administración gestiona comprador, transferencia, cita, asistencia, cancelación y cierre.</li>
               <li>Operario y Administración pueden cambiar una moto entre Taller y Venta mientras no existan procesos operativos bloqueantes. El motivo queda registrado junto con usuario, fecha y circuitos de origen y destino.</li>

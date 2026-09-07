@@ -309,7 +309,7 @@ export function SelectField({
       <select
         className="select-native"
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => { setActiveIndex(-1); onChange(event.target.value); }}
         disabled={disabled}
         required={required}
         tabIndex={-1}
@@ -391,11 +391,13 @@ export function AutocompleteField({
   const [suggestions, setSuggestions] = useState<AutocompleteResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const query = value.trim();
   const localSuggestions = !selected && !loadOptions && query.length >= minChars
     ? (options ?? []).filter((item) => `${item.label} ${item.secondary ?? ""}`.toLowerCase().includes(query.toLowerCase())).slice(0, 10)
     : [];
   const visibleSuggestions = loadOptions ? suggestions : localSuggestions;
+  const listboxId = useId();
 
   useEffect(() => {
     if (selected || query.length < minChars || !loadOptions) return;
@@ -430,13 +432,23 @@ export function AutocompleteField({
         autoComplete="off"
         disabled={disabled}
         aria-label={ariaLabel}
+        role="combobox"
         aria-autocomplete="list"
+        aria-expanded={!selected && query.length >= minChars && (loading || visibleSuggestions.length > 0 || Boolean(loadOptions) || Boolean(options))}
+        aria-controls={listboxId}
+        aria-activedescendant={activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown" && visibleSuggestions.length) { event.preventDefault(); setActiveIndex((index) => Math.min(index + 1, visibleSuggestions.length - 1)); }
+          if (event.key === "ArrowUp" && visibleSuggestions.length) { event.preventDefault(); setActiveIndex((index) => Math.max(index - 1, 0)); }
+          if (event.key === "Enter" && activeIndex >= 0 && visibleSuggestions[activeIndex]) { event.preventDefault(); const item = visibleSuggestions[activeIndex]; onSelect(item); setSuggestions([]); setActiveIndex(-1); }
+          if (event.key === "Escape") { setSuggestions([]); setActiveIndex(-1); }
+        }}
       />
       {value && <button type="button" className="icon-button" aria-label="Limpiar selección" onClick={clear}><X size={16} /></button>}
       {!selected && query.length >= minChars && (loading || visibleSuggestions.length > 0 || Boolean(loadOptions) || Boolean(options)) && (
-        <div className="suggestions" role="listbox">
-          {loading ? <p className="suggestions-empty">{loadingText}</p> : error ? <p className="suggestions-empty" role="status">{error}</p> : visibleSuggestions.length ? visibleSuggestions.map((item) => (
-            <button type="button" key={item.id} role="option" aria-selected="false" onClick={() => { onSelect(item); setSuggestions([]); }}>
+        <div id={listboxId} className="suggestions" role="listbox">
+          {loading ? <p className="suggestions-empty">{loadingText}</p> : error ? <p className="suggestions-empty" role="status">{error}</p> : visibleSuggestions.length ? visibleSuggestions.map((item, index) => (
+             <button type="button" id={`${listboxId}-option-${index}`} key={item.id} role="option" aria-selected={activeIndex === index} onMouseEnter={() => setActiveIndex(index)} onClick={() => { onSelect(item); setSuggestions([]); setActiveIndex(-1); }}>
               <span>{item.label}</span>
               <small>{item.secondary ?? ""}</small>
             </button>
@@ -476,10 +488,7 @@ export function ConfirmModal({
     <div className="modal-backdrop">
       <section
         ref={modalRef}
-        onKeyDownCapture={(event) => {
-          if ((event.target as HTMLElement).closest(".confirm-modal")) return;
-          onModalKeyDown(event);
-        }}
+        onKeyDownCapture={onModalKeyDown}
         className="modal confirm-modal"
         role="dialog"
         tabIndex={-1}

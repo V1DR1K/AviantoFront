@@ -31,6 +31,7 @@ export function MotoDetail({
   initialTab,
   onBack,
   onOpenFicha,
+  onOpenSale,
   onOpenRepuesto,
   onNewFicha,
   onNewRepuesto,
@@ -41,6 +42,7 @@ export function MotoDetail({
   initialTab?: "general" | "client" | "services" | "fichas" | "repuestos" | "venta";
   onBack: () => void;
   onOpenFicha: (ficha: FichaResponse) => void;
+  onOpenSale: (id: string) => void;
   onOpenRepuesto: (repuesto: RepuestoResponse) => void;
   onNewFicha: (prefill: { motoId: string; clienteId?: string | null }) => void;
   onNewRepuesto: (prefill: { motoId: string; clienteId?: string | null; fichaId?: string }) => void;
@@ -159,7 +161,7 @@ export function MotoDetail({
     setConfigOpen(true);
   };
   const openCircuitChange = () => {
-    if (!moto || moto.estado === "Vendida") return;
+    if (!moto) return;
     setCircuitTarget(moto.seccion === "Venta" ? "TALLER" : "VENTA");
     setCircuitReason("");
   };
@@ -204,7 +206,7 @@ export function MotoDetail({
         </div>
         <div className="detail-stack moto-detail-actions">
           <StatusBadge status={moto.estado} />
-             {!moto.ingresada ? <button className="button secondary" onClick={() => onIntake(moto.patente)}><LogIn size={17} />Ingresar moto</button> : moto.seccion === "Venta" ? <button className="button primary" onClick={() => setTab("venta")}><FileText size={17} />Abrir ficha de venta</button> : moto.seccion === "Taller" ? <button className="button primary" onClick={() => setTab("fichas")}><FileText size={17} />Abrir ficha Taller</button> : moto.estado === "Terminada" ? <span className="detail-note">Pendiente de entrega al cliente</span> : <span className="detail-note">La entrega se completa desde la ficha terminada</span>}
+             {!moto.ingresada ? <button className="button secondary" onClick={() => onIntake(moto.patente)}><LogIn size={17} />Ingresar moto</button> : moto.seccion === "Venta" ? <button className="button primary" onClick={() => saleFicha ? onOpenSale(saleFicha.id) : setTab("venta")}><FileText size={17} />Abrir ficha de venta</button> : moto.seccion === "Taller" ? <button className="button primary" onClick={() => setTab("fichas")}><FileText size={17} />Abrir ficha Taller</button> : moto.estado === "Terminada" ? <span className="detail-note">Pendiente de entrega al cliente</span> : <span className="detail-note">La entrega se completa desde la ficha terminada</span>}
              {moto.ingresada && moto.seccion && <button className="button secondary" onClick={openCircuitChange}><ArrowRightLeft size={17} />{moto.seccion === "Venta" ? "Pasar a Taller" : "Pasar a Ventas"}</button>}
             <strong className="moto-detail-year">Año {moto.anio ?? "—"}</strong>
          </div>
@@ -241,7 +243,7 @@ export function MotoDetail({
       )}
       {tab === "venta" && moto.seccion === "Venta" && (
         <section className="panel sale-profile-entry">
-          <div className="panel-head"><div><h2>Ficha de venta</h2><p>Carpeta, comprador y transferencia se gestionan desde una única ficha trazable.</p></div><button className="button primary" onClick={() => setTab("venta")}><FileText size={17} />Abrir ficha de venta</button></div>
+           <div className="panel-head"><div><h2>Ficha de venta</h2><p>Carpeta, comprador y transferencia se gestionan desde una única ficha trazable.</p></div>{saleFicha && <button className="button primary" onClick={() => onOpenSale(saleFicha.id)}><FileText size={17} />Abrir ficha de venta</button>}</div>
           {saleFicha ? <dl className="record-detail"><div><dt>Ficha</dt><dd>{saleFicha.numero}</dd></div><div><dt>Estado</dt><dd><StatusBadge status={saleFicha.estado} /></dd></div><div><dt>Vendedor actual</dt><dd>{saleFicha.vendedor}</dd></div><div><dt>{saleFicha.estado === "Vendida" ? "Comprador final" : "Comprador prospectivo"}</dt><dd>{saleFicha.comprador ?? "Sin seleccionar"}</dd></div><div><dt>Carpeta de transferencia</dt><dd>{saleFicha.obligatoriosCompletos ? "Completa" : "Incompleta"}</dd></div><div><dt>Cita</dt><dd>{saleFicha.transferencia?.citaFecha ? `${date(saleFicha.transferencia.citaFecha)} · ${saleFicha.transferencia.citaHora?.slice(0, 5) ?? "—"}` : "Sin programar"}</dd></div></dl> : <div className="table-loading" role="status">Cargando resumen de venta...</div>}
         </section>
       )}
@@ -328,7 +330,7 @@ export function MotoDetail({
       </Dialog>
       <Dialog open={circuitTarget !== null} title={circuitTarget === "TALLER" ? "Pasar moto a Taller" : "Pasar moto a Ventas"} onClose={() => { if (!circuitSaving) setCircuitTarget(null); }} dirty={Boolean(circuitReason)}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveCircuitChange(); }}>
-          <p className="form-notice">El cambio conserva el historial. Solo se permite antes de iniciar procesos operativos: no debe haber ficha abierta, repuestos activos, pagos vigentes, transferencia activa ni venta finalizada. Al volver a Taller, la ficha de venta queda cancelada y auditada.</p>
+          <p className="form-notice">El cambio conserva el historial. Solo se permite cuando no hay ficha abierta, repuestos activos, pagos vigentes ni transferencia activa. Al volver a Taller, la ficha de venta abierta queda cancelada y auditada.</p>
           <label className="form-field-wide">Motivo del cambio<textarea value={circuitReason} maxLength={500} onChange={(event) => setCircuitReason(event.target.value)} placeholder="Ej.: se seleccionó el circuito incorrecto al ingresar la moto" required /></label>
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setCircuitTarget(null)} disabled={circuitSaving}>Cancelar</button><button className="button primary" disabled={!circuitReason.trim() || circuitSaving}>{circuitSaving ? "Guardando..." : "Confirmar cambio"}</button></div>
         </form>

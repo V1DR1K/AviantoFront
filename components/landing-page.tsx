@@ -5,9 +5,11 @@ import {
   ClipboardList,
   FileCheck2,
   FileText,
+  LogIn,
   MessageCircle,
   Wrench,
 } from "lucide-react";
+import Link from "next/link";
 
 const whatsappUrl = "https://wa.me/5493412639357?text=Hola%2C%20quiero%20conocer%20motorcom";
 
@@ -22,7 +24,8 @@ export function LandingPage() {
         <nav className="landing-nav" aria-label="Navegación principal">
           <a href="#como-funciona">Cómo funciona</a>
           <a href="#para-talleres">Para talleres</a>
-          <a className="landing-login" href={whatsappUrl} target="_blank" rel="noreferrer"><MessageCircle size={16} /> Contactanos</a>
+          <Link className="landing-login" href="/login"><LogIn size={16} /> Ingresar</Link>
+          <a className="landing-contact" href={whatsappUrl} target="_blank" rel="noreferrer"><MessageCircle size={16} /> Contactanos</a>
         </nav>
       </header>
 

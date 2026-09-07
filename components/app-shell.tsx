@@ -1,5 +1,5 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ChevronDown,
   ChevronLeft,
@@ -22,7 +22,7 @@ const home = { id: "dashboard", label: "Inicio", icon: LayoutDashboard };
 const navGroups = [
   { id: "taller", label: "Taller", items: [{ id: "orders", label: "Fichas", icon: FileText }, { id: "repuestos", label: "Pedidos", icon: Package }] },
   { id: "ventas", label: "Ventas", items: [{ id: "sales", label: "Ventas", icon: LayoutDashboard }, { id: "transfers", label: "Transferencias", icon: ArrowRightLeft }] },
-  { id: "records", label: "Registros", items: [{ id: "clients", label: "Clientes", icon: Users }, { id: "catalog", label: "Controles", icon: Package }, { id: "trabajos", label: "Trabajos", icon: Wrench, adminOnly: true }] },
+  { id: "records", label: "Registros", items: [{ id: "clients", label: "Clientes", icon: Users }, { id: "catalog", label: "Controles", icon: Package, adminOnly: true }, { id: "trabajos", label: "Trabajos", icon: Wrench, adminOnly: true }] },
 ];
 export function AppShell({
   children,
@@ -43,6 +43,8 @@ export function AppShell({
   const [collapsed, setCollapsed] = useState(false);
   const activeGroup = navGroups.find((group) => group.items.some((item) => item.id === page))?.id;
   const [openGroup, setOpenGroup] = useState(activeGroup ?? "taller");
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
   const isAdmin = session.user.rol === "ADMINISTRACION";
   const openMenu = () => {
     if (activeGroup) setOpenGroup(activeGroup);
@@ -53,6 +55,25 @@ export function AppShell({
     setMenuOpen(false);
   };
   const toggleGroup = (groupId: string) => setOpenGroup((current) => current === groupId ? "" : groupId);
+  useEffect(() => {
+    if (!menuOpen) return;
+    previousFocus.current = document.activeElement as HTMLElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusFirst = window.requestAnimationFrame(() => drawerRef.current?.querySelector<HTMLElement>("button, [href], input")?.focus());
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); setMenuOpen(false); return; }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(drawerRef.current?.querySelectorAll<HTMLElement>("button:not([disabled]), [href], input:not([disabled])") ?? []);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => { window.cancelAnimationFrame(focusFirst); document.removeEventListener("keydown", onKeyDown); document.body.style.overflow = previousOverflow; previousFocus.current?.focus(); };
+  }, [menuOpen]);
   const renderItem = (item: typeof home & { adminOnly?: boolean }) => {
     const Icon = item.icon;
     return (
@@ -131,7 +152,8 @@ export function AppShell({
       {menuOpen && (
         <>
           <button className="mobile-drawer-backdrop" aria-label="Cerrar menú" onClick={() => setMenuOpen(false)} />
-          <div
+           <div
+             ref={drawerRef}
             className="mobile-drawer"
             role="dialog"
             aria-modal="true"

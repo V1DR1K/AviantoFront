@@ -354,7 +354,7 @@ export function RepuestoDetail({
         onSaved={(next) => { setRepuesto(next); setEditOpen(false); }}
         onError={(message) => notify(message, "error")}
       />
-      <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; setConfirmation(null); if (!request) return; return request.action().then(() => notify(request.successMessage)).catch((reason) => { notify(errorMessage(reason), "error"); throw reason; }); }} />
+      <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; if (!request) return; return request.action().then(() => { notify(request.successMessage); setConfirmation(null); }).catch((reason) => { notify(errorMessage(reason), "error"); throw reason; }); }} />
     </div>
   );
 }

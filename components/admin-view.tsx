@@ -21,7 +21,7 @@ const configs = {
 
 function rowFor(resource: Exclude<Resource, "audit">, item: ClienteResponse | MotovehiculoResponse | ControlResponse): DataRow {
   if (resource === "clients") { const client = item as ClienteResponse; return { ...client, estado: client.activo ? "Activo" : "Inactivo" }; }
-  if (resource === "vehicles") { const vehicle = item as MotovehiculoResponse; return { ...vehicle, estado: vehicle.estado, activoF: vehicle.activo ? "Activo" : "Inactivo" }; }
+  if (resource === "vehicles") { const vehicle = item as MotovehiculoResponse; return { ...vehicle, clienteId: vehicle.propietarioId, cliente: vehicle.propietario, estado: vehicle.estado, activoF: vehicle.activo ? "Activo" : "Inactivo" }; }
   const control = item as ControlResponse;
   return { ...control, categorias: control.categorias.map((category) => category.nombre).join(", ") || "—", estado: control.activo ? "Activo" : "Inactivo", obligatorio: control.obligatorio ? "true" : "false" };
 }
@@ -66,7 +66,7 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
     const params = { q: query || undefined, activo: filter === "Todos" ? undefined : filter === "Activo", page: page - 1, size: 20 };
     if (resource === "catalog") {
       void api<ControlResponse[]>("/configuracion/controles", {}, { includeDeleted: false })
-        .then((list) => { setRows(list.map((item) => rowFor("catalog", item))); setTotal(1); })
+        .then((list) => { const filtered = list.filter((item) => (!query || `${item.nombre} ${item.descripcion ?? ""}`.toLowerCase().includes(query.toLowerCase())) && (filter === "Todos" || (filter === "Activo" ? item.activo : !item.activo))); setRows(filtered.map((item) => rowFor("catalog", item))); setTotal(1); })
         .catch((reason) => notify(requestError(reason), "error"));
       return;
     }
@@ -140,7 +140,7 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
       </section>
       {resource === "vehicles" ? <VehicleAbmModal key={String(editing?.id ?? "new")} open={editing !== null} mode={editing?.id ? "modificar" : "agregar"} initialValues={editing ?? {}} brands={brands} clients={clients} onClose={() => setEditing(null)} onSubmit={submit} onError={(message) => notify(message, "error")} /> : <AbmFormModal key={String(editing?.id ?? "new")} open={editing !== null} resource={config.singular} mode={editing?.id ? "modificar" : "agregar"} fields={fields} initialValues={editing ?? {}} onClose={() => setEditing(null)} onSubmit={submit} onError={(message) => notify(message, "error")} />}
       <RecordDetail open={detail !== null} title={config.singular} record={detail} onClose={() => setDetail(null)} onEdit={() => { setEditing(detail); setDetail(null); }} />
-      <ConfirmModal open={deleting !== null} title={`Eliminar ${config.singular}`} body="El registro seleccionado pasará a inactivo y conservará su historial." confirmLabel={`Eliminar ${config.singular}`} onClose={() => setDeleting(null)} onConfirm={async () => { if (!deleting) return; const selected = deleting; setDeleting(null); try { await api(`${config.endpoint}/${selected.id}`, { method: "DELETE" }); load(); notify(`${config.singular[0].toUpperCase()}${config.singular.slice(1)} eliminado correctamente.`); } catch (reason) { notify(requestError(reason), "error"); throw reason; } }} />
+     <ConfirmModal open={deleting !== null} title={`Eliminar ${config.singular}`} body="El registro seleccionado pasará a inactivo y conservará su historial." confirmLabel={`Eliminar ${config.singular}`} onClose={() => setDeleting(null)} onConfirm={async () => { if (!deleting) return; const selected = deleting; try { await api(`${config.endpoint}/${selected.id}`, { method: "DELETE" }); load(); notify(`${config.singular[0].toUpperCase()}${config.singular.slice(1)} eliminado correctamente.`); setDeleting(null); } catch (reason) { notify(requestError(reason), "error"); throw reason; } }} />
     </div>
   );
 }
@@ -160,7 +160,7 @@ function AuditView({ notify }: { notify: Notify }) {
 }
 
 type Setting = { title: string; description: string; endpoint: string; fields: AbmField[]; name: (item: DataRow) => string };
-const settings: Setting[] = [{ title: "Marcas de motos", description: "Opciones disponibles en el alta y edición de motos.", endpoint: "/configuracion/marcas-moto", fields: [{ key: "nombre", label: "Marca", required: true, wide: true }], name: (item) => String(item.nombre) }, { title: "Categorías de revisión", description: "Agrupaciones de controles para el checklist de entrega.", endpoint: "/configuracion/categorias", fields: [{ key: "nombre", label: "Categoría", required: true, wide: true }], name: (item) => String(item.nombre) }, { title: "Usuarios del sistema", description: "Usuarios y perfiles de acceso del taller.", endpoint: "/configuracion/usuarios", fields: [{ key: "username", label: "Usuario", required: true }, { key: "nombre", label: "Nombre", required: true }, { key: "email", label: "Email", type: "email" }, { key: "rol", label: "Perfil", type: "select", required: true, options: [{ value: "ADMINISTRACION", label: "Administración" }, { value: "OPERARIO", label: "Operario" }] }, { key: "password", label: "Contraseña", type: "text" }], name: (item) => `${item.nombre} · ${item.rol === "ADMINISTRACION" ? "Administración" : "Operario"}` }];
+const settings: Setting[] = [{ title: "Marcas de motos", description: "Opciones disponibles en el alta y edición de motos.", endpoint: "/configuracion/marcas-moto", fields: [{ key: "nombre", label: "Marca", required: true, wide: true }], name: (item) => String(item.nombre) }, { title: "Categorías de revisión", description: "Agrupaciones de controles para el checklist de entrega.", endpoint: "/configuracion/categorias", fields: [{ key: "nombre", label: "Categoría", required: true, wide: true }], name: (item) => String(item.nombre) }, { title: "Usuarios del sistema", description: "Usuarios y perfiles de acceso del taller.", endpoint: "/configuracion/usuarios", fields: [{ key: "username", label: "Usuario", required: true }, { key: "nombre", label: "Nombre", required: true }, { key: "email", label: "Email", type: "email" }, { key: "rol", label: "Perfil", type: "select", required: true, options: [{ value: "ADMINISTRACION", label: "Administración" }, { value: "OPERARIO", label: "Operario" }] }, { key: "password", label: "Contraseña", type: "password" }], name: (item) => `${item.nombre} · ${item.rol === "ADMINISTRACION" ? "Administración" : "Operario"}` }];
 
 export function SettingsView({ notify }: { notify: Notify }) {
   return <div className="page"><div className="page-heading"><div><h1>Administración</h1><p>Marcas, categorías, usuarios y la carpeta de transferencia.</p></div></div><section className="settings-grid">{settings.map((setting) => <ConfigSection key={setting.endpoint} setting={setting} notify={notify} />)}<SaleChecklistSection notify={notify} /></section></div>;

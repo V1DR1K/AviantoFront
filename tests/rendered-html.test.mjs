@@ -207,6 +207,7 @@ test("keeps the sale ficha workflow, read-only transfer registry, and sale check
   assert.match(admin, /Carpeta de transferencia/);
   assert.match(admin, /"\/configuracion\/ventas\/checklist"/);
   assert.match(intake, /Solo Administración puede ingresar una moto a Ventas/);
+  assert.match(motoDetail, /!moto\.ingresada \? <button className="button secondary"/);
   assert.match(types, /export interface VentaFichaResponse/);
   assert.match(types, /export interface VentaTransferenciaResponse/);
   assert.match(types, /fichaVentaId\?: string \| null;/);
