@@ -28,6 +28,7 @@ type Line = {
   catalogo?: boolean;
 };
 type PhotoDraft = { file: File; url: string; idempotencyKey: string };
+const fichaSnapshot = (values: { fechaIngreso: string; fechaEntregaEstimada: string; kilometrajeIngreso: string; notes: string; iva: boolean; descuentoGlobal: number; trabajos: Line[] }) => JSON.stringify({ ...values, trabajos: values.trabajos.map((trabajo) => ({ ...trabajo, key: undefined })) });
 
 const today = todayInAr;
 const workStateClass = (estado: Line["estadoTrabajo"], realizado: boolean) =>
@@ -93,6 +94,7 @@ export function FichaForm({
 }) {
   const editing = Boolean(fichaKey);
   const [persistedFichaId, setPersistedFichaId] = useState<string | null>(fichaKey ?? null);
+  const [baseline, setBaseline] = useState<string | null>(null);
   const [loadedEstado, setLoadedEstado] = useState<string | null>(null);
   const editable =
     !editing || loadedEstado === "Pendiente" || loadedEstado === "En proceso";
@@ -173,6 +175,8 @@ export function FichaForm({
           estadoTrabajo: trabajo.estadoTrabajo,
           observacionTrabajo: trabajo.observacionTrabajo ?? "",
         }));
+        const nextFechaIngreso = ficha.fechaIngreso.slice(0, 10) || today();
+        setBaseline(fichaSnapshot({ fechaIngreso: nextFechaIngreso, fechaEntregaEstimada: ficha.fechaEntregaEstimada ?? "", kilometrajeIngreso: ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : "", notes: ficha.observaciones ?? "", iva: ficha.iva, descuentoGlobal: Number(ficha.descuentoGlobal ?? 0), trabajos: nextTrabajos }));
         setTrabajos(nextTrabajos);
         setExpandedObservations(new Set(nextTrabajos.filter((trabajo) => trabajo.observacionTrabajo?.trim()).map((trabajo) => trabajo.key)));
       })
@@ -221,6 +225,15 @@ export function FichaForm({
     photos.length > 0 ||
     Boolean(fechaEntregaEstimada) ||
     Boolean(kilometrajeIngreso);
+  const isDirty = editing
+    ? (baseline !== null && fichaSnapshot({ fechaIngreso, fechaEntregaEstimada, kilometrajeIngreso, notes, iva, descuentoGlobal, trabajos }) !== baseline) || photos.length > 0
+    : hasDraftContent;
+  useEffect(() => {
+    if (!isDirty) return;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [isDirty]);
   const addTrabajo = (r?: Partial<Line>) => {
     const key = crypto.randomUUID();
     setTrabajos((previous) => [
@@ -373,7 +386,7 @@ export function FichaForm({
         <button
           className="button secondary form-close"
           onClick={() =>
-            hasDraftContent && !editing ? setCloseConfirmation(true) : onClose()
+            isDirty ? setCloseConfirmation(true) : onClose()
           }
         >
           <X size={18} />
@@ -655,7 +668,7 @@ export function FichaForm({
       <ConfirmModal
         open={closeConfirmation}
         title="¿Cerrar ficha?"
-        body="Hay información cargada en esta ficha. Si cerrás ahora, se descartará el borrador."
+        body={editing ? "Hay cambios sin guardar en esta ficha. Si cerrás ahora, se descartarán." : "Hay información cargada en esta ficha. Si cerrás ahora, se descartará el borrador."}
         confirmLabel="Sí, cerrar ficha"
         onClose={() => setCloseConfirmation(false)}
         onConfirm={onClose}
