@@ -56,7 +56,7 @@ export function VentaFichaDetail({
 
   useEffect(() => {
     let active = true;
-    void api<VentaFichaResponse>(`/ventas/${fichaKey}`)
+    void api<VentaFichaResponse>(`/ventas/${fichaKey}/checklist/sincronizar`, { method: "POST" })
       .then((next) => {
         if (active) {
           setFicha(next);

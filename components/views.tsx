@@ -548,7 +548,7 @@ export function FichaDetail({
   }, [fichaKey, notify]);
   useEffect(() => {
     if (ficha?.estado === "En revisión")
-      void api<RevisionResponse>(`/fichas/${fichaKey}/revision`)
+      void api<RevisionResponse>(`/fichas/${fichaKey}/revision/preparar`, { method: "POST" })
         .then(setRevision)
         .catch(() => undefined);
   }, [ficha?.estado, fichaKey]);

@@ -185,6 +185,7 @@ test("keeps the sale ficha workflow, read-only transfer registry, and sale check
   assert.doesNotMatch(sales, /venta\/completar/);
   assert.match(saleDetail, /Carpeta de transferencia/);
   assert.match(saleDetail, /Carpeta sin requisitos/);
+  assert.match(saleDetail, /\/ventas\/\$\{fichaKey\}\/checklist\/sincronizar/);
   assert.match(saleDetail, /steps = \["Carpeta", "Comprador", "Iniciar transferencia", "Turno \/ proceso"\]/);
   assert.match(saleDetail, /Comprador prospectivo/);
   assert.match(saleDetail, /\/ventas\/\$\{ficha\.id\}\/transferencia\/cita/);
@@ -225,6 +226,8 @@ test("keeps the sale ficha workflow, read-only transfer registry, and sale check
   assert.match(apiContract, /VentaFichaResponse/);
   assert.match(apiContract, /registro de solo lectura/i);
   assert.match(apiContract, /POST \/ventas\/\{id\}\/transferencia\/cancelar/);
+  assert.match(apiContract, /POST \/ventas\/\{id\}\/checklist\/sincronizar/);
+  assert.match(sales, /\/fichas\/\$\{fichaKey\}\/revision\/preparar/);
   assert.match(motoDetail, /\/motovehiculos\/\$\{id\}\/circuito/);
   assert.match(motoDetail, /Motivo del cambio/);
   assert.match(types, /"Cancelada"/);
