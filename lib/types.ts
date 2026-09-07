@@ -406,6 +406,12 @@ export interface AuditoriaResponse {
   modulo: string;
   accion: string;
   descripcion: string;
+  entidad?: string | null;
+  entidadId?: string | null;
+  antes?: string | null;
+  despues?: string | null;
+  motivo?: string | null;
+  correlationId?: string | null;
 }
 export interface ReporteResponse { etiqueta: string; valor: number; }
 export interface DashboardOrderResponse { id: string; numero: string; cliente: string; moto: string; estado: FichaStatus; total: number; createdAt: string; }
