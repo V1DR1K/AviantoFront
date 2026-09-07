@@ -62,29 +62,34 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
   const [clients, setClients] = useState<ClienteResponse[]>([]);
   const [brands, setBrands] = useState<MarcaMotoResponse[]>([]);
 
-  const load = () => {
+  const load = (signal?: AbortSignal) => {
+    const controller = signal ? null : new AbortController();
+    const requestSignal = signal ?? controller?.signal;
     const params = { q: query || undefined, activo: filter === "Todos" ? undefined : filter === "Activo", page: page - 1, size: 20 };
     if (resource === "catalog") {
-      void api<ControlResponse[]>("/configuracion/controles", {}, { includeDeleted: false })
+      void api<ControlResponse[]>("/configuracion/controles", { signal: requestSignal }, { includeDeleted: false })
         .then((list) => { const filtered = list.filter((item) => (!query || `${item.nombre} ${item.descripcion ?? ""}`.toLowerCase().includes(query.toLowerCase())) && (filter === "Todos" || (filter === "Activo" ? item.activo : !item.activo))); setRows(filtered.map((item) => rowFor("catalog", item))); setTotal(1); })
-        .catch((reason) => notify(requestError(reason), "error"));
-      return;
+        .catch((reason) => { if (!requestSignal?.aborted) notify(requestError(reason), "error"); });
+      return () => controller?.abort();
     }
-    void api<PageResponse<ClienteResponse | MotovehiculoResponse>>(config.endpoint, {}, params)
+    void api<PageResponse<ClienteResponse | MotovehiculoResponse>>(config.endpoint, { signal: requestSignal }, params)
       .then((result) => { setRows(result.content.map((item) => rowFor(resource, item))); setTotal(result.totalPages || 1); })
-      .catch((reason) => notify(requestError(reason), "error"));
+      .catch((reason) => { if (!requestSignal?.aborted) notify(requestError(reason), "error"); });
+    return () => controller?.abort();
   };
 
   useEffect(load, [resource, query, filter, page, config.endpoint, notify]);
   useEffect(() => {
     if (resource !== "vehicles") return;
+    const controller = new AbortController();
     void Promise.all([
-      api<PageResponse<ClienteResponse>>("/clientes", {}, { size: 100, activo: true }),
-      api<MarcaMotoResponse[]>("/configuracion/marcas-moto"),
+      api<PageResponse<ClienteResponse>>("/clientes", { signal: controller.signal }, { size: 100, activo: true }),
+      api<MarcaMotoResponse[]>("/configuracion/marcas-moto", { signal: controller.signal }),
     ]).then(([clientPage, nextBrands]) => {
       setClients(clientPage.content);
       setBrands(nextBrands.filter((brand) => brand.activo));
-    }).catch((reason) => notify(requestError(reason), "error"));
+    }).catch((reason) => { if (!controller.signal.aborted) notify(requestError(reason), "error"); });
+    return () => controller.abort();
   }, [resource, notify]);
 
   const fields: AbmField[] = resource === "catalog"
@@ -172,7 +177,12 @@ function ConfigSection({ setting, notify }: { setting: Setting; notify: Notify }
   const [entries, setEntries] = useState<DataRow[]>([]);
   const [editing, setEditing] = useState<DataRow | null>(null);
   const [deleting, setDeleting] = useState<DataRow | null>(null);
-  const load = () => void api<DataRow[]>(setting.endpoint).then(setEntries).catch((reason) => notify(requestError(reason), "error"));
+  const load = (signal?: AbortSignal) => {
+    const controller = signal ? null : new AbortController();
+    const requestSignal = signal ?? controller?.signal;
+    void api<DataRow[]>(setting.endpoint, { signal: requestSignal }).then(setEntries).catch((reason) => { if (!requestSignal?.aborted) notify(requestError(reason), "error"); });
+    return () => controller?.abort();
+  };
   useEffect(load, [setting.endpoint, notify]);
   const submit = async (values: Record<string, string>) => {
     try {
@@ -201,7 +211,12 @@ function SaleChecklistSection({ notify }: { notify: Notify }) {
   const [reloadKey, setReloadKey] = useState(0);
   const [editing, setEditing] = useState<VentaChecklistPlantillaResponse | null>(null);
   const [deleting, setDeleting] = useState<VentaChecklistPlantillaResponse | null>(null);
-  const load = () => void api<VentaChecklistPlantillaResponse[]>("/configuracion/ventas/checklist", {}, { includeDeleted: false }).then((next) => { setEntries(next); setLoadError(null); }).catch((reason) => { const message = requestError(reason); setLoadError(message); notify(message, "error"); });
+  const load = (signal?: AbortSignal) => {
+    const controller = signal ? null : new AbortController();
+    const requestSignal = signal ?? controller?.signal;
+    void api<VentaChecklistPlantillaResponse[]>("/configuracion/ventas/checklist", { signal: requestSignal }, { includeDeleted: false }).then((next) => { setEntries(next); setLoadError(null); }).catch((reason) => { if (!requestSignal?.aborted) { const message = requestError(reason); setLoadError(message); notify(message, "error"); } });
+    return () => controller?.abort();
+  };
   useEffect(load, [notify, reloadKey]);
   const submit = async (values: Record<string, string>) => {
     const payload: VentaChecklistPlantillaRequest = {

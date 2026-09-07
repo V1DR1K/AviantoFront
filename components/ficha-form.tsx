@@ -120,6 +120,7 @@ export function FichaForm({
   const workInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const photoUrls = useRef(new Set<string>());
   const existingUrls = useRef<Record<string, string>>({});
+  const workSearchController = useRef<AbortController | null>(null);
 
   useEffect(
     () => () => {
@@ -131,21 +132,25 @@ export function FichaForm({
     [],
   );
   useEffect(() => {
-    let active = true;
-    void api<TrabajoCatalogoResponse[]>("/configuracion/trabajos/autocomplete", {}, { q: workQuery })
-      .then((items) => { if (active) setWorkSuggestions(items); })
-      .catch(() => { if (active) setWorkSuggestions([]); });
-    return () => { active = false; };
+    const controller = new AbortController();
+    void api<TrabajoCatalogoResponse[]>("/configuracion/trabajos/autocomplete", { signal: controller.signal }, { q: workQuery })
+      .then(setWorkSuggestions)
+      .catch(() => { if (!controller.signal.aborted) setWorkSuggestions([]); });
+    return () => controller.abort();
   }, [workQuery]);
   useEffect(() => {
     const motoId = fichaKey ? undefined : initialMotoId;
-    if (motoId) void api<MotovehiculoResponse>(`/motovehiculos/${motoId}`).then(setCurrentVehicle).catch((reason) => notify(reason instanceof Error ? reason.message : "No se pudo cargar la moto.", "error"));
+    if (!motoId) return;
+    const controller = new AbortController();
+    void api<MotovehiculoResponse>(`/motovehiculos/${motoId}`, { signal: controller.signal }).then(setCurrentVehicle).catch((reason) => { if (!controller.signal.aborted) notify(reason instanceof Error ? reason.message : "No se pudo cargar la moto.", "error"); });
+    return () => controller.abort();
   }, [fichaKey, initialMotoId, notify]);
   useEffect(() => {
     if (!fichaKey) return;
-    void api<FichaResponse>(`/fichas/${fichaKey}`)
+    const controller = new AbortController();
+    void api<FichaResponse>(`/fichas/${fichaKey}`, { signal: controller.signal })
       .then((ficha) => {
-        void api<MotovehiculoResponse>(`/motovehiculos/${ficha.motoId}`).then(setCurrentVehicle).catch(() => undefined);
+        void api<MotovehiculoResponse>(`/motovehiculos/${ficha.motoId}`, { signal: controller.signal }).then(setCurrentVehicle).catch(() => undefined);
         setLoadedEstado(ficha.estado);
         setFechaIngreso(ficha.fechaIngreso.slice(0, 10) || today());
         setFechaEntregaEstimada(ficha.fechaEntregaEstimada ?? "");
@@ -171,22 +176,16 @@ export function FichaForm({
         setTrabajos(nextTrabajos);
         setExpandedObservations(new Set(nextTrabajos.filter((trabajo) => trabajo.observacionTrabajo?.trim()).map((trabajo) => trabajo.key)));
       })
-      .catch((reason) =>
-        notify(
-          reason instanceof Error
-            ? reason.message
-            : "No se pudo cargar la ficha.",
-          "error",
-        ),
-      );
+      .catch((reason) => { if (!controller.signal.aborted) notify(reason instanceof Error ? reason.message : "No se pudo cargar la ficha.", "error"); });
+    return () => controller.abort();
   }, [fichaKey, notify]);
   useEffect(() => {
     if (!fichaKey) return;
-    let active = true;
-    void api<RepuestoResponse[]>(`/fichas/${fichaKey}/repuestos`)
-      .then((items) => { if (active) setLinkedRepuestos(items); })
-      .catch(() => { if (active) setLinkedRepuestos([]); });
-    return () => { active = false; };
+    const controller = new AbortController();
+    void api<RepuestoResponse[]>(`/fichas/${fichaKey}/repuestos`, { signal: controller.signal })
+      .then(setLinkedRepuestos)
+      .catch(() => { if (!controller.signal.aborted) setLinkedRepuestos([]); });
+    return () => controller.abort();
   }, [fichaKey]);
 
   const vehicleId = currentVehicle?.id ?? "";
@@ -424,7 +423,7 @@ export function FichaForm({
                         ref={(element) => { workInputRefs.current[trabajo.key] = element; }}
                         value={trabajo.descripcion}
                         readOnly={trabajo.catalogo}
-                        onFocus={() => { if (trabajo.catalogo) return; setWorkOpen(trabajo.key); setWorkQuery(trabajo.descripcion); void api<TrabajoCatalogoResponse[]>("/configuracion/trabajos/autocomplete", {}, { q: trabajo.descripcion }).then(setWorkSuggestions).catch(() => setWorkSuggestions([])); }}
+                        onFocus={() => { if (trabajo.catalogo) return; setWorkOpen(trabajo.key); setWorkQuery(trabajo.descripcion); workSearchController.current?.abort(); const controller = new AbortController(); workSearchController.current = controller; void api<TrabajoCatalogoResponse[]>("/configuracion/trabajos/autocomplete", { signal: controller.signal }, { q: trabajo.descripcion }).then(setWorkSuggestions).catch(() => { if (!controller.signal.aborted) setWorkSuggestions([]); }); }}
                         onBlur={() => window.setTimeout(() => setWorkOpen((key) => key === trabajo.key ? null : key), 120)}
                         onChange={(event) => {
                           if (trabajo.catalogo) return;

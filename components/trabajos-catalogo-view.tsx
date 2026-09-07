@@ -17,11 +17,14 @@ export function TrabajosCatalogoView({ notify }: { notify: Notify }) {
   const [editing, setEditing] = useState<TrabajoCatalogoResponse | null>(null);
   const [detail, setDetail] = useState<TrabajoCatalogoResponse | null>(null);
   const [deleting, setDeleting] = useState<TrabajoCatalogoResponse | null>(null);
-  const load = () => {
-    void api<TrabajoCatalogoResponse[]>("/configuracion/trabajos", {}, {
+  const load = (signal?: AbortSignal) => {
+    const controller = signal ? null : new AbortController();
+    const requestSignal = signal ?? controller?.signal;
+    void api<TrabajoCatalogoResponse[]>("/configuracion/trabajos", { signal: requestSignal }, {
       q: query || undefined,
       activo: filter === "Todos" ? undefined : filter === "Activo",
-    }).then(setRows).catch((reason) => notify(errorMessage(reason), "error"));
+    }).then(setRows).catch((reason) => { if (!requestSignal?.aborted) notify(errorMessage(reason), "error"); });
+    return () => controller?.abort();
   };
   useEffect(load, [query, filter, notify]);
   const submit = async (values: Record<string, string>) => {
