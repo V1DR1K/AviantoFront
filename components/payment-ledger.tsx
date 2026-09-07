@@ -38,6 +38,7 @@ export function PaymentLedger({
   const [amount, setAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(todayInAr());
   const [paymentMethod, setPaymentMethod] = useState<"" | PaymentMethod>("");
+  const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [paymentToAnnul, setPaymentToAnnul] = useState<PagoResponse | null>(null);
   const endpoint = `/${resource}/${documentId}/pagos`;
@@ -69,6 +70,7 @@ export function PaymentLedger({
     setAmount("");
     setPaymentDate(todayInAr());
     setPaymentMethod("");
+    setIdempotencyKey(null);
   };
   const closeForm = () => {
     if (!saving) resetForm();
@@ -88,7 +90,7 @@ export function PaymentLedger({
     try {
       await api<PagoResponse>(endpoint, {
         method: "POST",
-        body: JSON.stringify({ monto, fecha: paymentDate || undefined, medioPago: paymentMethod || undefined }),
+        body: JSON.stringify({ monto, fecha: paymentDate || undefined, medioPago: paymentMethod || undefined, idempotencyKey: idempotencyKey ?? crypto.randomUUID() }),
       });
       await Promise.all([loadPayments(), onDocumentChange()]);
       resetForm();
@@ -116,7 +118,7 @@ export function PaymentLedger({
     <section className="panel payment-ledger" aria-labelledby={`${resource}-${documentId}-payments`}>
       <div className="payment-ledger-head">
         <div><h2 id={`${resource}-${documentId}-payments`}>Pagos</h2><StatusBadge status={estadoPago} /></div>
-        <button type="button" className="button primary payment-register" disabled={!canRegister} onClick={() => setFormOpen(true)}><CircleDollarSign size={18} />{registerLabel}</button>
+      <button type="button" className="button primary payment-register" disabled={!canRegister} onClick={() => { setIdempotencyKey(crypto.randomUUID()); setFormOpen(true); }}><CircleDollarSign size={18} />{registerLabel}</button>
       </div>
       <div className="payment-balance" aria-label="Balance de pagos del documento">
         <div><span>Total</span><strong>{paymentAmount(total)}</strong></div>
