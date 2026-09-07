@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowDownUp, Download, Edit3, Eye, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download } from "../lib/api";
 import { integerInput, money, parseIntegerInput, parsePrice, priceInput } from "../lib/format";
@@ -47,10 +47,11 @@ export function RepuestosView({
   const [editing, setEditing] = useState<RepuestoResponse | null>(null);
   const [deleting, setDeleting] = useState<RepuestoResponse | null>(null);
   const [clients, setClients] = useState<ClienteResponse[]>([]);
-  const repuestoParams = () => ({ estado: estado === "Todos" ? undefined : estado, q: query || undefined, fechaDesde: desde || undefined, fechaHasta: hasta || undefined, sortBy, direction });
-  useEffect(() => { const controller = new AbortController(); void api<PageResponse<RepuestoResponse>>("/repuestos", { signal: controller.signal }, { ...repuestoParams(), page: page - 1, size: 20 }).then(setResult).catch((err) => { if (!controller.signal.aborted) notify(errorMessage(err), "error"); }); return () => controller.abort(); }, [query, estado, desde, hasta, sortBy, direction, page, notify]);
+  const repuestoParams = useMemo(() => ({ estado: estado === "Todos" ? undefined : estado, q: query || undefined, fechaDesde: desde || undefined, fechaHasta: hasta || undefined, sortBy, direction }), [estado, query, desde, hasta, sortBy, direction]);
+  useEffect(() => { const controller = new AbortController(); void api<PageResponse<RepuestoResponse>>("/repuestos", { signal: controller.signal }, { ...repuestoParams, page: page - 1, size: 20 }).then(setResult).catch((err) => { if (!controller.signal.aborted) notify(errorMessage(err), "error"); }); return () => controller.abort(); }, [repuestoParams, page, notify]);
   const loadClients = () => void api<PageResponse<ClienteResponse>>("/clientes", {}, { size: 100, activo: true }).then((r) => setClients(r.content)).catch(() => undefined);
-  const refresh = () => void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { ...repuestoParams(), page: page - 1, size: 20 }).then(setResult).catch((err) => notify(errorMessage(err), "error"));
+  const refresh = () => void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { ...repuestoParams, page: page - 1, size: 20 }).then(setResult).catch((err) => notify(errorMessage(err), "error"));
+  const loadVehicles = useCallback(async (clienteId: string) => { const r = await api<PageResponse<MotovehiculoResponse>>("/motovehiculos", {}, { clienteId, size: 100, activo: true }); return r.content.filter((moto) => moto.ingresada && moto.seccion === "Taller"); }, []);
   const toggleDirection = () => setDirection((d) => (d === "ASC" ? "DESC" : "ASC"));
   useEffect(() => { if (createPrefill) loadClients(); }, [createPrefill]);
   return (
@@ -78,7 +79,7 @@ export function RepuestosView({
             <ArrowDownUp size={16} />
             {direction === "DESC" ? "Más recientes" : "Más antiguos"}
           </button>
-           <button className="button secondary" onClick={() => void download("/repuestos/export.xlsx", "repuestos.xlsx", repuestoParams()).catch((reason) => notify(errorMessage(reason), "error"))}><Download size={17} />Exportar Excel</button>
+            <button className="button secondary" onClick={() => void download("/repuestos/export.xlsx", "repuestos.xlsx", repuestoParams).catch((reason) => notify(errorMessage(reason), "error"))}><Download size={17} />Exportar Excel</button>
          </FilterBar>
         {result?.content.length ? (
           <table>
@@ -106,7 +107,7 @@ export function RepuestosView({
         prefill={createPrefill}
         clients={clients}
         notify={notify}
-         onLoadVehicles={async (clienteId) => { const r = await api<PageResponse<MotovehiculoResponse>>("/motovehiculos", {}, { clienteId, size: 100, activo: true }); return r.content.filter((moto) => moto.ingresada && moto.seccion === "Taller"); }}
+          onLoadVehicles={loadVehicles}
         onClose={() => { setCreateOpen(false); setEditing(null); onPrefillHandled?.(); }}
         onSaved={(repuesto) => { setCreateOpen(false); setEditing(null); onPrefillHandled?.(); refresh(); onOpen(repuesto); }}
           onError={(message) => notify(message, "error")}
@@ -156,14 +157,18 @@ export function CreateRepuestoDialog({
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     if (!clientId) return;
+    let active = true;
+    const controller = new AbortController();
     void onLoadVehicles(clientId).then((loaded) => {
+      if (!active) return;
       setMotoOptions(loaded);
       const selectedMotoId = initial?.motoId ?? prefill?.motoId;
       if (selectedMotoId && !loaded.some((moto) => moto.id === selectedMotoId)) {
-        void api<MotovehiculoResponse>(`/motovehiculos/${selectedMotoId}`).then((moto) => setMotoOptions((all) => all.some((vehicle) => vehicle.id === moto.id) ? all : [moto, ...all])).catch(() => undefined);
+        void api<MotovehiculoResponse>(`/motovehiculos/${selectedMotoId}`, { signal: controller.signal }).then((moto) => { if (active) setMotoOptions((all) => all.some((vehicle) => vehicle.id === moto.id) ? all : [moto, ...all]); }).catch(() => undefined);
       }
-    }).catch((reason) => onError(errorMessage(reason)));
-  }, [clientId]);
+    }).catch((reason) => { if (active) onError(errorMessage(reason)); });
+    return () => { active = false; controller.abort(); };
+  }, [clientId, initial?.motoId, onError, onLoadVehicles, prefill?.motoId]);
   const changeClient = (value: string) => {
     setClientId(value);
     setMotoId("");
@@ -177,16 +182,18 @@ export function CreateRepuestoDialog({
   };
   useEffect(() => {
     if (!motoId) return;
-    void api<PageResponse<FichaResponse>>("/fichas", {}, { motoId, size: 50 }).then((page) => {
+    const controller = new AbortController();
+    void api<PageResponse<FichaResponse>>("/fichas", { signal: controller.signal }, { motoId, size: 50 }).then((page) => {
       const open = page.content.filter((ficha) => ficha.estado !== "Terminada" && ficha.estado !== "Entregada" && ficha.estado !== "Cancelada");
       setFichas(open);
       const keep = initial?.fichaId && page.content.some((ficha) => ficha.id === initial.fichaId) ? initial.fichaId : "";
       setFichaId(keep || open[0]?.id || "");
       if (initial?.fichaId && !page.content.some((ficha) => ficha.id === initial.fichaId)) {
-        void api<FichaResponse>(`/fichas/${initial.fichaId}`).then((ficha) => { setFichas((all) => all.some((item) => item.id === ficha.id) ? all : [ficha, ...all]); setFichaId(ficha.id); }).catch(() => undefined);
+        void api<FichaResponse>(`/fichas/${initial.fichaId}`, { signal: controller.signal }).then((ficha) => { if (controller.signal.aborted) return; setFichas((all) => all.some((item) => item.id === ficha.id) ? all : [ficha, ...all]); setFichaId(ficha.id); }).catch(() => undefined);
       }
-    }).catch((reason) => onError(errorMessage(reason)));
-  }, [motoId]);
+    }).catch((reason) => { if (!controller.signal.aborted) onError(errorMessage(reason)); });
+    return () => controller.abort();
+  }, [motoId, initial?.fichaId, onError]);
   const changeFicha = (value: string) => {
     setFichaId(value);
     setRows((all) => all.map((row) => {
