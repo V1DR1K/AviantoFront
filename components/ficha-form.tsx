@@ -27,7 +27,7 @@ type Line = {
   observacionTrabajo?: string;
   catalogo?: boolean;
 };
-type PhotoDraft = { file: File; url: string };
+type PhotoDraft = { file: File; url: string; idempotencyKey: string };
 
 const today = todayInAr;
 const workStateClass = (estado: Line["estadoTrabajo"], realizado: boolean) =>
@@ -92,6 +92,7 @@ export function FichaForm({
   notify: Notify;
 }) {
   const editing = Boolean(fichaKey);
+  const [persistedFichaId, setPersistedFichaId] = useState<string | null>(fichaKey ?? null);
   const [loadedEstado, setLoadedEstado] = useState<string | null>(null);
   const editable =
     !editing || loadedEstado === "Pendiente" || loadedEstado === "En proceso";
@@ -266,7 +267,7 @@ export function FichaForm({
         ...converted.map((file) => {
           const url = URL.createObjectURL(file);
           photoUrls.current.add(url);
-          return { file, url };
+          return { file, url, idempotencyKey: crypto.randomUUID() };
         }),
       ]);
     } catch (reason) {
@@ -318,24 +319,27 @@ export function FichaForm({
           observacionTrabajo: trabajo.observacionTrabajo || undefined,
         })),
       };
-      let ficha = fichaKey
-        ? await api<FichaResponse>(`/fichas/${fichaKey}`, {
+      const targetFichaId = persistedFichaId ?? fichaKey;
+      let ficha = targetFichaId
+        ? await api<FichaResponse>(`/fichas/${targetFichaId}`, {
             method: "PUT",
             body: JSON.stringify(request),
           })
         : await api<FichaResponse>("/fichas", {
             method: "POST",
-            body: JSON.stringify(request),
-          });
+          body: JSON.stringify(request),
+        });
+      setPersistedFichaId(ficha.id);
       if (photos.length) {
         await Promise.all(
-          photos.map(async ({ file }) =>
+          photos.map(async ({ file, idempotencyKey }) =>
             api(`/fichas/${ficha.id}/fotos`, {
               method: "POST",
               body: JSON.stringify({
                 filename: file.name,
                 contentType: "image/webp",
                 base64: await readAsBase64(file),
+                idempotencyKey,
               }),
             }),
           ),
