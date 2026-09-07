@@ -46,7 +46,6 @@ function DashboardMetric({ label, value, detail }: { label: string; value: strin
 
 function OrderPhotos({ photos, onChange }: { photos: PhotoResponse[]; onChange: () => void }) {
   const [urls, setUrls] = useState<Record<string, string>>({});
-  const key = photos.map((photo) => photo.id).join(",");
   useEffect(() => {
     let active = true;
     let loaded: Record<string, string> = {};
@@ -61,7 +60,7 @@ function OrderPhotos({ photos, onChange }: { photos: PhotoResponse[]; onChange: 
       active = false;
       Object.values(loaded).forEach(URL.revokeObjectURL);
     };
-  }, [key]);
+  }, [photos]);
   if (!photos.length) return null;
   return (
     <section className="order-photos">
