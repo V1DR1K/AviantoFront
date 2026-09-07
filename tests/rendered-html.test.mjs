@@ -106,6 +106,9 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(fichaForm, /const \[priceDrafts, setPriceDrafts\] = useState<Record<string, string>>\(\{\}\);/);
   assert.match(fichaForm, /onFocus=\{\(\) => setPriceDrafts/);
   assert.match(fichaForm, /onBlur=\{\(\) => setPriceDrafts/);
+  assert.match(fichaForm, /const isDirty = editing/);
+  assert.match(fichaForm, /beforeunload/);
+  assert.match(fichaForm, /Hay cambios sin guardar en esta ficha/);
   assert.match(views, /<h3>Presupuesto<\/h3>/);
   assert.match(fichaForm, /Trabajos y servicios[\s\S]*?Repuestos y accesorios[\s\S]*?<BudgetBreakdown/);
   assert.match(budgetBreakdown, /Trabajos y servicios[\s\S]*?Repuestos y accesorios[\s\S]*?Subtotal[\s\S]*?IVA 21%[\s\S]*?Total presupuesto/);

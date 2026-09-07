@@ -59,18 +59,20 @@ const asWebp = async (file: File) => {
 
 function ExistingPhoto({ photo }: { photo: PhotoResponse }) {
   const [url, setUrl] = useState("");
+  const urlRef = useRef("");
   useEffect(() => {
     let active = true;
     void objectUrl(photo.url)
       .then((next) => {
-        if (active) setUrl(next);
+        if (active) { urlRef.current = next; setUrl(next); }
+        else URL.revokeObjectURL(next);
       })
       .catch(() => undefined);
     return () => {
       active = false;
-      if (url) URL.revokeObjectURL(url);
+      if (urlRef.current) { URL.revokeObjectURL(urlRef.current); urlRef.current = ""; }
     };
-  }, [photo.id]);
+  }, [photo.id, photo.url]);
   if (!url) return null;
   return (
     <a className="existing-photo" href={url} target="_blank" rel="noreferrer">
