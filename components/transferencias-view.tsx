@@ -30,8 +30,9 @@ export function TransferenciasView({
   const [page, setPage] = useState(1);
 
   useEffect(() => {
+    const controller = new AbortController();
     if (!initialMotoId) {
-      void api<PageResponse<TransferResponse>>("/transferencias", {}, {
+      void api<PageResponse<TransferResponse>>("/transferencias", { signal: controller.signal }, {
         q: query || undefined,
         fechaDesde: desde || undefined,
         fechaHasta: hasta || undefined,
@@ -39,10 +40,10 @@ export function TransferenciasView({
         direction,
         page: page - 1,
         size: 20,
-      }).then((next) => { setResult(next); setLoadError(null); }).catch((reason) => { const message = errorMessage(reason); setLoadError(message); notify(message, "error"); });
-      return;
+      }).then((next) => { setResult(next); setLoadError(null); }).catch((reason) => { if (!controller.signal.aborted) { const message = errorMessage(reason); setLoadError(message); notify(message, "error"); } });
+      return () => controller.abort();
     }
-    void api<TransferResponse[]>(`/motovehiculos/${initialMotoId}/transferencias`)
+    void api<TransferResponse[]>(`/motovehiculos/${initialMotoId}/transferencias`, { signal: controller.signal })
       .then((entries) => {
         const normalized = query.trim().toLowerCase();
         const filtered = entries.filter((entry) => {
@@ -56,7 +57,8 @@ export function TransferenciasView({
         });
         setResult({ content: filtered, page: 0, size: filtered.length || 20, totalElements: filtered.length, totalPages: 1, sortBy: "fechaTransferencia", direction }); setLoadError(null);
       })
-      .catch((reason) => { const message = errorMessage(reason); setLoadError(message); notify(message, "error"); });
+      .catch((reason) => { if (!controller.signal.aborted) { const message = errorMessage(reason); setLoadError(message); notify(message, "error"); } });
+    return () => controller.abort();
   }, [query, desde, hasta, direction, page, initialMotoId, notify, reloadKey]);
 
   const params = { q: query || undefined, fechaDesde: desde || undefined, fechaHasta: hasta || undefined, sortBy: "fechaTransferencia", direction };

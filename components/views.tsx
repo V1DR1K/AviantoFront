@@ -255,14 +255,16 @@ export function VentasView({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   useEffect(() => {
-    void api<PageResponse<VentaFichaResponse>>("/ventas", {}, {
+    const controller = new AbortController();
+    void api<PageResponse<VentaFichaResponse>>("/ventas", { signal: controller.signal }, {
       q: query || undefined,
       estado: status === "Todos" ? undefined : status,
       sortBy,
       direction,
       page: page - 1,
       size: 20,
-    }).then((next) => { setResult(next); setLoadError(null); }).catch((reason) => { const message = errorMessage(reason); setLoadError(message); notify(message, "error"); });
+    }).then((next) => { setResult(next); setLoadError(null); }).catch((reason) => { if (!controller.signal.aborted) { const message = errorMessage(reason); setLoadError(message); notify(message, "error"); } });
+    return () => controller.abort();
   }, [query, status, sortBy, direction, page, notify, reloadKey]);
   const emptyLabel = status === "Todos" ? "para mostrar" : status.toLowerCase();
   return <div className="page">
@@ -314,8 +316,9 @@ export function FichasView({
   const [page, setPage] = useState(1);
   const pendingIntake = status === "Ingresada Taller";
   useEffect(() => {
+    const controller = new AbortController();
     if (pendingIntake) {
-      void api<PageResponse<MotovehiculoResponse>>("/motovehiculos", {}, {
+      void api<PageResponse<MotovehiculoResponse>>("/motovehiculos", { signal: controller.signal }, {
         q: query || undefined,
         estado: "Ingresada Taller",
         page: page - 1,
@@ -324,12 +327,12 @@ export function FichasView({
         direction,
       })
         .then(setPendingMotos)
-        .catch((reason) => notify(errorMessage(reason), "error"));
-      return;
+        .catch((reason) => { if (!controller.signal.aborted) notify(errorMessage(reason), "error"); });
+      return () => controller.abort();
     }
     void api<PageResponse<FichaResponse>>(
       "/fichas",
-      {},
+      { signal: controller.signal },
       {
         q: query || undefined,
         estado: status === "Todos" ? undefined : status,
@@ -343,7 +346,8 @@ export function FichasView({
       },
     )
       .then(setResult)
-      .catch((reason) => notify(errorMessage(reason), "error"));
+      .catch((reason) => { if (!controller.signal.aborted) notify(errorMessage(reason), "error"); });
+    return () => controller.abort();
   }, [query, status, paymentStatus, desde, hasta, sortBy, direction, page, pendingIntake, notify]);
   const params = {
     q: query || undefined,

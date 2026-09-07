@@ -26,9 +26,11 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    void api<PageResponse<PerfilResponse>>("/perfiles", {}, { dominio: dominio || undefined, moto: motoQuery || undefined, cliente: clienteQuery || undefined, estado: estado || undefined, sortBy, direction, page: page - 1, size: 20 })
+    const controller = new AbortController();
+    void api<PageResponse<PerfilResponse>>("/perfiles", { signal: controller.signal }, { dominio: dominio || undefined, moto: motoQuery || undefined, cliente: clienteQuery || undefined, estado: estado || undefined, sortBy, direction, page: page - 1, size: 20 })
       .then(setResult)
-      .catch((reason) => notify(reason instanceof Error ? reason.message : "No se pudieron cargar los perfiles.", "error"));
+      .catch((reason) => { if (!controller.signal.aborted) notify(reason instanceof Error ? reason.message : "No se pudieron cargar los perfiles.", "error"); });
+    return () => controller.abort();
   }, [dominio, motoQuery, clienteQuery, estado, sortBy, direction, page, reloadKey, notify]);
   useEffect(() => {
     void api<MarcaMotoResponse[]>("/configuracion/marcas-moto").then((nextBrands) => setBrands(nextBrands.filter((brand) => brand.activo))).catch((reason) => notify(reason instanceof Error ? reason.message : "No se pudieron cargar los datos de edición.", "error"));

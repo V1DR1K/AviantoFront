@@ -48,7 +48,7 @@ export function RepuestosView({
   const [deleting, setDeleting] = useState<RepuestoResponse | null>(null);
   const [clients, setClients] = useState<ClienteResponse[]>([]);
   const repuestoParams = () => ({ estado: estado === "Todos" ? undefined : estado, q: query || undefined, fechaDesde: desde || undefined, fechaHasta: hasta || undefined, sortBy, direction });
-  useEffect(() => { void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { ...repuestoParams(), page: page - 1, size: 20 }).then(setResult).catch((err) => notify(errorMessage(err), "error")); }, [query, estado, desde, hasta, sortBy, direction, page, notify]);
+  useEffect(() => { const controller = new AbortController(); void api<PageResponse<RepuestoResponse>>("/repuestos", { signal: controller.signal }, { ...repuestoParams(), page: page - 1, size: 20 }).then(setResult).catch((err) => { if (!controller.signal.aborted) notify(errorMessage(err), "error"); }); return () => controller.abort(); }, [query, estado, desde, hasta, sortBy, direction, page, notify]);
   const loadClients = () => void api<PageResponse<ClienteResponse>>("/clientes", {}, { size: 100, activo: true }).then((r) => setClients(r.content)).catch(() => undefined);
   const refresh = () => void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { ...repuestoParams(), page: page - 1, size: 20 }).then(setResult).catch((err) => notify(errorMessage(err), "error"));
   const toggleDirection = () => setDirection((d) => (d === "ASC" ? "DESC" : "ASC"));
