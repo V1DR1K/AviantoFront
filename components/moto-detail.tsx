@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ArrowDownUp, ArrowRightLeft, Eye, FileText, Filter, LogIn, Plus, Settings2 } from "lucide-react";
 import { api } from "../lib/api";
 import { integerInput, money, parseIntegerInput } from "../lib/format";
@@ -93,26 +93,30 @@ export function MotoDetail({
   const [circuitReason, setCircuitReason] = useState("");
   const [circuitSaving, setCircuitSaving] = useState(false);
 
-  const load = () =>
-    void api<MotovehiculoResponse>(`/motovehiculos/${id}`)
-      .then((next) => { setMoto(next); if (next.propietarioId) void api<ClienteResponse>(`/clientes/${next.propietarioId}`).then(setClient).catch(() => setClient(null)); })
-       .catch((reason) => { setError(errorMessage(reason)); notify(errorMessage(reason), "error"); });
+  const load = useCallback((signal?: AbortSignal) =>
+    void api<MotovehiculoResponse>(`/motovehiculos/${id}`, { signal })
+      .then((next) => { setMoto(next); if (next.propietarioId) void api<ClienteResponse>(`/clientes/${next.propietarioId}`, { signal }).then(setClient).catch(() => { if (!signal?.aborted) setClient(null); }); })
+       .catch((reason) => { if (!signal?.aborted) { setError(errorMessage(reason)); notify(errorMessage(reason), "error"); } }), [id, notify]);
   const panelError = (key: string, reason: unknown) => setPanelErrors((current) => ({ ...current, [key]: errorMessage(reason) }));
-  const loadServices = () => void api<PageResponse<ServiceResponse>>(`/motovehiculos/${id}/services/historial`, {}, { fechaDesde: serviceDesde || undefined, fechaHasta: serviceHasta || undefined, page: servicePage - 1, size: 10, sortBy: serviceSort, direction: serviceDirection }).then((value) => { setServices(value); setPanelErrors((current) => ({ ...current, services: "" })); }).catch((reason) => panelError("services", reason));
-  const loadFichas = () => void api<PageResponse<FichaResponse>>("/fichas", {}, { motoId: id, fechaDesde: fichaDesde || undefined, fechaHasta: fichaHasta || undefined, estado: fichaEstado || undefined, estadoPago: fichaPago || undefined, page: fichaPage - 1, size: 10, sortBy: fichaSort, direction: fichaDirection }).then((value) => { setFichas(value); setPanelErrors((current) => ({ ...current, fichas: "" })); }).catch((reason) => panelError("fichas", reason));
-  const loadRepuestos = () => void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { motoId: id, fechaDesde: repuestoDesde || undefined, fechaHasta: repuestoHasta || undefined, estado: repuestoEstado || undefined, estadoPago: repuestoPago || undefined, page: repuestoPage - 1, size: 10, sortBy: repuestoSort, direction: repuestoDirection }).then((value) => { setRepuestos(value); setPanelErrors((current) => ({ ...current, repuestos: "" })); }).catch((reason) => panelError("repuestos", reason));
-  const loadNext = () => void api<NextServiceResponse[]>("/services/proximos").then((list) => { setNextService(list.find((next) => next.motoId === id) ?? null); setPanelErrors((current) => ({ ...current, next: "" })); }).catch((reason) => panelError("next", reason));
-  useEffect(load, [id, notify]);
-  useEffect(() => { loadServices(); }, [id, serviceDesde, serviceHasta, serviceSort, serviceDirection, servicePage, notify]);
-  useEffect(() => { loadFichas(); }, [id, fichaDesde, fichaHasta, fichaEstado, fichaPago, fichaSort, fichaDirection, fichaPage, notify]);
-  useEffect(() => { loadRepuestos(); }, [id, repuestoDesde, repuestoHasta, repuestoEstado, repuestoPago, repuestoSort, repuestoDirection, repuestoPage, notify]);
+  const loadServices = useCallback((signal?: AbortSignal) => void api<PageResponse<ServiceResponse>>(`/motovehiculos/${id}/services/historial`, { signal }, { fechaDesde: serviceDesde || undefined, fechaHasta: serviceHasta || undefined, page: servicePage - 1, size: 10, sortBy: serviceSort, direction: serviceDirection }).then((value) => { setServices(value); setPanelErrors((current) => ({ ...current, services: "" })); }).catch((reason) => { if (!signal?.aborted) panelError("services", reason); }), [id, serviceDesde, serviceHasta, servicePage, serviceSort, serviceDirection]);
+  const loadFichas = useCallback((signal?: AbortSignal) => void api<PageResponse<FichaResponse>>("/fichas", { signal }, { motoId: id, fechaDesde: fichaDesde || undefined, fechaHasta: fichaHasta || undefined, estado: fichaEstado || undefined, estadoPago: fichaPago || undefined, page: fichaPage - 1, size: 10, sortBy: fichaSort, direction: fichaDirection }).then((value) => { setFichas(value); setPanelErrors((current) => ({ ...current, fichas: "" })); }).catch((reason) => { if (!signal?.aborted) panelError("fichas", reason); }), [id, fichaDesde, fichaHasta, fichaEstado, fichaPago, fichaPage, fichaSort, fichaDirection]);
+  const loadRepuestos = useCallback((signal?: AbortSignal) => void api<PageResponse<RepuestoResponse>>("/repuestos", { signal }, { motoId: id, fechaDesde: repuestoDesde || undefined, fechaHasta: repuestoHasta || undefined, estado: repuestoEstado || undefined, estadoPago: repuestoPago || undefined, page: repuestoPage - 1, size: 10, sortBy: repuestoSort, direction: repuestoDirection }).then((value) => { setRepuestos(value); setPanelErrors((current) => ({ ...current, repuestos: "" })); }).catch((reason) => { if (!signal?.aborted) panelError("repuestos", reason); }), [id, repuestoDesde, repuestoHasta, repuestoEstado, repuestoPago, repuestoPage, repuestoSort, repuestoDirection]);
+  const loadNext = useCallback((signal?: AbortSignal) => void api<NextServiceResponse[]>("/services/proximos", { signal }).then((list) => { setNextService(list.find((next) => next.motoId === id) ?? null); setPanelErrors((current) => ({ ...current, next: "" })); }).catch((reason) => { if (!signal?.aborted) panelError("next", reason); }), [id]);
+  useEffect(() => { const controller = new AbortController(); load(controller.signal); return () => controller.abort(); }, [load]);
+  useEffect(() => { const controller = new AbortController(); loadServices(controller.signal); return () => controller.abort(); }, [loadServices]);
+  useEffect(() => { const controller = new AbortController(); loadFichas(controller.signal); return () => controller.abort(); }, [loadFichas]);
+  useEffect(() => { const controller = new AbortController(); loadRepuestos(controller.signal); return () => controller.abort(); }, [loadRepuestos]);
   useEffect(() => {
-    loadNext();
-    void api<TransferResponse[]>(`/motovehiculos/${id}/transferencias`).then(setTransfers).catch(() => undefined);
-  }, [id, notify]);
+    const controller = new AbortController();
+    loadNext(controller.signal);
+    void api<TransferResponse[]>(`/motovehiculos/${id}/transferencias`, { signal: controller.signal }).then(setTransfers).catch(() => undefined);
+    return () => controller.abort();
+  }, [id, loadNext]);
   useEffect(() => {
     if (moto?.seccion !== "Venta") return;
-    void api<VentaFichaResponse>(`/motovehiculos/${id}/venta`).then(setSaleFicha).catch(() => setSaleFicha(null));
+    const controller = new AbortController();
+    void api<VentaFichaResponse>(`/motovehiculos/${id}/venta`, { signal: controller.signal }).then(setSaleFicha).catch(() => { if (!controller.signal.aborted) setSaleFicha(null); });
+    return () => controller.abort();
   }, [id, moto?.seccion]);
 
   const addService = async () => {
