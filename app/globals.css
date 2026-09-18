@@ -1,45 +1,5 @@
 @import "tailwindcss";
-:root {
-  --color-brand-950: #0b294a;
-  --color-brand-900: #12355b;
-  --color-brand-700: #2468a5;
-  --color-canvas: #f4f7fa;
-  --color-surface: #fff;
-  --color-surface-subtle: #eef5fa;
-  --color-surface-muted: #f1f5f8;
-  --color-border: #c9d6e2;
-  --color-border-strong: #aebfd0;
-  --color-text: #13243b;
-  --color-text-muted: #607188;
-  --color-label: #43556b;
-  --color-focus: #0b294a;
-  --color-success: #137a4d;
-  --color-danger: #b42318;
-  --color-warning: #76510a;
-  --navy: var(--color-brand-900);
-  --navy-2: var(--color-brand-950);
-  --blue: var(--color-brand-700);
-  --paper: var(--color-canvas);
-  --line: var(--color-border);
-  --ink: var(--color-text);
-  --muted: var(--color-text-muted);
-  --green: var(--color-success);
-  --red: var(--color-danger);
-  --warning: var(--color-warning);
-  --white: var(--color-surface);
-  --radius-surface: 14px;
-  --radius-control: 9px;
-  --radius-field: 8px;
-  --radius-pill: 999px;
-  --radius: var(--radius-surface);
-  --border-field: var(--color-border-strong);
-  --shadow-document: 0 12px 28px rgba(18, 53, 91, 0.09);
-  --shadow-modal: 0 20px 65px rgba(0, 0, 0, 0.3);
-  --shadow: var(--shadow-document);
-  --modal-shadow: var(--shadow-modal);
-  --focus-ring: 0 0 0 3px rgba(11, 41, 74, 0.28);
-  --mobile-nav-height: 74px;
-}
+@import "./design-tokens.css";
 * {
   box-sizing: border-box;
 }
@@ -47,9 +7,9 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: "Aptos", "Segoe UI Variable", sans-serif;
-  font-size: 15px;
-  line-height: 1.45;
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
 }
 button,
 input,
@@ -109,12 +69,12 @@ textarea:focus-visible {
   text-align: left;
 }
 .brand span span {
-  color: #91c5e9;
+  color: var(--brand-blue-soft);
 }
 .brand-mark {
   width: 33px;
   height: 33px;
-  border: 2px solid #a4d3ef;
+  border: 2px solid var(--brand-blue-soft);
   border-radius: 9px;
   display: grid;
   place-items: center;
@@ -139,7 +99,7 @@ textarea:focus-visible {
 }
 .sidebar nav button:hover,
 .sidebar nav button.active {
-  background: #214c78;
+  background: var(--brand-blue-strong);
   color: #fff;
 }
 .nav-group {
@@ -4049,6 +4009,323 @@ td.table-actions {
     gap: 5px;
   }
 }
+
+/* Avianto Motos brand system: applied after legacy surface rules so every view shares the same visual language. */
+.brand-logo {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  color: inherit;
+  line-height: 1;
+}
+.brand-logo img {
+  display: block;
+  width: var(--brand-logo-size, 168px);
+  height: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+.brand-logo-mark img {
+  width: 48px;
+  height: 48px;
+}
+.brand-logo-descriptor {
+  color: currentColor;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.sidebar .brand {
+  align-items: flex-start;
+  min-height: 48px;
+  padding-inline: 8px;
+}
+.sidebar .brand-logo img {
+  width: 156px;
+}
+.sidebar.collapsed .brand-logo img {
+  width: 48px;
+}
+.sidebar.collapsed .brand-logo-descriptor {
+  display: none;
+}
+.mobile-header .brand-text {
+  display: inline-flex;
+  flex: 1;
+  justify-content: center;
+  padding: 0;
+}
+.mobile-header .brand-logo img {
+  width: 136px;
+}
+.mobile-header .brand-logo-descriptor {
+  display: none;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-body);
+}
+body {
+  background: var(--color-canvas);
+  color: var(--color-text);
+}
+h1,
+h2,
+h3,
+h4,
+.page-heading h1,
+.landing-page h1,
+.landing-page h2 {
+  font-family: var(--font-display);
+}
+.sidebar {
+  background: var(--brand-blue);
+}
+.sidebar nav button:hover,
+.sidebar nav button.active {
+  background: var(--brand-blue-strong);
+}
+.sidebar nav button:focus-visible,
+.sidebar .settings:focus-visible,
+.mobile-header button:focus-visible {
+  outline-color: var(--brand-white);
+}
+.brand span span {
+  color: var(--brand-white);
+}
+.button.primary {
+  background: var(--brand-blue);
+  color: var(--brand-white);
+}
+.button.primary:hover {
+  background: var(--brand-blue-strong);
+}
+.button.secondary {
+  border-color: var(--color-border-strong);
+  color: var(--brand-blue);
+}
+.button.secondary:hover,
+.button.tertiary:hover {
+  background: var(--brand-blue-soft);
+}
+.button.danger,
+.button.danger-outline:hover {
+  background: var(--brand-red);
+  color: var(--brand-white);
+}
+.button.danger-outline {
+  border-color: var(--brand-red);
+  color: var(--brand-red-strong);
+  background: var(--brand-white);
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline-color: var(--brand-blue);
+}
+textarea,
+input,
+.select-control,
+.autocomplete-field {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+textarea:focus,
+input:focus,
+.select-control:focus-within,
+.select-control.is-open,
+.autocomplete-field:focus-within {
+  border-color: var(--brand-blue);
+  box-shadow: var(--focus-ring);
+}
+.panel,
+.form-section,
+.summary,
+.metric {
+  border: 1px solid rgb(48 52 139 / 0.08);
+  box-shadow: var(--shadow-document);
+}
+.status.status-info,
+.status.status-neutral {
+  background: var(--brand-blue-soft);
+  color: var(--brand-blue-strong);
+}
+.status.status-success {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+.status.status-danger {
+  background: var(--brand-red-soft);
+  color: var(--brand-red-strong);
+}
+.status.status-warning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+.status.status-violet {
+  background: var(--color-violet-soft);
+  color: var(--color-violet);
+}
+.select-menu,
+.suggestions {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-document);
+}
+.select-menu button:hover,
+.select-menu button.highlighted,
+.suggestions button:hover,
+.suggestions button[aria-selected="true"] {
+  background: var(--brand-blue-soft);
+  color: var(--brand-blue-strong);
+}
+.modal-backdrop {
+  background: rgb(19 20 43 / 0.62);
+}
+.modal {
+  border: 1px solid rgb(48 52 139 / 0.14);
+  box-shadow: var(--shadow-modal);
+}
+.toast-success {
+  border-color: rgb(19 122 77 / 0.24);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+.toast-error {
+  border-color: rgb(229 37 40 / 0.24);
+  background: var(--brand-red-soft);
+  color: var(--brand-red-strong);
+}
+.toast-warning {
+  border-color: rgb(133 93 6 / 0.24);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+.toast-info {
+  border-color: rgb(48 52 139 / 0.2);
+  background: var(--brand-blue-soft);
+  color: var(--brand-blue-strong);
+}
+.login-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--brand-blue);
+}
+.login-page::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url("/brand/avianto-isotipo-white.png") center / min(72vw, 720px) auto no-repeat;
+  content: "";
+  opacity: 0.1;
+}
+.login-card {
+  background: rgb(48 52 139 / 0.96);
+  border: 1px solid rgb(255 255 255 / 0.25);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.24);
+  color: var(--brand-white);
+}
+.login-card h1,
+.login-card p,
+.login-card label {
+  color: var(--brand-white);
+}
+.login-brand {
+  color: var(--brand-white);
+}
+.login-card input {
+  border-color: transparent;
+}
+.login-card .button.primary {
+  background: var(--brand-white);
+  color: var(--brand-blue);
+}
+.login-card .button.primary:hover {
+  background: var(--brand-red);
+  color: var(--brand-white);
+}
+.landing-page {
+  --landing-ink: var(--color-text);
+  --landing-navy: var(--brand-blue);
+  --landing-blue: var(--brand-blue);
+  --landing-paper: var(--color-canvas);
+  --landing-line: var(--color-border);
+  --landing-muted: var(--color-text-muted);
+  background: var(--color-canvas);
+  font-family: var(--font-body);
+}
+.landing-brand .brand-logo img {
+  width: 138px;
+}
+.landing-brand .brand-logo-descriptor {
+  color: var(--brand-blue);
+}
+.landing-hero h1 em,
+.landing-hero h1 strong,
+.landing-intro h2 em {
+  color: var(--brand-red);
+}
+.landing-button-primary,
+.landing-cta {
+  background: var(--brand-blue);
+}
+.landing-button-primary:hover {
+  background: var(--brand-blue-strong);
+}
+.landing-visual-tag-one,
+.landing-record-status {
+  background: var(--brand-red);
+}
+.landing-hero-visual {
+  background: var(--brand-blue-soft);
+  border-color: var(--color-border);
+}
+.landing-hero-visual::after {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: url("/brand/avianto-isotipo.png") 120% 120% / 62% auto no-repeat;
+  content: "";
+  opacity: 0.035;
+  pointer-events: none;
+}
+.landing-hero-visual > * {
+  position: relative;
+}
+.landing-cta h2,
+.landing-cta .landing-button-light {
+  color: var(--brand-white) !important;
+}
+.landing-cta .landing-button-light {
+  background: var(--brand-red);
+}
+.landing-cta .landing-button-light:hover {
+  background: var(--brand-red-strong);
+}
+.login-card label {
+  color: var(--brand-white);
+}
+@media (max-width: 680px) {
+  .sidebar .brand-logo img,
+  .mobile-header .brand-logo img {
+    width: 122px;
+  }
+  .landing-brand .brand-logo img {
+    width: 116px;
+  }
+}
 .filter-bar > .select-control,
 .filter-bar > .select-field {
   height: 40px;
@@ -4878,8 +5155,8 @@ td.table-actions {
 /* Public landing: the product's service-record language, opened into a commercial story. */
 .landing-page {
   --landing-ink: #102b47;
-  --landing-navy: #12355b;
-  --landing-blue: #2468a5;
+  --landing-navy: var(--brand-blue);
+  --landing-blue: var(--brand-blue);
   --landing-paper: #f4f7fa;
   --landing-line: #c9d6e2;
   --landing-muted: #5d7084;
@@ -4921,7 +5198,7 @@ td.table-actions {
 .landing-button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 0 18px; border-radius: 9px; font-size: 14px; font-weight: 800; transition: transform .16s ease, background-color .16s ease, color .16s ease; }
 .landing-button:hover { transform: translateY(-2px); }
 .landing-button-primary { background: var(--landing-navy); color: #fff !important; box-shadow: 0 10px 22px rgba(18, 53, 91, .16); }
-.landing-button-primary:hover { background: #0b294a; }
+.landing-button-primary:hover { background: var(--brand-blue-strong); }
 .landing-button-light { background: #fff; color: var(--landing-navy) !important; }
 .landing-text-link { display: inline-flex; align-items: center; gap: 7px; color: var(--landing-navy); font-size: 14px; font-weight: 800; }
 .landing-note { margin: 20px 0 0; color: var(--landing-muted); font-size: 12px; }
@@ -5035,4 +5312,48 @@ td.table-actions {
   .landing-button-light { width: 100%; }
   .landing-footer { align-items: flex-start; flex-direction: column; padding-bottom: 30px; }
   .landing-footer > div { align-items: flex-start; flex-direction: column; gap: 12px; }
+}
+
+/* Final landing overrides keep the public surface on the same tokens as the application shell. */
+.landing-page {
+  --landing-ink: var(--color-text);
+  --landing-navy: var(--brand-blue);
+  --landing-blue: var(--brand-blue);
+  --landing-paper: var(--color-canvas);
+  --landing-line: var(--color-border);
+  --landing-muted: var(--color-text-muted);
+  background: var(--color-canvas);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+.landing-brand .brand-logo img { width: 138px; }
+.landing-brand .brand-logo-descriptor { color: var(--brand-blue); }
+.landing-hero h1 em { color: var(--brand-red); }
+.landing-button-primary,
+.landing-cta { background: var(--brand-blue); }
+.landing-button-primary:hover { background: var(--brand-blue-strong); }
+.landing-visual-tag-one { background: var(--brand-red); }
+.landing-hero-visual { background: var(--brand-blue-soft); border-color: var(--color-border); }
+.landing-hero-visual::after {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: url("/brand/avianto-isotipo.png") 120% 120% / 62% auto no-repeat;
+  content: "";
+  opacity: 0.035;
+  pointer-events: none;
+}
+.landing-hero-visual > * { position: relative; z-index: 1; }
+.landing-cta h2,
+.landing-cta .landing-button-light { color: var(--brand-white) !important; }
+.landing-cta .landing-button-light { background: var(--brand-red); }
+.landing-cta .landing-button-light:hover { background: var(--brand-red-strong); }
+@media (max-width: 680px) {
+  .landing-brand .brand-logo img { width: 116px; }
+}
+.login-card input:focus-visible {
+  border-color: var(--brand-white);
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 0.28);
+  outline: 3px solid var(--brand-white);
+  outline-offset: 2px;
 }

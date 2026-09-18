@@ -18,6 +18,7 @@ import {
   Wrench,
 } from "lucide-react";
 import type { AuthSession } from "../lib/auth";
+import { BrandLogo } from "./brand-logo";
 const home = { id: "dashboard", label: "Inicio", icon: LayoutDashboard };
 const navGroups = [
   { id: "taller", label: "Taller", items: [{ id: "orders", label: "Fichas", icon: FileText }, { id: "repuestos", label: "Pedidos", icon: Package }] },
@@ -91,10 +92,7 @@ export function AppShell({
           onClick={() => go("dashboard")}
           aria-label="Ir al inicio"
         >
-          <span className="brand-mark">A</span>
-          <span>
-            Avianto<span>Software</span>
-          </span>
+          <BrandLogo variant="white" size="sm" />
         </button>
         <nav>
           {renderItem(home)}
@@ -137,7 +135,7 @@ export function AppShell({
             <Menu />
           </button>
           <button className="brand-text" onClick={() => go("dashboard")}>
-            AviantoSoftware
+            <BrandLogo variant="color" size="sm" />
           </button>
           <button
             className="button mobile-new"

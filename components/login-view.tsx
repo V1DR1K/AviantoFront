@@ -3,19 +3,15 @@
 import { useState } from "react";
 import { LogIn } from "lucide-react";
 import { login, type AuthSession } from "../lib/auth";
-import type { Notify } from "./ui";
+import { Button, type Notify } from "./ui";
+import { BrandLogo } from "./brand-logo";
 
 export function LoginView({ onAuthenticated, notify }: { onAuthenticated: (session: AuthSession) => void; notify: Notify }) {
   const [pending, setPending] = useState(false);
   return (
     <main className="login-page">
       <section className="login-card">
-        <div className="login-brand">
-          <span className="brand-mark">A</span>
-          <strong>
-            Avianto<span>Software</span>
-          </strong>
-        </div>
+        <div className="login-brand"><BrandLogo variant="white" size="md" descriptor /></div>
         <div>
           <h1>Iniciar sesión</h1>
           <p>Accedé a la gestión operativa del taller.</p>
@@ -49,10 +45,10 @@ export function LoginView({ onAuthenticated, notify }: { onAuthenticated: (sessi
               required
             />
           </label>
-          <button className="button primary large" type="submit" disabled={pending}>
+          <Button type="submit" size="large" loading={pending} loadingLabel="Ingresando...">
             <LogIn size={18} />
-            {pending ? "Ingresando..." : "Ingresar"}
-          </button>
+            Ingresar
+          </Button>
         </form>
       </section>
     </main>

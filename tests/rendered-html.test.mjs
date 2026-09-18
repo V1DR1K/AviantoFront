@@ -12,16 +12,16 @@ async function render() {
   }, { waitUntil() {}, passThroughOnException() {} });
 }
 
-test("server-renders motorcom landing metadata", async () => {
+test("server-renders Avianto landing metadata", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
-  assert.match(html, /<title>motorcom \| Gestión de taller<\/title>/i);
+  assert.match(html, /<title>Avianto \| Gestión de taller<\/title>/i);
   assert.match(html, /<meta[^>]+name="viewport"[^>]+content="width=device-width, initial-scale=1"[^>]*>/i);
   assert.doesNotMatch(html, /maximum-scale|user-scalable=no/i);
   assert.match(html, /Cada moto tiene una historia/);
-  assert.match(html, /Conocer motorcom/);
+  assert.match(html, /Conocer Avianto/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview|SkeletonPreview/);
 });
 

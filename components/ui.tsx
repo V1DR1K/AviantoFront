@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { AlertTriangle, Check, CheckCircle2, ChevronDown, Clock3, Info, Search, SlidersHorizontal, X, type LucideIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { AutocompleteResponse } from "../lib/types";
@@ -7,6 +7,31 @@ import type { AutocompleteResponse } from "../lib/types";
 export type ToastTone = "success" | "error" | "warning" | "info";
 export type ToastState = { message: string; tone: ToastTone };
 export type Notify = (message: string, tone?: ToastTone) => void;
+
+export type ButtonVariant = "primary" | "secondary" | "danger" | "danger-outline" | "tertiary";
+
+export function Button({
+  variant = "primary",
+  size,
+  loading = false,
+  loadingLabel = "Cargando...",
+  className = "",
+  children,
+  disabled,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant;
+  size?: "default" | "large";
+  loading?: boolean;
+  loadingLabel?: string;
+}) {
+  const classes = ["button", variant, size === "large" ? "large" : "", className].filter(Boolean).join(" ");
+  return (
+    <button {...props} className={classes} disabled={disabled || loading} aria-busy={loading || undefined}>
+      {loading ? loadingLabel : children}
+    </button>
+  );
+}
 
 function statusToneValue(status: string) {
   const s = status.toLowerCase();

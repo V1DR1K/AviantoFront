@@ -33,15 +33,15 @@ An Argentine motorcycle workshop. Core records are customers, their motorcycles,
 - No real authentication yet; the interface must make Operario and Administración contexts distinct.
 - Logical deletion, protected sensitive actions, filters, pagination, mock Excel export, PDF preview/download, and device-local data are required for the MVP.
 - Photos are base64-style mock data until backend uploads are added.
-- Brand assets exist but are not presently available. The design system must parameterize visual tokens so a future brand manual can replace them without restructuring the product.
+- Brand assets are sourced from the Avianto Motos manual and stored as reusable frontend assets. The design system must keep the official blue/red identity, approved logo variants and Arboria font hook replaceable without restructuring the product.
 
 ## Brand Commitments
 
-The visible product name is AviantoSoftware. The current brief binds a clear professional interface, deep blue as the working primary color, green for positive actions or states, red only for destructive/risk states, large accessible type, white and soft gray surfaces, and mechanics/motorcycles as a subtle—not decorative—reference.
+The visible product identity is AVIANTO with the descriptor “Mecánica integral de motos”. AviantoSoftware remains the technical product name in metadata. The interface uses the official blue `#30348B`, red `#E52528`, white and black, with green reserved for positive states, large accessible type, and mechanics/motorcycles as a subtle—not decorative—reference.
 
 ## Evidence on Hand
 
-The brief supplies product requirements and realistic example motorcycle and catalogue data. No logo, final brand manual, customer testimonials, commercial benchmarks, or real workshop photography is available; none may be invented as factual proof.
+The official brand manual and editable Illustrator/PDF artwork are available in the workspace. No customer testimonials, commercial benchmarks, or real workshop photography may be invented as factual proof.
 
 ## Product Principles
 
