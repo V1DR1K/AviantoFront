@@ -419,7 +419,7 @@ export function FichaForm({
              <div className="ficha-moto-fields">
                <label>Fecha ingreso<input type="date" value={fechaIngreso} onChange={(event) => setFechaIngreso(event.target.value)} /></label>
                <label>Entrega estimada<input type="date" value={fechaEntregaEstimada} onChange={(event) => setFechaEntregaEstimada(event.target.value)} /></label>
-               <label>Kilometraje ingreso<input type="text" inputMode="numeric" value={integerInput(kilometrajeIngreso)} onChange={(event) => setKilometrajeIngreso(event.target.value)} placeholder="KM actual" /></label>
+               <label>Kilometraje ingreso<input type="text" inputMode="numeric" value={integerInput(kilometrajeIngreso)} onChange={(event) => setKilometrajeIngreso(event.target.value)} placeholder="KM al ingresar" aria-describedby="kilometraje-ingreso-help" /><small id="kilometraje-ingreso-help">Debe ser igual o mayor al kilometraje actual registrado.</small></label>
              </div>
             </section>
            <section className="form-section">
