@@ -1,5 +1,5 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
-import { ArrowRight, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { BrandLogo } from "./brand-logo";
 
 export type AviantoTab = { id: string; label: string };
@@ -55,8 +55,8 @@ export function VehicleField({ label, value, tone }: { label: string; value: Rea
   return <div className={`avianto-vehicle-field${tone ? ` tone-${tone}` : ""}`}><span>{label}</span><strong>{value}</strong></div>;
 }
 
-export function VehicleCard({ plate, children, action }: { plate: string; children: ReactNode; action?: ReactNode }) {
-  return <article className="avianto-vehicle-card"><header><strong>{plate}</strong></header><div className="avianto-vehicle-card-fields">{children}</div>{action && <footer>{action}<ArrowRight size={17} aria-hidden="true" /></footer>}</article>;
+export function VehicleCard({ plate, children, action, variant = "dashboard" }: { plate: string; children: ReactNode; action?: ReactNode; variant?: "dashboard" | "profile" | "ficha" }) {
+  return <article className={`avianto-vehicle-card avianto-vehicle-card-${variant}`}><header><strong>{plate}</strong></header><div className="avianto-vehicle-card-fields">{children}</div>{action && <footer>{action}</footer>}</article>;
 }
 
 export function ServiceCard({ date, km, next, notes }: { date: string; km: string; next?: string; notes?: string | null }) {

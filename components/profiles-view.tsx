@@ -78,7 +78,7 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
       <StatusRail active={estado || "Todos"} onChange={(value) => { setEstado(value === "Todos" ? "" : value); setPage(1); }} items={[{ id: "Todos", label: "Todos", count: result?.totalElements ?? 0 }, ...profileStates.map((state) => ({ id: state, label: state, count: result?.content.filter((profile) => profile.estado === state).length ?? 0 }))]} />
       <div className="avianto-screen-body">
         <div className="avianto-mobile-list">
-          {result?.content.length ? result.content.map((profile) => <VehicleCard key={profile.id} plate={profile.patente} action={<div className="avianto-vehicle-actions">
+          {result?.content.length ? result.content.map((profile) => <VehicleCard key={profile.id} variant="profile" plate={profile.patente} action={<div className="avianto-vehicle-actions">
             <button type="button" className="text-button" onClick={() => onOpen(profile.id)}>Abrir perfil</button>
             {!profile.ingresada && <button type="button" className="text-button" onClick={() => onIntake(profile.patente)}>Ingresar moto</button>}
             {profile.ingresada && profile.seccion === "Venta" && <button type="button" className="text-button" aria-label={`Abrir ficha de venta ${profile.patente}`} onClick={() => onOpenSale(profile.id)}>Abrir venta</button>}

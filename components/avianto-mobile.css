@@ -77,19 +77,27 @@
 .avianto-metric-card.tone-neutral { border-color: var(--color-border-strong); }
 .avianto-vehicle-card {
   overflow: hidden;
-  border: 2px solid var(--brand-blue);
-  border-radius: 16px;
+  display: grid;
+  gap: 0;
+  padding: 16px 18px 0;
+  border: 3px solid var(--brand-blue);
+  border-radius: 28px;
   background: var(--brand-white);
-  box-shadow: var(--shadow-document);
+  box-shadow: none;
 }
 .avianto-vehicle-card > header {
-  padding: 12px 16px;
+  padding: 10px 16px;
+  border-radius: 12px 12px 0 0;
   background: var(--brand-blue);
   color: var(--brand-white);
   text-align: center;
 }
-.avianto-vehicle-card > header strong { font-size: 1.4rem; letter-spacing: 0.04em; }
-.avianto-vehicle-card-fields { display: grid; gap: 0; padding: 0 12px 10px; }
+.avianto-vehicle-card > header strong { font-size: 1.45rem; letter-spacing: 0.04em; }
+.avianto-vehicle-card-fields { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; padding: 0; background: var(--color-surface-subtle); }
+.avianto-vehicle-card-profile .avianto-vehicle-field:nth-child(-n + 3) { grid-column: span 2; }
+.avianto-vehicle-card-profile .avianto-vehicle-field:nth-child(n + 4) { grid-column: span 3; }
+.avianto-vehicle-card-dashboard .avianto-vehicle-card-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.avianto-vehicle-card-ficha .avianto-vehicle-card-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .avianto-vehicle-field {
   display: grid;
   min-height: 58px;
@@ -100,7 +108,7 @@
 .avianto-vehicle-field span { color: var(--brand-blue); font-size: 0.72rem; line-height: 1.1; }
 .avianto-vehicle-field strong { color: var(--brand-blue); font-size: 1.02rem; line-height: 1.05; }
 .avianto-vehicle-field.tone-red strong { color: var(--brand-red); }
-.avianto-vehicle-card footer { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; color: var(--brand-blue); font-weight: 800; }
+.avianto-vehicle-card footer { display: flex; align-items: center; justify-content: center; min-height: 54px; margin: 0 -18px; padding: 8px 14px; border-radius: 0 0 22px 22px; background: var(--color-surface-subtle); color: var(--brand-blue); font-weight: 800; }
 .avianto-service-card { display: grid; gap: 10px; padding: 14px; background: var(--color-surface-subtle); border-bottom: 1px solid var(--color-border); }
 .avianto-service-card > div { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
 .avianto-service-card p { margin: 0; color: var(--color-text-muted); font-size: 0.84rem; }
@@ -110,7 +118,7 @@ body main.login-page {
   background: var(--brand-white);
 }
 body main.login-page::before {
-  background: var(--asset-isotipo) center / min(120vw, 820px) auto no-repeat;
+  background: var(--asset-isotipo) center / min(135vw, 960px) auto no-repeat;
   opacity: 1;
 }
 body main.login-page .login-card {
@@ -140,7 +148,9 @@ body main.login-page .login-card .button.primary { text-transform: uppercase; fo
     display: grid;
     grid-template-columns: 44px 1fr auto;
     align-items: center;
+    height: 78px;
     min-height: 78px;
+    box-sizing: border-box;
     padding: 10px 12px;
     border-bottom: 1px solid var(--color-border);
     background: var(--brand-white);
@@ -166,9 +176,9 @@ body main.login-page .login-card .button.primary { text-transform: uppercase; fo
     background: var(--brand-blue);
     box-shadow: 0 -5px 16px rgb(0 0 0 / 0.16);
   }
-  .avianto-bottom-navigation button { display: grid; min-width: 44px; min-height: 44px; place-items: center; border: 0; background: transparent; color: var(--brand-white); font-size: 0.72rem; font-weight: 700; }
+  .avianto-bottom-navigation button { display: grid; min-width: 44px; min-height: 44px; place-items: center; border: 0; background: transparent; color: var(--brand-white); font-size: 0.82rem; font-weight: 700; }
   .avianto-bottom-navigation button.active { color: var(--brand-red); }
-  .avianto-bottom-art { display: block; width: min(100%, 76px); height: 52px; background: currentColor; -webkit-mask-image: var(--avianto-nav-art); mask-image: var(--avianto-nav-art); -webkit-mask-position: center; mask-position: center; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-size: contain; mask-size: contain; }
+  .avianto-bottom-art { display: block; width: min(100%, 84px); height: 60px; background: currentColor; -webkit-mask-image: var(--avianto-nav-art); mask-image: var(--avianto-nav-art); -webkit-mask-position: center; mask-position: center; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-size: contain; mask-size: contain; }
   .main { padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom)) !important; }
   .mobile-header, .mobile-nav { display: none !important; }
   .avianto-mobile-screen { display: block; }
@@ -178,15 +188,15 @@ body main.login-page .login-card .button.primary { text-transform: uppercase; fo
   .avianto-dashboard-hero { display: grid; grid-template-columns: 0.9fr 1.35fr; align-items: center; gap: 4px 8px; padding: 20px 38px 16px; background: var(--brand-white); color: var(--brand-blue); }
   .avianto-dashboard-hero .brand-logo-mark { grid-column: 2; grid-row: 1 / span 2; justify-self: end; }
   .avianto-dashboard-hero .brand-logo-mark img { width: 190px; height: 150px; object-fit: contain; }
-  .avianto-dashboard-hero h1 { grid-column: 1; grid-row: 1; margin: 0; font-size: 1.125rem; line-height: 1.1; }
+  .avianto-dashboard-hero h1 { grid-column: 1; grid-row: 1; margin: 0; font-size: 1rem; line-height: 1.1; }
   .avianto-dashboard-hero p { grid-column: 1; grid-row: 2; margin: 0; color: var(--color-text-muted); font-size: 0.84rem; }
   .avianto-dashboard-hero .avianto-mobile-cta { grid-column: 1 / -1; grid-row: 3; }
   .avianto-mobile-cta { min-height: 48px; width: 100%; border: 0; border-radius: 10px; background: var(--brand-blue); color: var(--brand-white); font-size: 1.05rem; font-weight: 800; text-transform: uppercase; }
   .avianto-red-heading { width: 100%; margin: 0; padding: 6px 10px; background: var(--brand-red); color: var(--brand-white); text-align: center; font-size: 1.25rem; line-height: 1.15; text-transform: uppercase; }
-  .avianto-segmented { display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; border: 2px solid var(--brand-red); border-radius: 10px; background: var(--brand-red); }
-  .avianto-segmented button { min-height: 44px; border: 0; background: var(--brand-red); color: var(--brand-white); font-weight: 800; text-transform: uppercase; }
-  .avianto-segmented button.active { background: var(--brand-white); color: var(--brand-red); }
-  .avianto-metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .avianto-segmented { display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; border: 2px solid var(--brand-blue); border-radius: 10px; background: var(--brand-blue); }
+  .avianto-segmented button { min-height: 44px; border: 0; background: var(--brand-blue); color: var(--brand-white); font-weight: 800; text-transform: uppercase; }
+  .avianto-segmented button.active { background: var(--brand-white); color: var(--brand-blue); }
+  .avianto-metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, calc(50% - 7px)), 1fr)); gap: 10px; }
   .avianto-mobile-list { display: grid; gap: 14px; }
   .main > .page > .page-heading { display: flex; align-items: center; gap: 12px; padding: 18px 12px 12px; }
   .main > .page > .page-heading h1 { font-size: 1.45rem; }
@@ -281,7 +291,6 @@ body main.login-page .login-card .button.primary { text-transform: uppercase; fo
   gap: 18px;
   width: 100%;
 }
-.avianto-dashboard-screen::before,
 .avianto-profile-screen::before {
   position: absolute;
   inset: 0;
@@ -291,6 +300,7 @@ body main.login-page .login-card .button.primary { text-transform: uppercase; fo
   opacity: var(--brand-pattern-opacity);
   pointer-events: none;
 }
+.avianto-dashboard-screen { background: var(--brand-white); }
 .avianto-dashboard-screen > *,
 .avianto-profile-screen > * { position: relative; z-index: 1; }
 .avianto-dashboard-hero {
@@ -320,7 +330,7 @@ body main.login-page .login-card .button.primary { text-transform: uppercase; fo
   grid-row: 1;
   margin: 0;
   color: var(--brand-blue);
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1.1;
 }
 .avianto-dashboard-hero p {
@@ -367,22 +377,22 @@ body main.login-page .login-card .button.primary { text-transform: uppercase; fo
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   overflow: hidden;
-  border: 2px solid var(--brand-red);
+  border: 2px solid var(--brand-blue);
   border-radius: 10px;
-  background: var(--brand-red);
+  background: var(--brand-blue);
 }
 .avianto-segmented button {
   min-height: 44px;
   border: 0;
-  background: var(--brand-red);
+  background: var(--brand-blue);
   color: var(--brand-white);
   font-weight: 800;
   text-transform: uppercase;
 }
-.avianto-segmented button.active { background: var(--brand-white); color: var(--brand-red); }
+.avianto-segmented button.active { background: var(--brand-white); color: var(--brand-blue); }
 .avianto-metric-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(190px, calc(50% - 7px)), 1fr));
   gap: 14px;
 }
 .avianto-mobile-list {
@@ -440,7 +450,6 @@ body main.login-page .login-card .button.primary { text-transform: uppercase; fo
 
 @media (min-width: 761px) and (max-width: 1199px) {
   .avianto-mobile-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .avianto-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (min-width: 1200px) {
@@ -457,5 +466,5 @@ body main.login-page .login-card .button.primary { text-transform: uppercase; fo
   .avianto-screen-body { padding: 0 12px; }
   .avianto-mobile-list { grid-template-columns: 1fr; }
   .avianto-profile-filters { padding: 0 12px; }
-  body main.login-page::before { background-size: 155vw auto; background-position: center 42%; }
+  body main.login-page::before { background-size: 170vw auto; background-position: center 42%; }
 }
