@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowDownUp, ArrowRightLeft, Eye, FileText, Filter, LogIn, Plus, Settings2 } from "lucide-react";
 import { api } from "../lib/api";
 import { integerInput, money, parseIntegerInput } from "../lib/format";
-import { todayInAr } from "../lib/dates";
+import { formatDateInAr, todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
   FichaResponse,
@@ -19,9 +19,9 @@ import type {
   VentaFichaResponse,
 } from "../lib/types";
 import { Dialog, EmptyState, FilterBar, Pagination, SelectField, StatusBadge, type Notify } from "./ui";
-import { AviantoTabs, VehicleField } from "./avianto-mobile";
+import { AviantoTabs, ServiceCard, VehicleField } from "./avianto-mobile";
 
-const date = (value?: string | null) => (value ? new Intl.DateTimeFormat("es-AR").format(new Date(value.includes("T") ? value : `${value}T12:00:00`)) : "—");
+const date = formatDateInAr;
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
 const fichaStates = ["Pendiente", "En proceso", "En revisión", "Terminada", "Entregada", "Cancelada"] as const;
 const pagoStates: PagoStatus[] = ["No pagado", "Parcial", "Pagado"];
@@ -200,91 +200,99 @@ export function MotoDetail({
     { id: "repuestos", label: "Repuestos" },
     ...(moto.seccion === "Venta" ? [{ id: "venta" as const, label: "Venta" }] : []),
   ];
+  const latestFicha = fichas?.content[0] ?? null;
+  const latestService = services?.content[0] ?? null;
+  const serviceHistory = services?.content.slice(1) ?? [];
+  const serviceInterval = moto.kmServicePeriodo ?? null;
   return (
     <div className="page avianto-detail-page">
-      <button className="back" onClick={onBack}>← Volver a perfiles</button>
-      <div className="detail-title moto-detail-title">
-        <div className="moto-detail-identity">
-          <p>{moto.patente}</p>
-          <h1>{moto.marca} {moto.modelo}</h1>
-          <span>{moto.propietario ?? "Sin propietario"} · KM {moto.kilometraje ?? "—"}</span>
-        </div>
-        <div className="moto-detail-mobile-summary" aria-label="Resumen de la moto">
-          <VehicleField label="Moto" value={moto.marca} />
-          <VehicleField label="Modelo" value={moto.modelo} />
-          <VehicleField label="Km" value={moto.kilometraje ?? "—"} />
-        </div>
-        <div className="detail-stack moto-detail-actions">
-          <StatusBadge status={moto.estado} />
-             {!moto.ingresada ? <button className="button secondary" onClick={() => onIntake(moto.patente)}><LogIn size={17} />Ingresar moto</button> : moto.seccion === "Venta" ? <button className="button primary" onClick={() => saleFicha ? onOpenSale(saleFicha.id) : setTab("venta")}><FileText size={17} />Abrir ficha de venta</button> : moto.seccion === "Taller" ? <button className="button primary" onClick={() => setTab("fichas")}><FileText size={17} />Abrir ficha Taller</button> : moto.estado === "Terminada" ? <span className="detail-note">Pendiente de entrega al cliente</span> : <span className="detail-note">La entrega se completa desde la ficha terminada</span>}
-             {moto.ingresada && moto.seccion && <button className="button secondary" onClick={openCircuitChange}><ArrowRightLeft size={17} />{moto.seccion === "Venta" ? "Pasar a Taller" : "Pasar a Ventas"}</button>}
-            <strong className="moto-detail-year">Año {moto.anio ?? "—"}</strong>
-         </div>
-      </div>
-      <nav className="tabs moto-detail-desktop-tabs">
-        {tabs.map((item) => (
-          <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)}>{item.label}</button>
-        ))}
-      </nav>
-      <AviantoTabs tabs={tabs} active={tab} onChange={(value) => setTab(value as typeof tab)} />
-      {tab === "general" && (
-        <section className="panel form-stack">
-          <div className="panel-head">
-            <h2>Datos del vehículo</h2>
+      <header className="moto-profile-hero">
+        <button className="moto-profile-back" onClick={onBack}><span aria-hidden="true">←</span> Volver a perfiles</button>
+        <div className="moto-profile-hero-inner">
+          <h1>{moto.patente}</h1>
+          <div className="moto-profile-summary" aria-label="Resumen de la moto">
+            <VehicleField label="Moto" value={moto.marca} />
+            <VehicleField label="Modelo" value={moto.modelo} />
+            <VehicleField label="Km" value={moto.kilometraje?.toLocaleString("es-AR") ?? "—"} />
           </div>
-          <dl className="record-detail">
-            <div><dt>Marca / modelo</dt><dd>{moto.marca} {moto.modelo}</dd></div>
-            <div><dt>Patente</dt><dd>{moto.patente}</dd></div>
-            <div><dt>Año</dt><dd>{moto.anio ?? "—"}</dd></div>
-            <div><dt>Kilometraje</dt><dd>{moto.kilometraje ?? "—"}</dd></div>
-            <div><dt>Estado</dt><dd>{moto.estado}</dd></div>
-            <div><dt>Observaciones</dt><dd>{moto.observaciones || "—"}</dd></div>
-          </dl>
+          <div className="moto-profile-actions">
+            {!moto.ingresada ? <button className="moto-profile-action" onClick={() => onIntake(moto.patente)}><LogIn size={20} />Ingresar moto</button> : moto.seccion === "Venta" ? <button className="moto-profile-action" onClick={() => saleFicha ? onOpenSale(saleFicha.id) : setTab("venta")}><FileText size={20} />Abrir ficha de venta</button> : moto.seccion === "Taller" ? <button className="moto-profile-action" onClick={() => setTab("fichas")}><FileText size={20} />Abrir ficha taller</button> : <span className="moto-profile-note">La entrega se completa desde la ficha terminada</span>}
+            {moto.ingresada && moto.seccion && <button className="moto-profile-action" onClick={openCircuitChange}><ArrowRightLeft size={20} />{moto.seccion === "Venta" ? "Pasar a taller" : "Pasar a ventas"}</button>}
+          </div>
+          <div className="moto-profile-state"><span>Estado</span><StatusBadge status={moto.estado} /></div>
+        </div>
+      </header>
+      <AviantoTabs tabs={tabs} active={tab} onChange={(value) => setTab(value as typeof tab)} />
+      <div className="moto-profile-content">
+      {tab === "general" && (
+        <section className="moto-profile-panel moto-profile-general">
+          <h2 className="moto-section-title">Datos del vehículo</h2>
+          <div className="moto-profile-fields">
+            <VehicleField label="Moto" value={moto.marca} />
+            <VehicleField label="Modelo" value={moto.modelo} />
+            <VehicleField label="Año" value={moto.anio ?? "—"} />
+            <VehicleField label="Cliente" value={moto.propietario ?? "Sin propietario"} />
+            <VehicleField label="Estado" value={<StatusBadge status={moto.estado} />} tone="red" />
+            <VehicleField label="Km" value={moto.kilometraje?.toLocaleString("es-AR") ?? "—"} />
+            <VehicleField label="Fecha ingreso" value={date(latestFicha?.fechaIngreso)} />
+            <VehicleField label="Ficha" value={latestFicha?.numero ?? "—"} />
+          </div>
+          {moto.observaciones && <div className="moto-profile-observations"><strong>Observaciones</strong><p>{moto.observaciones}</p></div>}
         </section>
       )}
       {tab === "client" && (
-        <section className="panel form-stack">
-          <div className="panel-head"><div><h2>Clientes</h2><p>Propietario actual e historial de transferencias.</p></div></div>
-          <dl className="record-detail">
-            <div><dt>Nombre y apellido</dt><dd>{moto.propietario ?? "—"}</dd></div>
-            <div><dt>Teléfono</dt><dd>{client?.telefono ?? "—"}</dd></div>
-          </dl>
-          <section className="table-panel"><div className="panel-head"><div><h3>Historial de transferencias</h3><p>Registro de solo lectura; las acciones viven en la ficha de venta.</p></div></div>{transfers.length ? <table><thead><tr><th>Ficha de venta</th><th>Comprador</th><th>Cita</th><th>Asistencia</th><th>Finalización</th></tr></thead><tbody>{transfers.map((transfer) => <tr key={transfer.id}><td data-label="Ficha de venta">{transfer.fichaVentaId ? "Venta vinculada" : "Histórica"}<small>{transfer.fechaTransferencia ? `Efectiva ${date(transfer.fechaTransferencia)}` : "Pendiente"}</small></td><td data-label="Comprador">{transfer.clienteNuevo}<small>Vendedor: {transfer.clienteAnterior}</small></td><td data-label="Cita">{transfer.citaFecha ? `${date(transfer.citaFecha)} · ${transfer.citaHora?.slice(0, 5) ?? "—"}` : "Sin cita"}<small>{transfer.citaLugar || "—"}</small></td><td data-label="Asistencia">{transfer.asistenciaAt ? "Confirmada" : "Pendiente"}<small>{transfer.asistenciaPor ?? "—"}</small></td><td data-label="Finalización">{transfer.finalizadaAt ? date(transfer.finalizadaAt) : "En proceso"}<small>{transfer.finalizadaPor ?? "—"}</small></td></tr>)}</tbody></table> : <p>Esta moto no tiene transferencias registradas.</p>}</section>
+        <section className="moto-profile-panel moto-profile-client">
+          <div className="moto-client-current">
+            <h2 className="moto-section-title">Cliente actual</h2>
+            <div className="moto-client-grid">
+              <VehicleField label="Cliente" value={moto.propietario ?? "—"} />
+              <VehicleField label="Teléfono" value={client?.telefono ?? "—"} />
+              <VehicleField label="Localidad" value={client?.direccion ?? "—"} />
+            </div>
+          </div>
+          <div className="moto-transfer-history">
+            <h3 className="moto-section-title">Historial de transferencias</h3>
+            {transfers.length ? <div className="moto-transfer-list">{transfers.map((transfer) => <article key={transfer.id} className="moto-transfer-card">
+              <VehicleField label="Cliente" value={transfer.clienteAnterior} />
+              <VehicleField label="Transferido a" value={transfer.clienteNuevo} />
+              <VehicleField label="Desde" value={date(transfer.createdAt)} />
+              <VehicleField label="Hasta" value={date(transfer.fechaTransferencia ?? transfer.finalizadaAt)} />
+            </article>)}</div> : <EmptyState title="Sin transferencias" body="Esta moto todavía no registra transferencias." />}
+          </div>
         </section>
       )}
       {tab === "venta" && moto.seccion === "Venta" && (
-        <section className="panel sale-profile-entry">
+        <section className="moto-profile-panel sale-profile-entry">
            <div className="panel-head"><div><h2>Ficha de venta</h2><p>Carpeta, comprador y transferencia se gestionan desde una única ficha trazable.</p></div>{saleFicha && <button className="button primary" onClick={() => onOpenSale(saleFicha.id)}><FileText size={17} />Abrir ficha de venta</button>}</div>
           {saleFicha ? <dl className="record-detail"><div><dt>Ficha</dt><dd>{saleFicha.numero}</dd></div><div><dt>Estado</dt><dd><StatusBadge status={saleFicha.estado} /></dd></div><div><dt>Vendedor actual</dt><dd>{saleFicha.vendedor}</dd></div><div><dt>{saleFicha.estado === "Vendida" ? "Comprador final" : "Comprador prospectivo"}</dt><dd>{saleFicha.comprador ?? "Sin seleccionar"}</dd></div><div><dt>Carpeta de transferencia</dt><dd>{saleFicha.obligatoriosCompletos ? "Completa" : "Incompleta"}</dd></div><div><dt>Cita</dt><dd>{saleFicha.transferencia?.citaFecha ? `${date(saleFicha.transferencia.citaFecha)} · ${saleFicha.transferencia.citaHora?.slice(0, 5) ?? "—"}` : "Sin programar"}</dd></div></dl> : <div className="table-loading" role="status">Cargando resumen de venta...</div>}
         </section>
       )}
       {tab === "services" && (
-        <section className="panel table-panel">
-          <div className="panel-head">
-            <h2>Services registrados</h2>
-            <div className="panel-actions">
-              <button className="button secondary" onClick={openConfig}><Settings2 size={17} />Configurar periodos</button>
-              <button className="button secondary" disabled={serviceSaving} onClick={() => { setServiceKm(moto.kilometraje != null ? String(moto.kilometraje) : ""); setServiceDate(todayInAr()); setServiceOpen(true); }}><Plus size={17} />Registrar service</button>
+        <section className="moto-profile-panel moto-profile-services">
+          <div className="moto-service-head"><h2 className="moto-section-title">Último service</h2><button className="button secondary moto-service-config" onClick={openConfig}><Settings2 size={18} />Configurar periodos</button></div>
+          <div className="moto-service-feature">
+            <div className="moto-service-feature-grid">
+              <VehicleField label="Fecha" value={date(latestService?.fecha ?? moto.fechaUltimoService)} />
+              <VehicleField label="Km" value={(latestService?.kilometraje ?? moto.kmUltimoService)?.toLocaleString("es-AR") ?? "—"} />
+              <VehicleField label="Próx. service" value={nextService?.proximaFecha ? date(nextService.proximaFecha) : serviceInterval ? `+${serviceInterval.toLocaleString("es-AR")} km` : "—"} />
+              <VehicleField label="Próx. km" value={nextService?.proximKm?.toLocaleString("es-AR") ?? "—"} />
             </div>
+            <div className="moto-service-notes"><strong>Observaciones ↓</strong><p>{latestService?.observaciones || moto.serviceObservaciones || "Sin observaciones."}</p></div>
           </div>
-          <div className="metrics service-kpis"><section className="metric"><span>Último service</span><strong>{moto.kmUltimoService != null ? `${moto.kmUltimoService.toLocaleString("es-AR")} km` : "—"}</strong><small>{date(moto.fechaUltimoService)}</small></section><section className="metric"><span>Período</span><strong>{moto.kmServicePeriodo ?? "—"} km</strong><small>{moto.mesesServicePeriodo ?? "—"} meses</small></section><section className="metric"><span>Próximo service</span><strong>{nextService?.proximKm != null ? `${nextService.proximKm.toLocaleString("es-AR")} km` : "—"}</strong><small>{nextService?.proximaFecha ? date(nextService.proximaFecha) : nextService?.sinReferencia ? "Sin referencia" : "—"}</small></section></div>
-           <FilterBar activeCount={(serviceDesde ? 1 : 0) + (serviceHasta ? 1 : 0) + (serviceSort !== "fecha" ? 1 : 0)}>
+          <button className="moto-service-new" disabled={serviceSaving} onClick={() => { setServiceKm(moto.kilometraje != null ? String(moto.kilometraje) : ""); setServiceDate(todayInAr()); setServiceOpen(true); }}><Plus size={19} />Nuevo service</button>
+          <h3 className="moto-section-title moto-history-title">Historial</h3>
+          <div className="moto-service-filters"><FilterBar activeCount={(serviceDesde ? 1 : 0) + (serviceHasta ? 1 : 0) + (serviceSort !== "fecha" ? 1 : 0)}>
              <label><span className="date-label">Desde</span><input type="date" value={serviceDesde} onChange={(event) => { setServiceDesde(event.target.value); setServicePage(1); }} /></label>
              <label><span className="date-label">Hasta</span><input type="date" value={serviceHasta} onChange={(event) => { setServiceHasta(event.target.value); setServicePage(1); }} /></label>
               <SelectField value={serviceSort} onChange={(value) => { setServiceSort(value); setServicePage(1); }} options={[{ value: "fecha", label: "Fecha" }, { value: "kilometraje", label: "Kilometraje" }]} icon={Filter} ariaLabel="Ordenar services por" />
              <button className="button secondary" onClick={() => { setServiceDirection((value) => value === "ASC" ? "DESC" : "ASC"); setServicePage(1); }} aria-label="Cambiar orden de services"><ArrowDownUp size={16} />{serviceDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
-           </FilterBar>
-           {panelErrors.services ? <EmptyState title="No se pudo cargar el historial" body={panelErrors.services} action={<button className="button secondary" onClick={loadServices}>Reintentar</button>} /> : services?.content.length ? (
-            <table>
-              <thead><tr><th>Fecha</th><th>Kilometraje</th><th>Ficha</th><th>Observaciones</th></tr></thead>
-              <tbody>{services.content.map((service) => <tr key={service.id}><td data-label="Fecha">{date(service.fecha)}</td><td data-label="Kilometraje">{service.kilometraje}</td><td data-label="Ficha">{service.fichaNumero ?? "—"}</td><td data-label="Observaciones">{service.observaciones || "—"}</td></tr>)}</tbody>
-            </table>
-          ) : <EmptyState title="Sin services" body="Registrá el primer service de la moto." />}
+           </FilterBar></div>
+           {panelErrors.services ? <EmptyState title="No se pudo cargar el historial" body={panelErrors.services} action={<button className="button secondary" onClick={loadServices}>Reintentar</button>} /> : serviceHistory.length ? <div className="moto-service-history">{serviceHistory.map((service) => <ServiceCard key={service.id} date={date(service.fecha)} km={service.kilometraje.toLocaleString("es-AR")} next={serviceInterval ? `+${serviceInterval.toLocaleString("es-AR")} km` : "—"} nextKm={serviceInterval ? (service.kilometraje + serviceInterval).toLocaleString("es-AR") : "—"} notes={service.observaciones} />)}</div> : <EmptyState title="Sin historial anterior" body="El último service registrado se muestra arriba." />}
           <Pagination page={servicePage} total={services?.totalPages || 1} onPage={setServicePage} />
         </section>
       )}
       {tab === "fichas" && (
-        <section className="panel table-panel">
+        <section className="moto-profile-panel table-panel moto-profile-table">
            <div className="panel-head"><div><h2>Fichas</h2><p>Trabajo actual e historial de ingresos al taller.</p></div><button className="button secondary" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewFicha({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nueva ficha</button></div>
            <FilterBar activeCount={(fichaDesde ? 1 : 0) + (fichaHasta ? 1 : 0) + (fichaEstado ? 1 : 0) + (fichaPago ? 1 : 0) + (fichaSort !== "fechaIngreso" ? 1 : 0)}>
              <label><span className="date-label">Desde</span><input type="date" value={fichaDesde} onChange={(event) => { setFichaDesde(event.target.value); setFichaPage(1); }} /></label>
@@ -304,7 +312,7 @@ export function MotoDetail({
         </section>
       )}
       {tab === "repuestos" && (
-        <section className="panel table-panel">
+        <section className="moto-profile-panel table-panel moto-profile-table">
            <div className="panel-head"><h2>Pedidos de repuestos</h2><button className="button secondary" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewRepuesto({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nuevo pedido</button></div>
            <FilterBar activeCount={(repuestoDesde ? 1 : 0) + (repuestoHasta ? 1 : 0) + (repuestoEstado ? 1 : 0) + (repuestoPago ? 1 : 0) + (repuestoSort !== "fecha" ? 1 : 0)}>
              <label><span className="date-label">Desde</span><input type="date" value={repuestoDesde} onChange={(event) => { setRepuestoDesde(event.target.value); setRepuestoPage(1); }} /></label>
@@ -323,6 +331,7 @@ export function MotoDetail({
           <Pagination page={repuestoPage} total={repuestos?.totalPages || 1} onPage={setRepuestoPage} />
         </section>
       )}
+      </div>
       <Dialog open={serviceOpen} title="Registrar Service" className="service-modal" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void addService(); }}>
           <label>Fecha<input type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>

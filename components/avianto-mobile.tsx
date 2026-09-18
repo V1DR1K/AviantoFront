@@ -25,22 +25,26 @@ export function BottomNavigation({ page, onPage, onMenu }: { page: string; onPag
     <nav className="avianto-bottom-navigation" aria-label="Navegación móvil">
       <button type="button" aria-label="Más opciones" onClick={onMenu}>
         <span className="avianto-bottom-art" style={{ "--avianto-nav-art": "url('/brand/avianto-svg/nav-more.svg')" } as CSSProperties} aria-hidden="true" />
-        <span className="sr-only">Más</span>
+        <span className="avianto-bottom-label">Más</span>
       </button>
       {items.map(({ id, label, artwork }) => <button type="button" key={id} className={page === id ? "active" : ""} aria-label={label} aria-current={page === id ? "page" : undefined} onClick={() => onPage(id)}>
         <span className="avianto-bottom-art" style={{ "--avianto-nav-art": `url('${artwork}')` } as CSSProperties} aria-hidden="true" />
-        <span className="sr-only">{label}</span>
+        <span className="avianto-bottom-label">{label}</span>
       </button>)}
     </nav>
   );
 }
 
 export function AviantoTabs({ tabs, active, onChange }: { tabs: AviantoTab[]; active: string; onChange: (id: string) => void }) {
+  const tabsRef = useRef<HTMLElement>(null);
   const activeButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (tabs[0]?.id !== active) activeButton.current?.scrollIntoView({ block: "nearest", inline: "center" });
+    const container = tabsRef.current;
+    const button = activeButton.current;
+    if (!container || !button || tabs[0]?.id === active) return;
+    container.scrollTo({ left: button.offsetLeft - (container.clientWidth - button.offsetWidth) / 2, behavior: "smooth" });
   }, [active, tabs]);
-  return <nav className="avianto-tabs" aria-label="Secciones de la moto">{tabs.map((tab) => <button ref={active === tab.id ? activeButton : undefined} type="button" key={tab.id} className={active === tab.id ? "active" : ""} onClick={() => onChange(tab.id)}>{tab.label}</button>)}</nav>;
+  return <nav ref={tabsRef} className="avianto-tabs" aria-label="Secciones de la moto">{tabs.map((tab) => <button ref={active === tab.id ? activeButton : undefined} type="button" key={tab.id} className={active === tab.id ? "active" : ""} onClick={() => onChange(tab.id)}>{tab.label}</button>)}</nav>;
 }
 
 export function StatusRail({ items, active, onChange }: { items: { id: string; label: string; count?: number }[]; active: string; onChange: (id: string) => void }) {
@@ -48,7 +52,7 @@ export function StatusRail({ items, active, onChange }: { items: { id: string; l
 }
 
 export function MetricCard({ label, value, detail, tone = "blue" }: { label: string; value: string; detail?: string; tone?: "blue" | "red" | "neutral" }) {
-  return <article className={`avianto-metric-card tone-${tone}`}><span>{label}</span><strong>{value}</strong>{detail && <small>{detail}</small>}</article>;
+  return <article className={`avianto-metric-card tone-${tone}`}><span>{label}</span><div className="avianto-metric-value"><strong>{value}</strong><b>Motos</b></div>{detail && <small>{detail}</small>}</article>;
 }
 
 export function VehicleField({ label, value, tone }: { label: string; value: ReactNode; tone?: "red" | "blue" }) {
@@ -59,6 +63,6 @@ export function VehicleCard({ plate, children, action, variant = "dashboard" }: 
   return <article className={`avianto-vehicle-card avianto-vehicle-card-${variant}`}><header><strong>{plate}</strong></header><div className="avianto-vehicle-card-fields">{children}</div>{action && <footer>{action}</footer>}</article>;
 }
 
-export function ServiceCard({ date, km, next, notes }: { date: string; km: string; next?: string; notes?: string | null }) {
-  return <article className="avianto-service-card"><div><VehicleField label="Fecha" value={date} /><VehicleField label="Km" value={km} /></div><div><VehicleField label="Próx. service" value={next ?? "—"} /><span className="avianto-service-arrow" aria-hidden="true">→</span></div>{notes && <p>{notes}</p>}</article>;
+export function ServiceCard({ date, km, next, nextKm, notes }: { date: string; km: string; next?: string; nextKm?: string; notes?: string | null }) {
+  return <article className="avianto-service-card"><div className="avianto-service-card-grid"><VehicleField label="Fecha" value={date} /><VehicleField label="Km" value={km} /><VehicleField label="Próx. service" value={next ?? "—"} /><VehicleField label="Próx. km" value={nextKm ?? "—"} /></div><details><summary>Observaciones <span aria-hidden="true">↓</span></summary><p>{notes || "Sin observaciones."}</p></details></article>;
 }

@@ -18,7 +18,7 @@ export const daysAgoInAr = (days: number): string => {
 export const formatDateInAr = (value?: string | null): string => {
   if (!value) return "—";
   const source = value.includes("T") ? value : `${value}T12:00:00`;
-  return new Intl.DateTimeFormat("es-AR").format(new Date(source));
+  return new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(source));
 };
 
 export const formatDateTimeInAr = (value?: string | null): string => {

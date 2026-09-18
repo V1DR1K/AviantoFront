@@ -150,7 +150,7 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(stylesheet, /\.revision-control-list > \.revision-control \{[\s\S]*?grid-template-areas: "check content note";/);
   assert.match(stylesheet, /\.revision-check input \{[\s\S]*?width: 20px;[\s\S]*?height: 20px;/);
   assert.match(motoDetail, /setTab\("venta"\)[\s\S]*?Abrir ficha de venta/);
-  assert.match(motoDetail, /setTab\("fichas"\)[\s\S]*?Abrir ficha Taller/);
+  assert.match(motoDetail, /setTab\("fichas"\)[\s\S]*?Abrir ficha taller/);
   assert.match(views, /<FileText size=\{17\} \/>[\s\S]*?<Eye size=\{17\} \/>/);
   assert.match(controller, /wiki:\s*"\/wiki"/);
   assert.match(shell, /id: "wiki", label: "Wiki"/);
@@ -193,9 +193,9 @@ test("keeps the sale ficha workflow, read-only transfer registry, and sale check
   assert.match(saleDetail, /item\.obligatorio \? checklistStates\.filter\(\(estado\) => estado !== "No aplica"\)/);
   assert.match(saleDetail, /\/ventas\/\$\{ficha\.id\}\/completar/);
   assert.match(motoDetail, /label: "Venta"/);
-  assert.match(motoDetail, /className="detail-title moto-detail-title"/);
-  assert.match(motoDetail, /className="moto-detail-identity"/);
-  assert.match(motoDetail, /className="detail-stack moto-detail-actions"/);
+  assert.match(motoDetail, /className="moto-profile-hero"/);
+  assert.match(motoDetail, /className="moto-profile-summary"/);
+  assert.match(motoDetail, /className="moto-profile-actions"/);
   assert.match(motoDetail, /Abrir ficha de venta/);
   assert.doesNotMatch(motoDetail, /venta\/completar/);
   assert.match(profiles, /Abrir ficha de venta/);
@@ -211,7 +211,7 @@ test("keeps the sale ficha workflow, read-only transfer registry, and sale check
   assert.match(admin, /Carpeta de transferencia/);
   assert.match(admin, /"\/configuracion\/ventas\/checklist"/);
   assert.match(intake, /Solo Administración puede ingresar una moto a Ventas/);
-  assert.match(motoDetail, /!moto\.ingresada \? <button className="button secondary"/);
+  assert.match(motoDetail, /!moto\.ingresada \? <button className="moto-profile-action"/);
   assert.match(types, /export interface VentaFichaResponse/);
   assert.match(types, /export interface VentaTransferenciaResponse/);
   assert.match(types, /fichaVentaId\?: string \| null;/);

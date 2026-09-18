@@ -128,6 +128,7 @@ export function Dashboard({
   };
   const salesCount = (estado: string) => ventasEstados.find((entry) => entry.estado === estado)?.motos.length ?? 0;
   const sales = ventasEstados.find((item) => item.estado === tab)?.motos ?? [];
+  const metric = (value: number) => String(value).padStart(2, "0");
   const changeSection = (next: "taller" | "ventas") => { setSection(next); setTab(next === "ventas" ? "En venta" : groupBy === "moto" ? "Ingresada Taller" : "Pendiente"); };
   return (
     <div className="page">
@@ -145,10 +146,10 @@ export function Dashboard({
             <button type="button" className={section === "ventas" ? "active" : ""} onClick={() => changeSection("ventas")}>Ventas</button>
           </div>
           {taller && fichasAgrupadas && <div className="avianto-metric-grid">
-            <MetricCard label="Total" value={String(section === "ventas" ? sales.length : count("Ingresada Taller"))} detail="Ingresadas" />
-            <MetricCard label="En curso" value={String(section === "ventas" ? sales.length : count("Pendiente") + count("En proceso") + count("En revisión"))} detail="Pendientes y proceso" />
-            <MetricCard label="Terminadas" value={String(section === "ventas" ? salesCount("Vendida") : count("Terminada"))} detail="Listas para entregar" />
-            <MetricCard label="Entregadas" value={String(section === "ventas" ? salesCount("Transferencia en proceso") : count("Entregada"))} detail="Último período" tone="red" />
+            <MetricCard label="Total" value={metric(section === "ventas" ? sales.length : count("Ingresada Taller"))} detail="Ingresadas" />
+            <MetricCard label="En curso" value={metric(section === "ventas" ? sales.length : count("Pendiente") + count("En proceso") + count("En revisión"))} detail="Pendientes y proceso" />
+            <MetricCard label="Terminadas" value={metric(section === "ventas" ? salesCount("Vendida") : count("Terminada"))} detail="Listas para entregar" />
+            <MetricCard label="Entregadas" value={metric(section === "ventas" ? salesCount("Transferencia en proceso") : count("Entregada"))} detail="Último período" tone="red" />
           </div>}
           {taller && fichasAgrupadas && <StatusRail
             active={tab}
