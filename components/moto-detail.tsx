@@ -19,6 +19,7 @@ import type {
   VentaFichaResponse,
 } from "../lib/types";
 import { Dialog, EmptyState, FilterBar, Pagination, SelectField, StatusBadge, type Notify } from "./ui";
+import { AviantoTabs, VehicleField } from "./avianto-mobile";
 
 const date = (value?: string | null) => (value ? new Intl.DateTimeFormat("es-AR").format(new Date(value.includes("T") ? value : `${value}T12:00:00`)) : "—");
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
@@ -208,6 +209,11 @@ export function MotoDetail({
           <h1>{moto.marca} {moto.modelo}</h1>
           <span>{moto.propietario ?? "Sin propietario"} · KM {moto.kilometraje ?? "—"}</span>
         </div>
+        <div className="moto-detail-mobile-summary" aria-label="Resumen de la moto">
+          <VehicleField label="Moto" value={moto.marca} />
+          <VehicleField label="Modelo" value={moto.modelo} />
+          <VehicleField label="Km" value={moto.kilometraje ?? "—"} />
+        </div>
         <div className="detail-stack moto-detail-actions">
           <StatusBadge status={moto.estado} />
              {!moto.ingresada ? <button className="button secondary" onClick={() => onIntake(moto.patente)}><LogIn size={17} />Ingresar moto</button> : moto.seccion === "Venta" ? <button className="button primary" onClick={() => saleFicha ? onOpenSale(saleFicha.id) : setTab("venta")}><FileText size={17} />Abrir ficha de venta</button> : moto.seccion === "Taller" ? <button className="button primary" onClick={() => setTab("fichas")}><FileText size={17} />Abrir ficha Taller</button> : moto.estado === "Terminada" ? <span className="detail-note">Pendiente de entrega al cliente</span> : <span className="detail-note">La entrega se completa desde la ficha terminada</span>}
@@ -215,11 +221,12 @@ export function MotoDetail({
             <strong className="moto-detail-year">Año {moto.anio ?? "—"}</strong>
          </div>
       </div>
-      <nav className="tabs">
+      <nav className="tabs moto-detail-desktop-tabs">
         {tabs.map((item) => (
           <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)}>{item.label}</button>
         ))}
       </nav>
+      <AviantoTabs tabs={tabs} active={tab} onChange={(value) => setTab(value as typeof tab)} />
       {tab === "general" && (
         <section className="panel form-stack">
           <div className="panel-head">
@@ -316,11 +323,12 @@ export function MotoDetail({
           <Pagination page={repuestoPage} total={repuestos?.totalPages || 1} onPage={setRepuestoPage} />
         </section>
       )}
-      <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)}>
+      <Dialog open={serviceOpen} title="Registrar Service" className="service-modal" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void addService(); }}>
-          <label>Kilometraje<input type="text" inputMode="numeric" value={integerInput(serviceKm)} onChange={(event) => setServiceKm(event.target.value)} required /></label>
           <label>Fecha<input type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
-          <label>Observación<input type="text" value={serviceNotes} onChange={(event) => setServiceNotes(event.target.value)} placeholder="Ej: cambio de aceite y filtros" /></label>
+          <label>Kilometraje<input type="text" inputMode="numeric" value={integerInput(serviceKm)} onChange={(event) => setServiceKm(event.target.value)} required /></label>
+          <div className="service-modal-summary"><VehicleField label="Próx. service" value={nextService?.proximaFecha ? date(nextService.proximaFecha) : "Sin referencia"} /><VehicleField label="Próx. km" value={nextService?.proximKm?.toLocaleString("es-AR") ?? "—"} /></div>
+          <label className="service-modal-notes">Observaciones<textarea value={serviceNotes} onChange={(event) => setServiceNotes(event.target.value)} placeholder="Ej: cambio de aceite y filtros" /></label>
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setServiceOpen(false)}>Cancelar</button><button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>
       </Dialog>

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./design-tokens.css";
+@import "../components/avianto-mobile.css";
 * {
   box-sizing: border-box;
 }

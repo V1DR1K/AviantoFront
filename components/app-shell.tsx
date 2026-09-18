@@ -10,15 +10,14 @@ import {
   FileText,
   LayoutDashboard,
   LogOut,
-  Menu,
   Package,
-  Plus,
   Settings,
   Users,
   Wrench,
 } from "lucide-react";
 import type { AuthSession } from "../lib/auth";
 import { BrandLogo } from "./brand-logo";
+import { AviantoHeader, BottomNavigation } from "./avianto-mobile";
 const home = { id: "dashboard", label: "Inicio", icon: LayoutDashboard };
 const navGroups = [
   { id: "taller", label: "Taller", items: [{ id: "orders", label: "Fichas", icon: FileText }, { id: "repuestos", label: "Pedidos", icon: Package }] },
@@ -130,21 +129,7 @@ export function AppShell({
         </div>
       </aside>
       <main className={`main${collapsed ? " sidebar-collapsed" : ""}`}>
-        <header className="mobile-header">
-          <button aria-label="Abrir menú" onClick={openMenu}>
-            <Menu />
-          </button>
-          <button className="brand-text" onClick={() => go("dashboard")}>
-            <BrandLogo variant="color" size="sm" />
-          </button>
-          <button
-            className="button mobile-new"
-            onClick={onIntake}
-            aria-label="Ingresar moto"
-          >
-            <Plus size={17} /> <span>Ingresar moto</span>
-          </button>
-        </header>
+        <AviantoHeader onMenu={openMenu} onHome={() => go("dashboard")} onIntake={onIntake} />
         {children}
       </main>
       {menuOpen && (
@@ -189,31 +174,7 @@ export function AppShell({
           </div>
         </>
       )}
-      <nav className="mobile-nav">
-        <button
-          className={page === "dashboard" ? "active" : ""}
-          onClick={() => go("dashboard")}
-        >
-          <LayoutDashboard size={20} />
-          <span>Inicio</span>
-        </button>
-        <button className={page === "profiles" ? "active" : ""} onClick={() => go("profiles")}>
-          <ClipboardList size={20} />
-          <span>Perfiles</span>
-        </button>
-        <button className={page === "orders" ? "active" : ""} onClick={() => go("orders")}>
-          <FileText size={20} />
-          <span>Fichas</span>
-        </button>
-        <button className={page === "repuestos" ? "active" : ""} onClick={() => go("repuestos")}>
-          <Package size={20} />
-          <span>Repuestos</span>
-        </button>
-        <button onClick={openMenu}>
-          <Menu size={20} />
-          <span>Más</span>
-        </button>
-      </nav>
+      <BottomNavigation page={page} onPage={go} onMenu={openMenu} />
     </div>
   );
 }

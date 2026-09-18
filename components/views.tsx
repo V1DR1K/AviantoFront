@@ -29,6 +29,8 @@ import type {
 import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 import { BudgetBreakdown } from "./budget-breakdown";
 import { PaymentLedger } from "./payment-ledger";
+import { MetricCard, StatusRail, VehicleCard, VehicleField } from "./avianto-mobile";
+import { BrandLogo } from "./brand-logo";
 
 const date = formatDateInAr;
 const errorMessage = (reason: unknown) =>
@@ -131,6 +133,44 @@ export function Dashboard({
   const changeSection = (next: "taller" | "ventas") => { setSection(next); setTab(next === "ventas" ? "En venta" : groupBy === "moto" ? "Ingresada Taller" : "Pendiente"); };
   return (
     <div className="page">
+      <div className="avianto-mobile-screen avianto-dashboard-screen">
+        <section className="avianto-dashboard-hero">
+          <BrandLogo variant="color" markOnly size="lg" />
+          <h1>Estado actual del taller</h1>
+          <p>{userName ? `Buenos días, ${userName}` : "Resumen operativo"}</p>
+          <button type="button" className="avianto-mobile-cta" onClick={onIntake}>+&nbsp; Ingresar moto</button>
+        </section>
+        <h2 className="avianto-red-heading">Resumen</h2>
+        <div className="avianto-screen-body">
+          <div className="avianto-segmented" role="tablist" aria-label="Circuito del dashboard">
+            <button type="button" className={section === "taller" ? "active" : ""} onClick={() => changeSection("taller")}>Taller</button>
+            <button type="button" className={section === "ventas" ? "active" : ""} onClick={() => changeSection("ventas")}>Ventas</button>
+          </div>
+          {taller && fichasAgrupadas && <div className="avianto-metric-grid">
+            <MetricCard label="Total" value={String(section === "ventas" ? sales.length : count("Ingresada Taller"))} detail="Ingresadas" />
+            <MetricCard label="En curso" value={String(section === "ventas" ? sales.length : count("Pendiente") + count("En proceso") + count("En revisión"))} detail="Pendientes y proceso" />
+            <MetricCard label="Terminadas" value={String(section === "ventas" ? salesCount("Vendida") : count("Terminada"))} detail="Listas para entregar" />
+            <MetricCard label="Entregadas" value={String(section === "ventas" ? salesCount("Transferencia en proceso") : count("Entregada"))} detail="Último período" tone="red" />
+          </div>}
+        </div>
+        {taller && fichasAgrupadas && <>
+          <StatusRail
+            active={tab}
+            onChange={setTab}
+            items={(section === "ventas" ? ventasEstados : estados).map((item) => ({ id: item.estado, label: item.estado, count: "motos" in item ? item.motos.length : item.fichas.length }))}
+          />
+          <div className="avianto-screen-body">
+            <div className="avianto-segmented" role="tablist" aria-label="Agrupar resultados">
+              <button type="button" className={groupBy === "moto" ? "active" : ""} onClick={() => { setGroupBy("moto"); setTab("Ingresada Taller"); }}>Agrupar x moto</button>
+              <button type="button" className={groupBy === "ficha" ? "active" : ""} onClick={() => { setGroupBy("ficha"); setTab("Pendiente"); }}>Agrupar x ficha</button>
+            </div>
+            <div className="avianto-mobile-list">
+              {section === "ventas" ? sales.map((moto) => <VehicleCard key={moto.motoId} plate={moto.patente} action={<button type="button" className="text-button" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button>}><VehicleField label="Moto" value={moto.moto} /><VehicleField label="Cliente" value={moto.cliente ?? "—"} /><VehicleField label="Estado" value={<StatusBadge status={moto.estado} />} tone="red" /></VehicleCard>) : groupBy === "moto" ? motos.map((moto) => <VehicleCard key={moto.motoId} plate={moto.patente} action={<button type="button" className="text-button" onClick={() => onOpenMoto(moto.motoId)}>Ingresar al perfil</button>}><VehicleField label="Moto" value={moto.moto} /><VehicleField label="Cliente" value={moto.cliente ?? "—"} /><VehicleField label="KM actual" value={moto.kilometraje?.toLocaleString("es-AR") ?? "—"} /><VehicleField label="Estado" value={<StatusBadge status={moto.estado} />} tone="red" /></VehicleCard>) : fichas.map((ficha) => <VehicleCard key={ficha.id} plate={ficha.numero} action={<button type="button" className="text-button" onClick={() => void api<FichaResponse>(`/fichas/${ficha.id}`).then(onSelect).catch((reason) => notify(errorMessage(reason), "error"))}>Ver ficha</button>}><VehicleField label="Cliente" value={ficha.cliente} /><VehicleField label="Moto" value={`${ficha.moto} · ${ficha.patente}`} /><VehicleField label="Estado" value={<StatusBadge status={ficha.estado} />} tone="red" /></VehicleCard>)}
+            </div>
+          </div>
+        </>}
+      </div>
+      <div className="dashboard-desktop-content">
       <div className="page-heading">
         <div>
           <h1>Buenos días, {userName}</h1>
@@ -223,6 +263,7 @@ export function Dashboard({
           )}
         </>
       )}
+      </div>
     </div>
   );
 }
