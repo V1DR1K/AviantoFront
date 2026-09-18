@@ -35,17 +35,11 @@ import { BrandLogo } from "./brand-logo";
 const date = formatDateInAr;
 const errorMessage = (reason: unknown) =>
   reason instanceof Error ? reason.message : "No fue posible cargar la información.";
-const tabKey = (estado: string) =>
-  ({ "Ingresada Taller": "ingresada", "Pendiente": "pendiente", "En proceso": "en-proceso", "En revisión": "revision", "Terminada": "terminada", "Entregada": "entregada", "Cancelada": "cancelada", "En venta": "en-venta", "Transferencia en proceso": "transferencia", "Vendida": "vendida" } as Record<string, string>)[estado] ?? "estado";
 const workStateClass = (estado: TrabajoStatus) =>
   estado === "Realizado" ? " is-completed" : estado === "Pendiente" ? " is-pending" : " is-cancelled";
 function Metric({ label, value, tone }: { label: string; value: string; tone: string }) {
   return <section className={`metric ${tone}`}><span>{label}</span><strong>{value}</strong><small>Período seleccionado</small></section>;
 }
-function DashboardMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return <section className="metric"><span>{label}</span><strong>{value}</strong><small>{detail}</small></section>;
-}
-
 function OrderPhotos({ photos, onChange }: { photos: PhotoResponse[]; onChange: () => void }) {
   const [urls, setUrls] = useState<Record<string, string>>({});
   useEffect(() => {
@@ -128,8 +122,6 @@ export function Dashboard({
   };
   const salesCount = (estado: string) => ventasEstados.find((entry) => entry.estado === estado)?.motos.length ?? 0;
   const sales = ventasEstados.find((item) => item.estado === tab)?.motos ?? [];
-  const visible = section === "ventas" ? sales.length : groupBy === "moto" ? motos.length : fichas.length;
-  const label = section === "ventas" ? "motos" : groupBy === "moto" ? "motos" : "fichas";
   const changeSection = (next: "taller" | "ventas") => { setSection(next); setTab(next === "ventas" ? "En venta" : groupBy === "moto" ? "Ingresada Taller" : "Pendiente"); };
   return (
     <div className="page">
@@ -146,6 +138,11 @@ export function Dashboard({
             <button type="button" className={section === "taller" ? "active" : ""} onClick={() => changeSection("taller")}>Taller</button>
             <button type="button" className={section === "ventas" ? "active" : ""} onClick={() => changeSection("ventas")}>Ventas</button>
           </div>
+          {taller && fichasAgrupadas && <StatusRail
+            active={tab}
+            onChange={setTab}
+            items={(section === "ventas" ? ventasEstados : estados).map((item) => ({ id: item.estado, label: item.estado, count: "motos" in item ? item.motos.length : item.fichas.length }))}
+          />}
           {taller && fichasAgrupadas && <div className="avianto-metric-grid">
             <MetricCard label="Total" value={String(section === "ventas" ? sales.length : count("Ingresada Taller"))} detail="Ingresadas" />
             <MetricCard label="En curso" value={String(section === "ventas" ? sales.length : count("Pendiente") + count("En proceso") + count("En revisión"))} detail="Pendientes y proceso" />
@@ -154,11 +151,6 @@ export function Dashboard({
           </div>}
         </div>
         {taller && fichasAgrupadas && <>
-          <StatusRail
-            active={tab}
-            onChange={setTab}
-            items={(section === "ventas" ? ventasEstados : estados).map((item) => ({ id: item.estado, label: item.estado, count: "motos" in item ? item.motos.length : item.fichas.length }))}
-          />
           <div className="avianto-screen-body">
             <div className="avianto-segmented" role="tablist" aria-label="Agrupar resultados">
               <button type="button" className={groupBy === "moto" ? "active" : ""} onClick={() => { setGroupBy("moto"); setTab("Ingresada Taller"); }}>Agrupar x moto</button>
@@ -169,100 +161,6 @@ export function Dashboard({
             </div>
           </div>
         </>}
-      </div>
-      <div className="dashboard-desktop-content">
-      <div className="page-heading">
-        <div>
-          <h1>Buenos días, {userName}</h1>
-          <p>Estado actual del taller.</p>
-        </div>
-        <div className="page-actions"><button className="button primary" onClick={onIntake}><Plus size={19} />Ingresar moto</button></div>
-      </div>
-      {taller && fichasAgrupadas && (
-        <>
-          <nav className="tabs dashboard-section-tabs" aria-label="Sección del dashboard">
-            <button className={section === "taller" ? "active" : ""} onClick={() => changeSection("taller")}>Taller</button>
-            <button className={section === "ventas" ? "active" : ""} onClick={() => changeSection("ventas")}>Ventas</button>
-          </nav>
-          <div className="metrics dashboard-metrics">
-            <DashboardMetric label="En pantalla" value={`${visible} ${label}`} detail={`${tab} · ${section === "ventas" ? "ventas" : `agrupadas por ${groupBy}`}`} />
-            <DashboardMetric label={section === "ventas" ? "En venta" : "En curso"} value={String(section === "ventas" ? sales.length : count("Pendiente") + count("En proceso") + count("En revisión"))} detail={section === "ventas" ? "motos disponibles o en gestión" : `${label} pendientes, en proceso o revisión`} />
-            <DashboardMetric label={section === "ventas" ? "Vendidas" : "Terminadas"} value={String(section === "ventas" ? salesCount("Vendida") : count("Terminada"))} detail={section === "ventas" ? "transferencias completadas" : `${label} listas para entregar`} />
-            <DashboardMetric label={section === "ventas" ? "En transferencia" : "Entregadas"} value={String(section === "ventas" ? salesCount("Transferencia en proceso") : count("Entregada"))} detail={section === "ventas" ? "operaciones en proceso" : "motos retiradas por el cliente"} />
-          </div>
-          {section === "ventas" ? (
-            <section className="table-panel taller-panel">
-              <nav className="tabs taller-tabs" aria-label="Estado de las ventas">
-                {ventasEstados.map((item) => <button key={item.estado} className={`${tab === item.estado ? "active" : ""} tab-${tabKey(item.estado)}`} onClick={() => setTab(item.estado)}>{item.estado}<span className="tab-count">{item.motos.length}</span></button>)}
-              </nav>
-              {sales.length ? <table><thead><tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Estado</th><th /></tr></thead><tbody>{sales.map((moto) => <tr key={moto.motoId}><td data-label="Moto">{moto.patente}<small>{moto.moto}</small></td><td data-label="Cliente">{moto.cliente ?? "—"}</td><td data-label="KM actual">{moto.kilometraje != null ? moto.kilometraje.toLocaleString("es-AR") : "—"}</td><td data-label="Estado"><StatusBadge status={moto.estado} /></td><td data-label="Acción"><button className="row-action" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button></td></tr>)}</tbody></table> : <EmptyState title={`Sin motos ${tab.toLowerCase()}`} body="No hay motos en este estado por el momento." />}
-            </section>
-          ) : (
-          <section className="table-panel taller-panel">
-            <nav className="tabs dashboard-group-tabs" aria-label="Agrupar tablero">
-              <button className={groupBy === "moto" ? "active" : ""} onClick={() => { setGroupBy("moto"); setTab("Ingresada Taller"); }}>Agrupar por moto</button>
-              <button className={groupBy === "ficha" ? "active" : ""} onClick={() => { setGroupBy("ficha"); setTab("Pendiente"); }}>Agrupar por ficha</button>
-            </nav>
-            <nav className="tabs taller-tabs" aria-label={`Estado de las ${groupBy === "moto" ? "motos" : "fichas"}`}>
-              {estados.map((item) => (
-                <button
-                  key={item.estado}
-                  className={`${tab === item.estado ? "active" : ""} tab-${tabKey(item.estado)}`}
-                  onClick={() => setTab(item.estado)}
-                >
-                  {item.estado}
-                  <span className="tab-count">{"motos" in item ? item.motos.length : item.fichas.length}</span>
-                </button>
-              ))}
-            </nav>
-            {groupBy === "moto" && (motos.length ? (
-              <table>
-                <thead>
-                   <tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Ingreso</th><th>Ficha</th><th>Estado</th><th /></tr>
-                </thead>
-                <tbody>
-                  {motos.map((moto) => (
-                    <tr key={moto.motoId}>
-                      <td data-label="Moto">{moto.patente}<small>{moto.moto}</small></td>
-                      <td data-label="Cliente">{moto.cliente}</td>
-                      <td data-label="KM actual">{moto.kilometraje != null ? moto.kilometraje.toLocaleString("es-AR") : "—"}</td>
-                      <td data-label="Ingreso">{moto.fechaIngreso ? date(moto.fechaIngreso) : "—"}</td>
-                       <td data-label="Ficha">{moto.fichaNumero ?? "—"}</td>
-                      <td data-label="Estado"><StatusBadge status={moto.estado} /></td>
-                      <td data-label="Acción"><button className="row-action" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <EmptyState title={`Sin motos en ${tab}`} body="No hay motos en este estado por el momento." />
-            ))}
-            {groupBy === "ficha" && (fichas.length ? (
-              <table>
-                <thead>
-                  <tr><th>Ficha</th><th>Cliente</th><th>Moto</th><th>Ingreso</th><th>Total</th><th>Estado</th><th /></tr>
-                </thead>
-                <tbody>
-                  {fichas.map((ficha) => (
-                    <tr key={ficha.id}>
-                      <td data-label="Ficha">{ficha.numero}</td>
-                      <td data-label="Cliente">{ficha.cliente}</td>
-                      <td data-label="Moto">{ficha.moto}<small>{ficha.patente}</small></td>
-                      <td data-label="Ingreso">{ficha.fechaIngreso ? date(ficha.fechaIngreso) : "—"}</td>
-                      <td data-label="Total">{money(ficha.total)}</td>
-                      <td data-label="Estado"><StatusBadge status={ficha.estado} /></td>
-                      <td data-label="Acción"><button className="row-action" onClick={() => void api<FichaResponse>(`/fichas/${ficha.id}`).then(onSelect).catch((reason) => notify(errorMessage(reason), "error"))}>Ver ficha</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <EmptyState title={`Sin fichas en ${tab}`} body="No hay fichas en este estado por el momento." />
-            ))}
-          </section>
-          )}
-        </>
-      )}
       </div>
     </div>
   );

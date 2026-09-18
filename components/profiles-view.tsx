@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDownUp, Edit3, Eye, FileText, Filter, LogIn, Plus, Trash2 } from "lucide-react";
+import { ArrowDownUp, Filter } from "lucide-react";
 import { api } from "../lib/api";
 import { parseIntegerInput } from "../lib/format";
 import type { MarcaMotoResponse, PageResponse, PerfilResponse } from "../lib/types";
@@ -62,33 +62,32 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
   };
   return <div className="page">
     <div className="avianto-mobile-screen avianto-profile-screen">
-      <div className="avianto-screen-body">
-        <h1>Perfiles</h1>
-        <p>Información integral e historial de cada moto.</p>
+      <div className="avianto-screen-body avianto-profile-intro">
+        <div><h1>Perfiles</h1><p>Información integral e historial de cada moto.</p></div>
         <button type="button" className="avianto-mobile-cta" onClick={() => onIntake()}>+&nbsp; Ingresar moto</button>
       </div>
-      <div className="avianto-profile-toolbar"><input value={dominio} onChange={(event) => { setDominio(event.target.value); setPage(1); }} placeholder="Buscar por dominio" aria-label="Buscar por dominio" /></div>
-      <StatusRail active={estado || "Todos"} onChange={(value) => { setEstado(value === "Todos" ? "" : value); setPage(1); }} items={[{ id: "Todos", label: "Todos", count: result?.totalElements ?? 0 }, ...profileStates.map((state) => ({ id: state, label: state, count: result?.content.filter((profile) => profile.estado === state).length ?? 0 }))]} />
-      <div className="avianto-screen-body">
-        <div className="avianto-mobile-list">
-          {result?.content.length ? result.content.map((profile) => <VehicleCard key={profile.id} plate={profile.patente} action={<button type="button" className="text-button" onClick={() => onOpen(profile.id)}>Ingresar al perfil</button>}><VehicleField label="Moto" value={`${profile.marca} ${profile.modelo}`} /><VehicleField label="Cliente" value={profile.propietario ?? "Sin propietario"} /><VehicleField label="Estado" value={<StatusBadge status={profile.estado} />} tone="red" /><VehicleField label="Sección" value={profile.seccion ?? "—"} /></VehicleCard>) : <EmptyState title="No hay perfiles" body="Creá el primer Perfil de una moto." action={<button className="button primary" onClick={() => onIntake()}>Ingresar moto</button>} />}
-        </div>
-        <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
-      </div>
-    </div>
-    <div className="profiles-desktop-content">
-    <div className="page-heading"><div><h1>Perfiles</h1><p>Información integral e historial de cada moto.</p></div><button className="button primary" onClick={() => onIntake()}><Plus size={19} />Ingresar moto</button></div>
-       <section className="panel table-panel">
-         <FilterBar primary={<SearchBox value={dominio} onChange={(value) => { setDominio(value); setPage(1); }} placeholder="Dominio" />} activeCount={(motoQuery ? 1 : 0) + (clienteQuery ? 1 : 0) + (estado ? 1 : 0) + (sortBy !== "updatedAt" ? 1 : 0)}>
+      <div className="avianto-profile-filters">
+        <FilterBar primary={<SearchBox value={dominio} onChange={(value) => { setDominio(value); setPage(1); }} placeholder="Dominio" />} activeCount={(motoQuery ? 1 : 0) + (clienteQuery ? 1 : 0) + (estado ? 1 : 0) + (sortBy !== "updatedAt" ? 1 : 0)}>
           <SearchBox value={motoQuery} onChange={(value) => { setMotoQuery(value); setPage(1); }} placeholder="Marca o modelo" />
           <SearchBox value={clienteQuery} onChange={(value) => { setClienteQuery(value); setPage(1); }} placeholder="Cliente" />
           <SelectField value={estado} onChange={(value) => { setEstado(value); setPage(1); }} options={profileStates.map((option) => ({ value: option, label: option }))} placeholder="Todos los estados" icon={Filter} ariaLabel="Filtrar perfiles por estado" />
           <SelectField value={sortBy} onChange={(value) => { setSortBy(value); setPage(1); }} options={[{ value: "patente", label: "Dominio" }, { value: "modelo", label: "Moto" }, { value: "estado", label: "Estado" }, { value: "updatedAt", label: "Última modificación" }]} icon={Filter} ariaLabel="Ordenar perfiles por" />
-           <button className="button secondary" onClick={() => { setDirection((value) => value === "ASC" ? "DESC" : "ASC"); setPage(1); }} aria-label="Cambiar orden de perfiles"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
+          <button className="button secondary" onClick={() => { setDirection((value) => value === "ASC" ? "DESC" : "ASC"); setPage(1); }} aria-label="Cambiar orden de perfiles"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
         </FilterBar>
-        {result?.content.length ? <table><thead><tr><th>Dominio</th><th>Moto</th><th>Cliente</th><th>Sección</th><th>Estado</th><th>Última modificación</th><th>Acciones</th></tr></thead><tbody>{result.content.map((profile) => <tr key={profile.id}><td data-label="Dominio"><strong>{profile.patente}</strong></td><td data-label="Moto">{profile.marca} {profile.modelo}</td><td data-label="Cliente">{profile.propietario ?? "Sin propietario"}</td><td data-label="Sección">{profile.seccion ?? "—"}</td><td data-label="Estado"><StatusBadge status={profile.estado} /></td><td data-label="Última modificación">{lastModified(profile.ultimaModificacion ?? profile.updatedAt)}</td><td className="table-actions"><button onClick={() => onOpen(profile.id)} aria-label={`Ver perfil ${profile.patente}`}><Eye size={17} /></button>{!profile.ingresada ? <button onClick={() => onIntake(profile.patente)} aria-label={`Ingresar moto ${profile.patente}`}><LogIn size={17} /></button> : profile.seccion === "Venta" ? <button onClick={() => onOpenSale(profile.id)} aria-label={`Abrir ficha de venta ${profile.patente}`}><FileText size={17} /></button> : null}<button onClick={() => setEditing(profile)} aria-label={`Editar perfil ${profile.patente}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(profile)} aria-label={`Eliminar perfil ${profile.patente}`}><Trash2 size={17} /></button></td></tr>)}</tbody></table> : <EmptyState title="No hay perfiles" body="Creá el primer Perfil de una moto." action={<button className="button primary" onClick={() => onIntake()}>Ingresar moto</button>} />}
-      <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
-    </section>
+      </div>
+      <StatusRail active={estado || "Todos"} onChange={(value) => { setEstado(value === "Todos" ? "" : value); setPage(1); }} items={[{ id: "Todos", label: "Todos", count: result?.totalElements ?? 0 }, ...profileStates.map((state) => ({ id: state, label: state, count: result?.content.filter((profile) => profile.estado === state).length ?? 0 }))]} />
+      <div className="avianto-screen-body">
+        <div className="avianto-mobile-list">
+          {result?.content.length ? result.content.map((profile) => <VehicleCard key={profile.id} plate={profile.patente} action={<div className="avianto-vehicle-actions">
+            <button type="button" className="text-button" onClick={() => onOpen(profile.id)}>Abrir perfil</button>
+            {!profile.ingresada && <button type="button" className="text-button" onClick={() => onIntake(profile.patente)}>Ingresar moto</button>}
+            {profile.ingresada && profile.seccion === "Venta" && <button type="button" className="text-button" aria-label={`Abrir ficha de venta ${profile.patente}`} onClick={() => onOpenSale(profile.id)}>Abrir venta</button>}
+            <button type="button" className="text-button" onClick={() => setEditing(profile)}>Editar</button>
+            <button type="button" className="text-button danger-action" onClick={() => setDeleting(profile)}>Eliminar</button>
+          </div>}><VehicleField label="Moto" value={`${profile.marca} ${profile.modelo}`} /><VehicleField label="Cliente" value={profile.propietario ?? "Sin propietario"} /><VehicleField label="Estado" value={<StatusBadge status={profile.estado} />} tone="red" /><VehicleField label="Sección" value={profile.seccion ?? "—"} /><VehicleField label="Última modificación" value={lastModified(profile.ultimaModificacion ?? profile.updatedAt)} /></VehicleCard>) : <EmptyState title="No hay perfiles" body="Creá el primer Perfil de una moto." action={<button className="button primary" onClick={() => onIntake()}>Ingresar moto</button>} />}
+        </div>
+        <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
+      </div>
     </div>
      <AbmFormModal key={String(editing?.id ?? "new")} open={editing !== null} resource="perfil" mode="modificar" initialValues={editing ?? {}} fields={profileFields} onClose={() => setEditing(null)} onSubmit={saveProfile} onError={(message) => notify(message, "error")} />
      <ConfirmModal open={deleting !== null} title="Eliminar perfil" body={`Vas a dar de baja la moto ${deleting?.patente ?? "seleccionada"}. El historial se conservará y no se eliminará de la base de datos.`} confirmLabel="Eliminar perfil" onClose={() => setDeleting(null)} onConfirm={removeProfile} />
