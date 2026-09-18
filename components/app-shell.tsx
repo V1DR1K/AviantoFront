@@ -4,26 +4,18 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ClipboardList,
-  ArrowRightLeft,
-  BookOpen,
-  FileText,
-  LayoutDashboard,
   LogOut,
-  Package,
-  Settings,
-  Users,
-  Wrench,
 } from "lucide-react";
 import type { AuthSession } from "../lib/auth";
 import { BrandLogo } from "./brand-logo";
 import { AviantoHeader, BottomNavigation } from "./avianto-mobile";
-const home = { id: "dashboard", label: "Inicio", icon: LayoutDashboard };
-const navGroups = [
-  { id: "taller", label: "Taller", items: [{ id: "orders", label: "Fichas", icon: FileText }, { id: "repuestos", label: "Pedidos", icon: Package }] },
-  { id: "ventas", label: "Ventas", items: [{ id: "sales", label: "Ventas", icon: LayoutDashboard }, { id: "transfers", label: "Transferencias", icon: ArrowRightLeft }] },
-  { id: "records", label: "Registros", items: [{ id: "clients", label: "Clientes", icon: Users }, { id: "catalog", label: "Controles", icon: Package, adminOnly: true }, { id: "trabajos", label: "Trabajos", icon: Wrench, adminOnly: true }] },
-];
+import {
+  aviantoHome,
+  aviantoNavigationGroups,
+  aviantoPrimaryNavigation,
+  normalizeBottomNavigationPage,
+  type AviantoNavigationItem,
+} from "./avianto-navigation";
 export function AppShell({
   children,
   page,
@@ -41,7 +33,7 @@ export function AppShell({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const activeGroup = navGroups.find((group) => group.items.some((item) => item.id === page))?.id;
+  const activeGroup = aviantoNavigationGroups.find((group) => group.items.some((item) => item.id === page))?.id;
   const [openGroup, setOpenGroup] = useState(activeGroup ?? "taller");
   const drawerRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
@@ -74,17 +66,17 @@ export function AppShell({
     document.addEventListener("keydown", onKeyDown);
     return () => { window.cancelAnimationFrame(focusFirst); document.removeEventListener("keydown", onKeyDown); document.body.style.overflow = previousOverflow; previousFocus.current?.focus(); };
   }, [menuOpen]);
-  const renderItem = (item: typeof home & { adminOnly?: boolean }) => {
+  const renderItem = (item: AviantoNavigationItem) => {
     const Icon = item.icon;
     return (
-      <button key={item.id} className={page === item.id ? "active" : ""} onClick={() => go(item.id)} title={item.label}>
+      <button key={item.id} className={page === item.id ? "active" : ""} aria-current={page === item.id ? "page" : undefined} onClick={() => go(item.id)} title={item.label}>
         <Icon size={20} />
         <span>{item.label}</span>
       </button>
     );
   };
   return (
-    <div className="app-shell">
+    <div className={`app-shell${collapsed ? " sidebar-is-collapsed" : ""}`}>
       <aside className={`sidebar${collapsed ? " collapsed" : ""}`}>
         <button
           className="brand"
@@ -94,10 +86,9 @@ export function AppShell({
           <BrandLogo variant="white" size="sm" />
         </button>
         <nav>
-          {renderItem(home)}
-          {renderItem({ id: "profiles", label: "Perfiles", icon: ClipboardList })}
-          {renderItem({ id: "wiki", label: "Wiki", icon: BookOpen })}
-          {navGroups.map((group) => {
+          {renderItem(aviantoHome)}
+          {aviantoPrimaryNavigation.map(renderItem)}
+          {aviantoNavigationGroups.map((group) => {
             const expanded = openGroup === group.id || group.items.some((item) => item.id === page);
             return (
               <section className={`nav-group${expanded ? " expanded" : ""}`} key={group.id}>
@@ -108,12 +99,8 @@ export function AppShell({
               </section>
             );
           })}
-          {isAdmin && <div className="sidebar-separated">{renderItem({ id: "audit", label: "Auditoría", icon: FileText })}</div>}
         </nav>
         <div className="sidebar-bottom">
-          {isAdmin && <button className="settings" onClick={() => go("settings")} title="Administración">
-            <Settings size={18} /> <span>Administración</span>
-          </button>}
           <button className="settings" onClick={onLogout} title="Cerrar sesión">
             <LogOut size={18} /> <span>Cerrar sesión</span>
           </button>
@@ -145,10 +132,9 @@ export function AppShell({
             <button className="drawer-close" onClick={() => setMenuOpen(false)}>
               Cerrar menú ×
             </button>
-              {renderItem(home)}
-              {renderItem({ id: "profiles", label: "Perfiles", icon: ClipboardList })}
-              {renderItem({ id: "wiki", label: "Wiki", icon: BookOpen })}
-             {navGroups.map((group) => (
+              {renderItem(aviantoHome)}
+              {aviantoPrimaryNavigation.map(renderItem)}
+             {aviantoNavigationGroups.map((group) => (
               <section className={`mobile-nav-group${openGroup === group.id ? " expanded" : ""}`} key={group.id}>
                 <button className="mobile-nav-group-toggle" type="button" aria-expanded={openGroup === group.id} onClick={() => toggleGroup(group.id)}>
                   <span>{group.label}</span><ChevronDown size={17} aria-hidden="true" />
@@ -158,7 +144,6 @@ export function AppShell({
                 </div>
               </section>
             ))}
-            {isAdmin && renderItem({ id: "audit", label: "Auditoría", icon: FileText })}
             <button
               className="button primary"
               onClick={() => {
@@ -174,7 +159,7 @@ export function AppShell({
           </div>
         </>
       )}
-      <BottomNavigation page={page} onPage={go} onMenu={openMenu} />
+      <BottomNavigation page={normalizeBottomNavigationPage(page)} onPage={go} onMenu={openMenu} />
     </div>
   );
 }

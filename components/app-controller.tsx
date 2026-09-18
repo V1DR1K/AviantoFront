@@ -33,6 +33,7 @@ import {
   type AuthSession,
 } from "../lib/auth";
 import { api } from "../lib/api";
+import { normalizeNavigationPage } from "./avianto-navigation";
 
 type RouteState = {
   page: string;
@@ -91,6 +92,7 @@ function routeState(pathname: string, search: string): RouteState {
   if (segments[0] === "repuestos" && segments.length === 2) return { page: "repuesto", repuestoId: segments[1], returnTo };
   if (segments[0] === "repuestos" && segments.length === 1) return { page: "repuestos" };
   if (segments[0] === "ventas" && segments.length === 2) return { page: "sale", saleId: segments[1], returnTo };
+  if (segments[0] === "administracion" && segments.length === 1) return { page: "settings" };
 
   const pages: Record<string, string> = {
     transferencias: "transfers",
@@ -130,17 +132,6 @@ const pathForPage = (page: string) => ({
     wiki: "/wiki",
     orders: "/fichas",
 }[page] ?? "/");
-
-const shellPage = (page: string) => {
-  if (page === "profile") return "profiles";
-  if (page === "intake") return "dashboard";
-  if (page === "sales") return "sales";
-  if (page === "sale") return "sales";
-  if (page === "taller-dashboard") return "taller-dashboard";
-  if (page === "ventas-dashboard") return "ventas-dashboard";
-  if (page === "repuesto-create" || page === "repuesto") return "repuestos";
-  return page;
-};
 
 export function AppController() {
   const pathname = usePathname();
@@ -238,7 +229,7 @@ export function AppController() {
   useEffect(() => {
     if (route.invalid) router.replace("/app");
     if (session && route.page === "login") router.replace("/app");
-    if (session?.user.rol !== "ADMINISTRACION" && ["audit", "settings", "trabajos", "catalog"].includes(route.page)) {
+    if (session && session.user.rol !== "ADMINISTRACION" && ["audit", "settings", "trabajos", "catalog"].includes(route.page)) {
       router.replace("/app");
     }
   }, [route.invalid, route.page, router, session]);
@@ -321,7 +312,7 @@ export function AppController() {
 
   return (
     <AppShell
-      page={shellPage(currentPage)}
+      page={normalizeNavigationPage(currentPage)}
       onPage={navigatePage}
        onIntake={() => navigate("/ingresar?returnTo=%2Fapp&base=dashboard")}
       session={session}

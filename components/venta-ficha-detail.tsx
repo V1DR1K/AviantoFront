@@ -6,6 +6,7 @@ import { api } from "../lib/api";
 import { formatDateInAr, todayInAr } from "../lib/dates";
 import type { AutocompleteResponse, VentaChecklistItemState, VentaFichaResponse } from "../lib/types";
 import { AutocompleteField, ConfirmModal, Dialog, EmptyState, SelectField, StatusBadge, type Notify } from "./ui";
+import { AviantoPage, AviantoRecordHero } from "./avianto-layout";
 
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible actualizar la ficha de venta.";
 const checklistStates: VentaChecklistItemState[] = ["Pendiente", "Realizado", "No aplica"];
@@ -143,19 +144,8 @@ export function VentaFichaDetail({
   };
 
   return (
-    <div className="page venta-ficha-page">
-      <button className="back" onClick={onBack}>← Volver a ventas</button>
-      <div className="detail-title venta-ficha-title">
-        <div>
-          <p>{ficha.numero}</p>
-          <h1>{ficha.moto} · {ficha.patente}</h1>
-          <span>Vendedor actual: {ficha.vendedor}</span>
-        </div>
-        <div className="detail-stack">
-          <StatusBadge status={ficha.estado} />
-          <button className="button secondary compact" onClick={() => onOpenMoto(ficha.motoId)}>Ver perfil de moto</button>
-        </div>
-      </div>
+    <AviantoPage className="venta-ficha-page">
+      <AviantoRecordHero eyebrow={ficha.numero} title={ficha.patente} subtitle={`${ficha.moto} · Vendedor actual: ${ficha.vendedor}`} status={<StatusBadge status={ficha.estado} />} actions={<button className="button secondary compact" onClick={() => onOpenMoto(ficha.motoId)}>Ver perfil de moto</button>} onBack={onBack} backLabel="Volver a ventas" />
 
       <ol className="flow-steps sale-flow" aria-label="Etapas de la carpeta de transferencia">
         {steps.map((step, index) => <li key={step} className={`flow-step${index < currentStep ? " done" : ""}${index === currentStep ? " current" : ""}`}><span>{index < currentStep ? "✓" : index + 1}</span><strong>{step}</strong></li>)}
@@ -224,6 +214,6 @@ export function VentaFichaDetail({
         </form>
       </Dialog>
        <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} variant={confirmation?.title === "Cancelar transferencia" ? "danger" : "success"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; if (!request) return; return request.action().then(() => setConfirmation(null)); }} />
-    </div>
+    </AviantoPage>
   );
 }

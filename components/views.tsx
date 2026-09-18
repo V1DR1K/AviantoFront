@@ -30,6 +30,7 @@ import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, Sel
 import { BudgetBreakdown } from "./budget-breakdown";
 import { PaymentLedger } from "./payment-ledger";
 import { MetricCard, StatusRail, VehicleCard, VehicleField } from "./avianto-mobile";
+import { AviantoPage, AviantoPageHeader, AviantoPanel, AviantoRecordHero, StickyActionBar } from "./avianto-layout";
 
 const splitVehicleName = (value: string) => {
   const [make, ...modelParts] = value.trim().split(/\s+/);
@@ -212,9 +213,9 @@ export function VentasView({
     return () => controller.abort();
   }, [query, status, sortBy, direction, page, notify, reloadKey]);
   const emptyLabel = status === "Todos" ? "para mostrar" : status.toLowerCase();
-  return <div className="page">
-    <div className="page-heading"><div><h1>Ventas</h1><p>Fichas persistentes para seguir comprador, requisitos y transferencia.</p></div><div className="page-actions"><button className="button secondary" onClick={onIntake}><Plus size={18} />Ingresar moto</button></div></div>
-       <section className="panel table-panel">
+  return <AviantoPage>
+    <AviantoPageHeader eyebrow="Ventas" title="Ventas" description="Fichas persistentes para seguir comprador, requisitos y transferencia." actions={<button className="button secondary" onClick={onIntake}><Plus size={18} />Ingresar moto</button>} />
+       <AviantoPanel className="table-panel">
        <FilterBar
           primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Ficha, patente o comprador" />}
           activeCount={(status !== "Todos" ? 1 : 0) + (sortBy !== "updatedAt" ? 1 : 0)}
@@ -230,8 +231,8 @@ export function VentasView({
             return <tr key={sale.id}><td data-label="Ficha"><strong>{sale.numero}</strong><small>Actualizada {date(sale.actualizadaEn)}</small></td><td data-label="Moto"><strong>{sale.patente}</strong><small>{sale.moto}</small></td><td data-label={sale.estado === "Vendida" ? "Comprador final" : sale.estado === "Cancelada" ? "Comprador registrado" : "Comprador prospectivo"}>{sale.comprador ?? "Sin comprador"}</td><td data-label="Carpeta">{required.length ? `${completed}/${required.length} obligatorios` : "Sin ítems obligatorios"}<small>{sale.obligatoriosCompletos ? "Completa" : "Incompleta"}</small></td><td data-label="Cita">{appointment}<small>{sale.transferencia?.asistenciaAt ? "Asistencia confirmada" : sale.transferencia ? "Asistencia pendiente" : "Esperando transferencia"}</small></td><td data-label="Estado"><StatusBadge status={sale.estado} /></td><td className="table-actions sales-actions"><button onClick={() => onOpenSale(sale)} aria-label={`Abrir ficha de venta ${sale.numero}`}><FileText size={17} /></button><button onClick={() => onOpenMoto(sale.motoId)} aria-label={`Ver moto ${sale.patente}`}><Eye size={17} /></button></td></tr>;
         })}</tbody></table> : loadError ? <EmptyState title="No se pudieron cargar las fichas de venta" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((value) => value + 1)}>Reintentar</button>} /> : result ? <EmptyState title={`Sin fichas ${emptyLabel}`} body={query ? "Probá con otra búsqueda." : "No hay fichas de venta dentro de los filtros seleccionados."} /> : <div className="table-loading" role="status">Cargando fichas de venta...</div>}
        <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
-      </section>
-    </div>;
+      </AviantoPanel>
+    </AviantoPage>;
 }
 
 export function FichasView({
@@ -305,17 +306,9 @@ export function FichasView({
   };
   const toggleDirection = () => setDirection((d) => (d === "ASC" ? "DESC" : "ASC"));
   return (
-    <div className="page">
-      <div className="page-heading">
-        <div>
-          <h1>Fichas de trabajo</h1>
-          <p>Consultá y administrá las órdenes de trabajo del taller.</p>
-        </div>
-        <button className="button primary" onClick={onNewOrder}>
-          <Plus size={19} />Nueva ficha
-        </button>
-      </div>
-       <section className="panel table-panel">
+    <AviantoPage>
+      <AviantoPageHeader eyebrow="Taller" title="Fichas de trabajo" description="Consultá y administrá las órdenes de trabajo del taller." actions={<button className="button primary" onClick={onNewOrder}><Plus size={19} />Nueva ficha</button>} />
+       <AviantoPanel className="table-panel">
          <FilterBar
             primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder={pendingIntake ? "Patente o moto" : "Número o cliente"} />}
             activeCount={(status !== "Todos" ? 1 : 0) + (pendingIntake ? 0 : (paymentStatus !== "Todos" ? 1 : 0) + (desde !== daysAgoInAr(30) ? 1 : 0) + (hasta !== todayInAr() ? 1 : 0)) + (sortBy !== "fechaIngreso" ? 1 : 0)}
@@ -378,8 +371,8 @@ export function FichasView({
           <EmptyState title="No hay fichas" body="Creá una nueva o ajustá los filtros." />
         )}
         <Pagination page={page} total={pendingIntake ? pendingMotos?.totalPages || 1 : result?.totalPages || 1} onPage={setPage} />
-      </section>
-    </div>
+      </AviantoPanel>
+    </AviantoPage>
   );
 }
 
@@ -658,21 +651,16 @@ export function FichaDetail({
   if (current !== "Terminada" && current !== "Entregada" && current !== "Cancelada")
        bottomActions.push({ key: "cancelar", label: "Cancelar ficha", className: "danger", onClick: () => onConfirm({ title: "Cancelar ficha", body: "La ficha quedará cancelada. El historial conservará el registro para auditoría.", confirmLabel: "Cancelar ficha", successMessage: "Ficha cancelada.", action: () => api<FichaResponse>(`/fichas/${ficha.id}/estado`, { method: "PATCH", body: JSON.stringify({ estado: "Cancelada" }) }).then(setFicha) }) });
   return (
-    <div className="page">
-      <button className="back" onClick={onBack}>← Volver a fichas</button>
-      <div className="detail-title">
-        <div>
-          <p>{ficha.numero}</p>
-          <h1>{ficha.moto} · {ficha.patente}</h1>
-          <span>{ficha.cliente}</span>
-        </div>
-        <div className="detail-stack">
-          <StatusBadge key={ficha.estado} status={ficha.estado} />
-          <StatusBadge key={ficha.estadoPago} status={ficha.estadoPago} />
-          <strong>{money(ficha.total)}</strong>
-          {(current === "Pendiente" || current === "En proceso") && <button className="button secondary" onClick={onEdit}><Edit3 size={17} />Editar ficha</button>}
-        </div>
-      </div>
+    <AviantoPage>
+      <AviantoRecordHero
+        eyebrow={ficha.numero}
+        title={ficha.patente}
+        subtitle={`${ficha.moto} · ${ficha.cliente}`}
+        status={<><StatusBadge key={ficha.estado} status={ficha.estado} /><StatusBadge key={ficha.estadoPago} status={ficha.estadoPago} /></>}
+        actions={<><strong className="avianto-record-total">{money(ficha.total)}</strong>{(current === "Pendiente" || current === "En proceso") && <button className="button secondary" onClick={onEdit}><Edit3 size={17} />Editar ficha</button>}</>}
+        onBack={onBack}
+        backLabel="Volver a fichas"
+      />
       <ol className={`flow-steps${current === "Cancelada" ? " canceled" : ""}`}>
         {flowSteps.map((step) => {
           const index = flowSteps.indexOf(step);
@@ -693,10 +681,10 @@ export function FichaDetail({
         )}
       </ol>
       {bottomActions.length > 0 && (
-        <div className="ficha-actions">
+        <StickyActionBar className="ficha-actions">
            {bottomActions.filter((action) => action.className === "primary").map((action) => <button key={action.key} className="button large primary" disabled={Boolean(pending) || (action.key === "aprobar" && (!revision || pendingControls.length > 0))} onClick={action.onClick}>{action.label}</button>)}
           {bottomActions.some((action) => action.className !== "primary") && <MoreActions actions={bottomActions.filter((action) => action.className !== "primary")} pending={Boolean(pending)} />}
-        </div>
+        </StickyActionBar>
       )}
       <PaymentLedger resource="fichas" documentId={ficha.id} documentState={ficha.estado} estadoPago={ficha.estadoPago} total={ficha.total} montoCobrado={ficha.montoCobrado} saldoPendiente={ficha.saldoPendiente} onDocumentChange={load} notify={notify} />
       <section className="detail-grid">
@@ -830,7 +818,7 @@ export function FichaDetail({
         </form>
       </Dialog>
       <ConfirmModal open={startWorkItem !== null} title="Iniciar trabajo" body="Esta ficha se marcará como En proceso si realizás un trabajo." confirmLabel="Marcar en proceso" variant="success" onClose={() => setStartWorkItem(null)} onConfirm={startWork} />
-    </div>
+    </AviantoPage>
   );
 }
 

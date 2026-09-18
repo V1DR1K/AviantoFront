@@ -16,6 +16,7 @@ import type {
 } from "../lib/types";
 import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 import { PaymentLedger } from "./payment-ledger";
+import { AviantoPage, AviantoPageHeader, AviantoPanel, AviantoRecordHero } from "./avianto-layout";
 
 const date = formatDateInAr;
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
@@ -55,12 +56,9 @@ export function RepuestosView({
   const toggleDirection = () => setDirection((d) => (d === "ASC" ? "DESC" : "ASC"));
   useEffect(() => { if (createPrefill) loadClients(); }, [createPrefill]);
   return (
-    <div className="page">
-      <div className="page-heading">
-        <div><h1>Pedidos de repuestos</h1><p>Control de compras, recepción y pago de repuestos y accesorios.</p></div>
-        <button className="button primary" onClick={() => { setCreateOpen(true); loadClients(); }}><Plus size={19} />Nuevo pedido</button>
-      </div>
-       <section className="panel table-panel">
+    <AviantoPage>
+      <AviantoPageHeader eyebrow="Taller" title="Pedidos de repuestos" description="Control de compras, recepción y pago de repuestos y accesorios." actions={<button className="button primary" onClick={() => { setCreateOpen(true); loadClients(); }}><Plus size={19} />Nuevo pedido</button>} />
+       <AviantoPanel className="table-panel">
          <FilterBar
            primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Número, cliente o patente" />}
            activeCount={(estado !== "Todos" ? 1 : 0) + (desde !== daysAgoInAr(30) ? 1 : 0) + (hasta !== todayInAr() ? 1 : 0) + (sortBy !== "fecha" ? 1 : 0)}
@@ -99,7 +97,7 @@ export function RepuestosView({
           </table>
         ) : <EmptyState title="No hay pedidos de repuestos" body="Creá uno nuevo o ajustá los filtros." />}
         <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
-      </section>
+      </AviantoPanel>
       <CreateRepuestoDialog
         key={createPrefill ? `create-${createPrefill.motoId}` : createOpen ? "create" : editing ? `edit-${editing.id}` : "closed"}
         open={createOpen || Boolean(editing) || Boolean(createPrefill)}
@@ -120,7 +118,7 @@ export function RepuestosView({
         onClose={() => setDeleting(null)}
         onConfirm={async () => { const sel = deleting; if (!sel) return; setDeleting(null); try { await api(`/repuestos/${sel.id}`, { method: "DELETE" }); refresh(); notify(`Pedido ${sel.numero} eliminado correctamente.`); } catch (reason) { notify(errorMessage(reason), "error"); } }}
       />
-    </div>
+    </AviantoPage>
   );
 }
 
@@ -303,12 +301,8 @@ export function RepuestoDetail({
   const setItemState = async (itemId: string, estado: RepuestoItemState) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/items/${itemId}/estado`, { method: "PATCH", body: JSON.stringify({ estado }) }); setRepuesto(next); notify(`Ítem marcado como ${estado}.`); } catch (reason) { notify(errorMessage(reason), "error"); } finally { setPending(false); } };
   const patch = async (path: string, body: Record<string, string>) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(path, { method: "PATCH", body: JSON.stringify(body) }); setRepuesto(next); return next; } catch (reason) { notify(errorMessage(reason), "error"); throw reason; } finally { setPending(false); } };
   return (
-    <div className="page">
-      <button className="back" onClick={onBack}>← Volver a repuestos</button>
-      <div className="detail-title">
-        <div><p>{repuesto.numero}</p><h1>{repuesto.patente}</h1><span>{repuesto.cliente} · {date(repuesto.fecha)}</span></div>
-        <div className="detail-stack"><StatusBadge status={repuesto.estado} /><StatusBadge status={repuesto.estadoPago} /><strong>{money(repuesto.total)}</strong>{!locked && <button className="button secondary" onClick={() => setEditOpen(true)}><Edit3 size={17} />Editar pedido</button>}</div>
-      </div>
+    <AviantoPage>
+      <AviantoRecordHero eyebrow={repuesto.numero} title={repuesto.patente} subtitle={`${repuesto.cliente} · ${date(repuesto.fecha)}`} status={<><StatusBadge status={repuesto.estado} /><StatusBadge status={repuesto.estadoPago} /></>} actions={<><strong className="avianto-record-total">{money(repuesto.total)}</strong>{!locked && <button className="button secondary" onClick={() => setEditOpen(true)}><Edit3 size={17} />Editar pedido</button>}</>} onBack={onBack} backLabel="Volver a repuestos" />
       <PaymentLedger resource="repuestos" documentId={repuesto.id} documentState={repuesto.estado} estadoPago={repuesto.estadoPago} total={repuesto.total} montoCobrado={repuesto.montoCobrado} saldoPendiente={repuesto.saldoPendiente} onDocumentChange={load} notify={notify} />
       <section className="detail-grid">
         <div className="form-stack">
@@ -362,6 +356,6 @@ export function RepuestoDetail({
         onError={(message) => notify(message, "error")}
       />
       <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; if (!request) return; return request.action().then(() => { notify(request.successMessage); setConfirmation(null); }).catch((reason) => { notify(errorMessage(reason), "error"); throw reason; }); }} />
-    </div>
+    </AviantoPage>
   );
 }

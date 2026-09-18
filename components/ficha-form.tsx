@@ -15,6 +15,7 @@ import type {
 } from "../lib/types";
 import { ConfirmModal, StatusBadge, type Notify } from "./ui";
 import { BudgetBreakdown } from "./budget-breakdown";
+import { StickyActionBar } from "./avianto-layout";
 
 type Line = {
   key: string;
@@ -654,6 +655,10 @@ export function FichaForm({
           </button>
         </aside>
       </div>
+      <StickyActionBar className="ficha-mobile-actions">
+        <button type="button" className="button secondary" onClick={() => isDirty ? setCloseConfirmation(true) : onClose()}><X size={18} />Cancelar</button>
+        <button type="button" className="button primary" disabled={saving || !editable} onClick={() => void save()}><Save size={18} />{saving ? "Guardando..." : editing ? "Guardar cambios" : "Guardar ficha"}</button>
+      </StickyActionBar>
       <ConfirmModal
         open={duplicateWork !== null}
         title="Trabajo ya agregado"

@@ -7,6 +7,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { StatusBadge } from "./ui";
+import { AviantoPage, AviantoPageHeader } from "./avianto-layout";
 
 type StateEntry = {
   status: string;
@@ -150,13 +151,8 @@ function Flow({ steps, label }: { steps: string[]; label: string }) {
 
 export function WikiView() {
   return (
-    <div className="page wiki-page">
-      <div className="page-heading">
-        <div>
-          <h1>Wiki operativa</h1>
-          <p>Definiciones, estados y transiciones para trabajar con una única interpretación en todo el equipo.</p>
-        </div>
-      </div>
+    <AviantoPage className="wiki-page">
+      <AviantoPageHeader eyebrow="Conocimiento" title="Wiki operativa" description="Definiciones, estados y transiciones para trabajar con una única interpretación en todo el equipo." />
 
       <div className="wiki-layout">
         <nav className="panel wiki-toc" aria-label="Índice de Wiki">
@@ -262,6 +258,6 @@ export function WikiView() {
           </section>
         </div>
       </div>
-    </div>
+    </AviantoPage>
   );
 }

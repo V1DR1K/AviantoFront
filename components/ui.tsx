@@ -119,7 +119,7 @@ export function FilterBar({
   const controlsId = `filter-bar-${useId()}`;
 
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 680px)");
+    const media = window.matchMedia("(max-width: 767px)");
     const syncWithViewport = () => setCollapsed(media.matches);
     syncWithViewport();
     media.addEventListener("change", syncWithViewport);

@@ -7,6 +7,7 @@ import { parseIntegerInput } from "../lib/format";
 import type { AuditoriaResponse, ClienteResponse, ControlResponse, MarcaMotoResponse, MotovehiculoResponse, PageResponse, VentaChecklistPlantillaRequest, VentaChecklistPlantillaResponse } from "../lib/types";
 import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, SelectField, type Notify } from "./ui";
 import { AbmFormModal, type AbmField, VehicleAbmModal } from "./modal/abm-form-modal";
+import { AviantoPage, AviantoPageHeader, AviantoPanel } from "./avianto-layout";
 
 type Resource = "clients" | "vehicles" | "catalog" | "audit";
 type DataRow = Record<string, string | number | boolean | null | undefined>;
@@ -124,15 +125,12 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
 
   const params = { q: query || undefined, activo: filter === "Todos" ? undefined : filter === "Activo" };
   return (
-    <div className="page">
-      <div className="page-heading">
-        <div><h1>{config.title}</h1><p>{config.description}</p></div>
-        <div className="panel-actions">
+    <AviantoPage>
+      <AviantoPageHeader eyebrow="Administración" title={config.title} description={config.description} actions={<div className="panel-actions">
           {resource === "vehicles" && onOpenServices && <button className="button secondary" onClick={onOpenServices}>Seguimiento de services</button>}
           <button className="button primary" onClick={() => setEditing({})}><Plus size={19} />Nuevo {config.singular}</button>
-        </div>
-      </div>
-       <section className="panel table-panel">
+        </div>} />
+       <AviantoPanel className="table-panel">
          <FilterBar
            primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder={`Buscar ${config.singular}`} />}
            activeCount={filter !== "Todos" ? 1 : 0}
@@ -142,11 +140,11 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
          </FilterBar>
         {rows.length ? <table><thead><tr>{config.columns.map((column) => <th key={column}>{column}</th>)}<th>Acciones</th></tr></thead><tbody>{rows.map((row) => <tr key={String(row.id)}>{config.columns.map((column) => <td key={column} data-label={column}>{cell(row, column)}</td>)}<td className="table-actions"><button onClick={() => resource === "vehicles" && onOpenVehicle ? onOpenVehicle(String(row.id)) : setDetail(row)} aria-label={`Ver ${config.singular}`}><Eye size={17} /></button><button onClick={() => setEditing(row)} aria-label={`Editar ${config.singular}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(row)} aria-label={`Eliminar ${config.singular}`}><Trash2 size={17} /></button></td></tr>)}</tbody></table> : <EmptyState title={`No hay ${config.title.toLowerCase()} para mostrar`} body="Probá ajustar los filtros o crear un registro." action={<button className="button primary" onClick={() => setEditing({})}>Crear registro</button>} />}
         <Pagination page={page} total={total} onPage={setPage} />
-      </section>
+      </AviantoPanel>
       {resource === "vehicles" ? <VehicleAbmModal key={String(editing?.id ?? "new")} open={editing !== null} mode={editing?.id ? "modificar" : "agregar"} initialValues={editing ?? {}} brands={brands} clients={clients} onClose={() => setEditing(null)} onSubmit={submit} onError={(message) => notify(message, "error")} /> : <AbmFormModal key={String(editing?.id ?? "new")} open={editing !== null} resource={config.singular} mode={editing?.id ? "modificar" : "agregar"} fields={fields} initialValues={editing ?? {}} onClose={() => setEditing(null)} onSubmit={submit} onError={(message) => notify(message, "error")} />}
       <RecordDetail open={detail !== null} title={config.singular} record={detail} onClose={() => setDetail(null)} onEdit={() => { setEditing(detail); setDetail(null); }} />
      <ConfirmModal open={deleting !== null} title={`Eliminar ${config.singular}`} body="El registro seleccionado pasará a inactivo y conservará su historial." confirmLabel={`Eliminar ${config.singular}`} onClose={() => setDeleting(null)} onConfirm={async () => { if (!deleting) return; const selected = deleting; try { await api(`${config.endpoint}/${selected.id}`, { method: "DELETE" }); load(); notify(`${config.singular[0].toUpperCase()}${config.singular.slice(1)} eliminado correctamente.`); setDeleting(null); } catch (reason) { notify(requestError(reason), "error"); throw reason; } }} />
-    </div>
+    </AviantoPage>
   );
 }
 

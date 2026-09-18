@@ -3454,7 +3454,7 @@ td.table-actions {
 .mobile-drawer {
   display: none;
 }
-@media (max-width: 1000px) {
+@media (max-width: 1199px) {
   .metrics {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -3512,7 +3512,7 @@ td.table-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-@media (max-width: 680px) {
+@media (max-width: 767px) {
   body {
     font-size: 16px;
   }
@@ -4317,7 +4317,7 @@ input:focus,
 .login-card label {
   color: var(--brand-white);
 }
-@media (max-width: 680px) {
+@media (max-width: 767px) {
   .sidebar .brand-logo img,
   .mobile-header .brand-logo img {
     width: 122px;
@@ -4505,7 +4505,7 @@ input:focus,
   }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 767px) {
   .settings-grid {
     grid-template-columns: 1fr;
   }
@@ -4523,7 +4523,7 @@ input:focus,
     width: 100%;
   }
 }
-@media (max-width: 680px) {
+@media (max-width: 767px) {
   .record-form {
     grid-template-columns: 1fr;
   }
@@ -4541,7 +4541,7 @@ input:focus,
   }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 767px) {
   .dashboard-dossier {
     grid-template-columns: 1fr;
   }
@@ -5035,7 +5035,7 @@ input:focus,
 .sidebar button:focus-visible {
   outline-color: #fff;
 }
-@media (min-width: 681px) and (max-width: 1000px) {
+@media (min-width: 768px) and (max-width: 1199px) {
   .table-panel {
     overflow-x: auto;
   }
@@ -5046,7 +5046,7 @@ input:focus,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-@media (max-width: 680px) {
+@media (max-width: 767px) {
   .wiki-layout {
     grid-template-columns: 1fr;
   }
@@ -5278,7 +5278,7 @@ input:focus,
   .landing-intro, .landing-capabilities, .landing-proof { gap: 45px; }
   .landing-cta { padding-inline: 40px; }
 }
-@media (max-width: 680px) {
+@media (max-width: 767px) {
   .landing-header, .landing-hero, .landing-intro, .landing-workflow, .landing-capabilities, .landing-proof, .landing-cta, .landing-footer { width: min(100% - 30px, 560px); }
   .landing-header { min-height: 72px; }
   .landing-nav { gap: 0; }
@@ -5348,7 +5348,7 @@ input:focus,
 .landing-cta .landing-button-light { color: var(--brand-white) !important; }
 .landing-cta .landing-button-light { background: var(--brand-red); }
 .landing-cta .landing-button-light:hover { background: var(--brand-red-strong); }
-@media (max-width: 680px) {
+@media (max-width: 767px) {
   .landing-brand .brand-logo img { width: 116px; }
 }
 .login-card input:focus-visible {

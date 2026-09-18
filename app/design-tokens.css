@@ -87,8 +87,11 @@
   --shadow: var(--shadow-document);
   --modal-shadow: var(--shadow-modal);
   --focus-ring: 0 0 0 3px rgb(48 52 139 / 0.28);
-  --mobile-nav-height: 82px;
+  --shell-sidebar-wide: 252px;
+  --shell-sidebar-rail: 84px;
+  --shell-mobile-header: 78px;
+  --mobile-nav-height: 104px;
   --mobile-nav-padding: 8px;
-  --breakpoint-tablet: 1000px;
-  --breakpoint-mobile: 680px;
+  --breakpoint-tablet: 1199px;
+  --breakpoint-mobile: 767px;
 }

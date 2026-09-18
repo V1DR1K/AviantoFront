@@ -23,7 +23,7 @@ export function BottomNavigation({ page, onPage, onMenu }: { page: string; onPag
   ];
   return (
     <nav className="avianto-bottom-navigation" aria-label="Navegación móvil">
-      <button type="button" aria-label="Más opciones" onClick={onMenu}>
+      <button type="button" className={page === "more" ? "active" : ""} aria-label="Más opciones" aria-current={page === "more" ? "page" : undefined} onClick={onMenu}>
         <span className="avianto-bottom-art" style={{ "--avianto-nav-art": "url('/brand/avianto-svg/nav-more.svg')" } as CSSProperties} aria-hidden="true" />
         <span className="avianto-bottom-label">Más</span>
       </button>

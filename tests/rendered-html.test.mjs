@@ -38,7 +38,7 @@ test("keeps motorcycle years without locale thousands separators", () => {
 });
 
 test("keeps the application entrypoint, production scripts, and responsive operational controls", async () => {
-  const [page, loginPage, layout, stylesheet, packageJson, controller, fichaForm, intakeView, ui, views, motoDetail, wiki, shell, budgetBreakdown, repuestosView, paymentLedger, types, apiContract] = await Promise.all([
+  const [page, loginPage, layout, stylesheet, packageJson, controller, fichaForm, intakeView, ui, views, motoDetail, wiki, shell, budgetBreakdown, repuestosView, paymentLedger, types, apiContract, responsiveStyles, navigation] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -57,13 +57,22 @@ test("keeps the application entrypoint, production scripts, and responsive opera
     readFile(new URL("../components/payment-ledger.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/types.ts", import.meta.url), "utf8"),
     readFile(new URL("../docs/api-contract.md", import.meta.url), "utf8"),
+    readFile(new URL("../components/avianto-layout.css", import.meta.url), "utf8"),
+    readFile(new URL("../components/avianto-navigation.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page, /LandingPage/);
   assert.match(loginPage, /AppController/);
   assert.match(layout, /AviantoSoftware/);
+  assert.match(layout, /viewportFit: "cover"/);
+  assert.match(responsiveStyles, /@media \(max-width: 767px\)/);
+  assert.match(responsiveStyles, /grid-template-columns: var\(--shell-sidebar-wide\) minmax\(0, 1fr\)/);
+  assert.match(responsiveStyles, /@media \(min-width: 768px\) and \(max-width: 1199px\)/);
+  assert.match(navigation, /profile: "profiles"/);
+  assert.match(navigation, /create: "orders"/);
+  assert.match(navigation, /fichas: "orders"/);
   assert.match(stylesheet, /\.order-form \.line-item \{[\s\S]*?grid-template-areas:[\s\S]*?"description price total status delete"[\s\S]*?"observation observation observation observation observation"/);
-  assert.match(stylesheet, /@media \(max-width: 680px\) \{[\s\S]*?\.order-form \.line-item \{[\s\S]*?"description delete"[\s\S]*?"observation observation"/);
-  assert.match(stylesheet, /@media \(max-width: 680px\) \{[\s\S]*?\.order-form input,[\s\S]*?\.order-form select,[\s\S]*?\.order-form textarea \{[\s\S]*?font-size: 16px;/);
+  assert.match(stylesheet, /@media \(max-width: 767px\) \{[\s\S]*?\.order-form \.line-item \{[\s\S]*?"description delete"[\s\S]*?"observation observation"/);
+  assert.match(stylesheet, /@media \(max-width: 767px\) \{[\s\S]*?\.order-form input,[\s\S]*?\.order-form select,[\s\S]*?\.order-form textarea \{[\s\S]*?font-size: 16px;/);
   assert.match(packageJson, /"build"/);
   assert.match(controller, /perfiles|fichas|repuestos/);
   assert.match(fichaForm, /line-observation[\s\S]*?observacionTrabajo/);
@@ -119,7 +128,7 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /Pedidos de repuestos y accesorios[\s\S]*?<BudgetBreakdown/);
   assert.match(views, /Enviar a revisión/);
   assert.match(views, /<\/ol>[\s\S]*?<PaymentLedger resource="fichas"[\s\S]*?<section className="detail-grid">/);
-  assert.match(repuestosView, /className="detail-title"[\s\S]*?<PaymentLedger resource="repuestos"[\s\S]*?<section className="detail-grid">/);
+  assert.match(repuestosView, /<AviantoRecordHero[\s\S]*?<PaymentLedger resource="repuestos"[\s\S]*?<section className="detail-grid">/);
   assert.doesNotMatch(views, /selectedPaidWorkIds|\/pago"/);
   assert.doesNotMatch(repuestosView, /selectedPaidItemIds|\/pago"/);
   assert.match(paymentLedger, /const endpoint = `\/\$\{resource\}\/\$\{documentId\}\/pagos`;/);
@@ -153,7 +162,8 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(motoDetail, /setTab\("fichas"\)[\s\S]*?Abrir ficha taller/);
   assert.match(views, /<FileText size=\{17\} \/>[\s\S]*?<Eye size=\{17\} \/>/);
   assert.match(controller, /wiki:\s*"\/wiki"/);
-  assert.match(shell, /id: "wiki", label: "Wiki"/);
+  assert.match(shell, /aviantoPrimaryNavigation/);
+  assert.match(navigation, /id: "wiki", label: "Wiki"/);
   assert.match(wiki, /enviar manualmente la ficha a revisión/);
   assert.match(wiki, /observación opcional/);
   assert.match(wiki, /Disponible no significa en venta/);
@@ -217,7 +227,7 @@ test("keeps the sale ficha workflow, read-only transfer registry, and sale check
   assert.match(types, /fichaVentaId\?: string \| null;/);
   assert.match(types, /canceladaAt\?: string \| null;/);
   assert.match(stylesheet, /\.sale-gates \{[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/);
-  assert.match(stylesheet, /@media \(max-width: 680px\) \{[\s\S]*?\.sale-checklist-item \{[\s\S]*?grid-template-columns: 44px minmax\(0, 1fr\);/);
+  assert.match(stylesheet, /@media \(max-width: 767px\) \{[\s\S]*?\.sale-checklist-item \{[\s\S]*?grid-template-columns: 44px minmax\(0, 1fr\);/);
   assert.match(stylesheet, /\.moto-detail-title \{[\s\S]*?display: grid;[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/);
   assert.match(stylesheet, /\.moto-detail-actions > \.button,[\s\S]*?\.moto-detail-actions > \.detail-note \{[\s\S]*?width: 100%;/);
   assert.match(stylesheet, /\.ficha-form-layout > \.form-stack,[\s\S]*?overflow: visible;/);

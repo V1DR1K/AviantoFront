@@ -181,7 +181,7 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
 .service-modal .modal-actions .button.secondary { border-color: var(--brand-white); background: transparent; color: var(--brand-white); }
 .empty { background-image: var(--asset-trama-2); background-position: center; background-size: 520px auto; }
 
-@media (max-width: 1199px) and (min-width: 761px) {
+@media (max-width: 1199px) and (min-width: 768px) {
   .avianto-mobile-list,
   .moto-transfer-list,
   .moto-service-history { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -189,7 +189,7 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
   .avianto-tabs button { flex-basis: 108px; padding-inline: 10px; font-size: .9rem; }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   :root { --mobile-nav-height: 104px; }
   .sidebar { display: none !important; }
   .main,
