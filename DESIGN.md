@@ -168,6 +168,15 @@ Surfaces use softly rounded technical documents (14px), controls use a compact 9
 
 - `BrandLogo` supports lockup/isotipo, color/white variants and responsive sizes.
 - The official area of security is preserved by transparent asset padding; no logo distortion, recoloring or unapproved effects are allowed.
+- Official SVG artwork from the Illustrator system lives in `public/brand/avianto-svg/`:
+  - `isologotipo.svg` and `isotipo.svg`: color lockup and mark used by `BrandLogo`.
+  - `fondo-inicio.svg`: login card texture and composition.
+  - `moto-fondo.svg`: subtle motorcycle watermark for detail and service surfaces.
+  - `trama-1.svg` / `trama-2.svg`: operational and secondary surface patterns.
+  - `nav-more.svg`, `nav-home.svg`, `nav-profiles.svg`, `nav-orders.svg` and `nav-pedidos.svg`: official mobile navigation artwork.
+- Asset URLs are exposed as tokens in `app/design-tokens.css`; components consume them through CSS instead of duplicating paths.
+- The official bottom-navigation artwork is rendered as a CSS mask so its silhouette stays intact while its foreground follows the accessible white/red navigation states. Its embedded text is hidden from visual duplication and the DOM keeps an accessible label.
+- The SVG package does not include a white lockup or white isotipo; the supplied white PNG variants remain the fallback for inverse desktop surfaces.
 
 ## Do's and Don'ts
 

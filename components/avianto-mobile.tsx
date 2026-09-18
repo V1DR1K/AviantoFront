@@ -1,6 +1,5 @@
-import { useEffect, useRef, type ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
-import { ArrowRight, ClipboardList, LayoutDashboard, Menu, Package } from "lucide-react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import { ArrowRight, Menu } from "lucide-react";
 import { BrandLogo } from "./brand-logo";
 
 export type AviantoTab = { id: string; label: string };
@@ -16,16 +15,22 @@ export function AviantoHeader({ onMenu, onHome, onIntake }: { onMenu: () => void
 }
 
 export function BottomNavigation({ page, onPage, onMenu }: { page: string; onPage: (page: string) => void; onMenu: () => void }) {
-  const items: { id: string; label: string; icon: LucideIcon }[] = [
-    { id: "repuestos", label: "Pedidos", icon: Package },
-    { id: "dashboard", label: "Inicio", icon: LayoutDashboard },
-    { id: "profiles", label: "Perfiles", icon: ClipboardList },
-    { id: "orders", label: "Fichas", icon: ClipboardList },
+  const items = [
+    { id: "repuestos", label: "Pedidos", artwork: "/brand/avianto-svg/nav-pedidos.svg" },
+    { id: "dashboard", label: "Inicio", artwork: "/brand/avianto-svg/nav-home.svg" },
+    { id: "profiles", label: "Perfiles", artwork: "/brand/avianto-svg/nav-profiles.svg" },
+    { id: "orders", label: "Fichas", artwork: "/brand/avianto-svg/nav-orders.svg" },
   ];
   return (
     <nav className="avianto-bottom-navigation" aria-label="Navegación móvil">
-      <button type="button" onClick={onMenu}><Menu size={22} /><span>Más</span></button>
-      {items.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={page === id ? "active" : ""} onClick={() => onPage(id)}><Icon size={22} /><span>{label}</span></button>)}
+      <button type="button" aria-label="Más opciones" onClick={onMenu}>
+        <span className="avianto-bottom-art" style={{ "--avianto-nav-art": "url('/brand/avianto-svg/nav-more.svg')" } as CSSProperties} aria-hidden="true" />
+        <span className="sr-only">Más</span>
+      </button>
+      {items.map(({ id, label, artwork }) => <button type="button" key={id} className={page === id ? "active" : ""} aria-label={label} aria-current={page === id ? "page" : undefined} onClick={() => onPage(id)}>
+        <span className="avianto-bottom-art" style={{ "--avianto-nav-art": `url('${artwork}')` } as CSSProperties} aria-hidden="true" />
+        <span className="sr-only">{label}</span>
+      </button>)}
     </nav>
   );
 }

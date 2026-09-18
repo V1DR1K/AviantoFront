@@ -201,7 +201,7 @@ export function MotoDetail({
     ...(moto.seccion === "Venta" ? [{ id: "venta" as const, label: "Venta" }] : []),
   ];
   return (
-    <div className="page">
+    <div className="page avianto-detail-page">
       <button className="back" onClick={onBack}>← Volver a perfiles</button>
       <div className="detail-title moto-detail-title">
         <div className="moto-detail-identity">

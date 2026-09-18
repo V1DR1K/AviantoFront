@@ -9,6 +9,15 @@
   --brand-black: #000000;
   --brand-white: #ffffff;
 
+  /* Official artwork delivered with the Avianto visual system. */
+  --asset-isologotipo: url("/brand/avianto-svg/isologotipo.svg");
+  --asset-isotipo: url("/brand/avianto-svg/isotipo.svg");
+  --asset-fondo-inicio: url("/brand/avianto-svg/fondo-inicio.svg");
+  --asset-moto-fondo: url("/brand/avianto-svg/moto-fondo.svg");
+  --asset-trama-1: url("/brand/avianto-svg/trama-1.svg");
+  --asset-trama-2: url("/brand/avianto-svg/trama-2.svg");
+  --brand-pattern-opacity: 0.78;
+
   /* Product neutrals and semantic colors. */
   --color-canvas: #f6f6fa;
   --color-surface: var(--brand-white);
@@ -79,6 +88,7 @@
   --modal-shadow: var(--shadow-modal);
   --focus-ring: 0 0 0 3px rgb(48 52 139 / 0.28);
   --mobile-nav-height: 74px;
+  --mobile-nav-padding: 8px;
   --breakpoint-tablet: 1000px;
   --breakpoint-mobile: 680px;
 }

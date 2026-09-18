@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Capa_1" data-name="Capa 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 595.28 419.53">
+  <defs>
+    <style>
+      .cls-1 {
+        font-family: Arboria-Medium, Arboria;
+        font-size: 45.15px;
+        font-weight: 500;
+      }
+
+      .cls-1, .cls-2 {
+        fill: #30348b;
+      }
+    </style>
+  </defs>
+  <g>
+    <rect class="cls-2" x="261.43" y="128.71" width="72.42" height="7.22" rx="3.61" ry="3.61" transform="translate(595.28 264.65) rotate(-180)"/>
+    <rect class="cls-2" x="261.43" y="163.01" width="72.42" height="7.22" rx="3.61" ry="3.61"/>
+    <rect class="cls-2" x="261.43" y="197.31" width="72.42" height="7.22" rx="3.61" ry="3.61"/>
+  </g>
+  <text class="cls-1" transform="translate(255.06 280.2)"><tspan x="0" y="0">Más</tspan></text>
+</svg>

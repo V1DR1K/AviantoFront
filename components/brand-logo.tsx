@@ -11,8 +11,8 @@ type BrandLogoProps = {
 
 const sources = {
   color: {
-    lockup: "/brand/avianto-lockup.png",
-    mark: "/brand/avianto-isotipo.png",
+    lockup: "/brand/avianto-svg/isologotipo.svg",
+    mark: "/brand/avianto-svg/isotipo.svg",
   },
   white: {
     lockup: "/brand/avianto-lockup-white.png",
