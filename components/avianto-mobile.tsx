@@ -55,7 +55,7 @@ export function VehicleField({ label, value, tone }: { label: string; value: Rea
   return <div className={`avianto-vehicle-field${tone ? ` tone-${tone}` : ""}`}><span>{label}</span><strong>{value}</strong></div>;
 }
 
-export function VehicleCard({ plate, children, action, variant = "dashboard" }: { plate: string; children: ReactNode; action?: ReactNode; variant?: "dashboard" | "profile" | "ficha" }) {
+export function VehicleCard({ plate, children, action, variant = "dashboard" }: { plate: string; children: ReactNode; action?: ReactNode; variant?: "dashboard" | "profile" | "dossier" | "ficha" }) {
   return <article className={`avianto-vehicle-card avianto-vehicle-card-${variant}`}><header><strong>{plate}</strong></header><div className="avianto-vehicle-card-fields">{children}</div>{action && <footer>{action}</footer>}</article>;
 }
 

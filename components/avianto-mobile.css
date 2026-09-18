@@ -94,8 +94,14 @@
 }
 .avianto-vehicle-card > header strong { font-size: 1.45rem; letter-spacing: 0.04em; }
 .avianto-vehicle-card-fields { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; padding: 0; background: var(--color-surface-subtle); }
-.avianto-vehicle-card-profile .avianto-vehicle-field:nth-child(-n + 3) { grid-column: span 2; }
-.avianto-vehicle-card-profile .avianto-vehicle-field:nth-child(n + 4) { grid-column: span 3; }
+.avianto-vehicle-card-profile .avianto-vehicle-field:nth-child(-n + 3),
+.avianto-vehicle-card-profile .avianto-vehicle-field:nth-child(n + 6),
+.avianto-vehicle-card-dossier .avianto-vehicle-field:nth-child(-n + 3),
+.avianto-vehicle-card-dossier .avianto-vehicle-field:nth-child(n + 6) { grid-column: span 2; }
+.avianto-vehicle-card-profile .avianto-vehicle-field:nth-child(4),
+.avianto-vehicle-card-profile .avianto-vehicle-field:nth-child(5),
+.avianto-vehicle-card-dossier .avianto-vehicle-field:nth-child(4),
+.avianto-vehicle-card-dossier .avianto-vehicle-field:nth-child(5) { grid-column: span 3; }
 .avianto-vehicle-card-dashboard .avianto-vehicle-card-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .avianto-vehicle-card-ficha .avianto-vehicle-card-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .avianto-vehicle-field {

@@ -10,7 +10,6 @@ import { ConfirmModal, EmptyState, FilterBar, Pagination, SearchBox, SelectField
 import { StatusRail, VehicleCard, VehicleField } from "./avianto-mobile";
 
 const profileStates = ["Disponible", "Ingresada Taller", "Pendiente", "En proceso", "En revisión", "Terminada", "Entregada", "En venta", "Transferencia en proceso", "Vendida"];
-const lastModified = (value: string) => new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
 
 export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntake: (plate?: string) => void; onOpen: (id: string) => void; onOpenSale: (id: string) => void; notify: Notify }) {
   const [dominio, setDominio] = useState("");
@@ -84,7 +83,16 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
             {profile.ingresada && profile.seccion === "Venta" && <button type="button" className="text-button" aria-label={`Abrir ficha de venta ${profile.patente}`} onClick={() => onOpenSale(profile.id)}>Abrir venta</button>}
             <button type="button" className="text-button" onClick={() => setEditing(profile)}>Editar</button>
             <button type="button" className="text-button danger-action" onClick={() => setDeleting(profile)}>Eliminar</button>
-          </div>}><VehicleField label="Moto" value={`${profile.marca} ${profile.modelo}`} /><VehicleField label="Cliente" value={profile.propietario ?? "Sin propietario"} /><VehicleField label="Estado" value={<StatusBadge status={profile.estado} />} tone="red" /><VehicleField label="Sección" value={profile.seccion ?? "—"} /><VehicleField label="Última modificación" value={lastModified(profile.ultimaModificacion ?? profile.updatedAt)} /></VehicleCard>) : <EmptyState title="No hay perfiles" body="Creá el primer Perfil de una moto." action={<button className="button primary" onClick={() => onIntake()}>Ingresar moto</button>} />}
+          </div>}>
+            <VehicleField label="Moto" value={profile.marca} />
+            <VehicleField label="Modelo" value={profile.modelo} />
+            <VehicleField label="Año" value={profile.anio ?? "—"} />
+            <VehicleField label="Cliente" value={profile.propietario ?? "Sin propietario"} />
+            <VehicleField label="Estado" value={<StatusBadge status={profile.estado} />} tone="red" />
+            <VehicleField label="Km" value={profile.kilometraje?.toLocaleString("es-AR") ?? "—"} />
+            <VehicleField label="Fecha ingreso" value="—" />
+            <VehicleField label="Ficha" value="—" />
+          </VehicleCard>) : <EmptyState title="No hay perfiles" body="Creá el primer Perfil de una moto." action={<button className="button primary" onClick={() => onIntake()}>Ingresar moto</button>} />}
         </div>
         <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
       </div>
