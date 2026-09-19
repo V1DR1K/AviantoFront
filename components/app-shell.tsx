@@ -1,21 +1,9 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  LogOut,
-} from "lucide-react";
 import type { AuthSession } from "../lib/auth";
-import { BrandLogo } from "./brand-logo";
 import { AviantoHeader, BottomNavigation } from "./avianto-mobile";
-import {
-  aviantoHome,
-  aviantoNavigationGroups,
-  aviantoPrimaryNavigation,
-  normalizeBottomNavigationPage,
-  type AviantoNavigationItem,
-} from "./avianto-navigation";
+import { normalizeBottomNavigationPage } from "./avianto-navigation";
+import { AviantoSidebarNavigation } from "./avianto-sidebar-navigation";
 export function AppShell({
   children,
   page,
@@ -33,20 +21,14 @@ export function AppShell({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const activeGroup = aviantoNavigationGroups.find((group) => group.items.some((item) => item.id === page))?.id;
-  const [openGroup, setOpenGroup] = useState(activeGroup ?? "taller");
   const drawerRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
   const isAdmin = session.user.rol === "ADMINISTRACION";
-  const openMenu = () => {
-    if (activeGroup) setOpenGroup(activeGroup);
-    setMenuOpen(true);
-  };
+  const openMenu = () => setMenuOpen(true);
   const go = (target: string) => {
     onPage(target);
     setMenuOpen(false);
   };
-  const toggleGroup = (groupId: string) => setOpenGroup((current) => current === groupId ? "" : groupId);
   useEffect(() => {
     if (!menuOpen) return;
     previousFocus.current = document.activeElement as HTMLElement;
@@ -66,54 +48,19 @@ export function AppShell({
     document.addEventListener("keydown", onKeyDown);
     return () => { window.cancelAnimationFrame(focusFirst); document.removeEventListener("keydown", onKeyDown); document.body.style.overflow = previousOverflow; previousFocus.current?.focus(); };
   }, [menuOpen]);
-  const renderItem = (item: AviantoNavigationItem) => {
-    const Icon = item.icon;
-    return (
-      <button key={item.id} className={page === item.id ? "active" : ""} aria-current={page === item.id ? "page" : undefined} onClick={() => go(item.id)} title={item.label}>
-        <Icon size={20} />
-        <span>{item.label}</span>
-      </button>
-    );
-  };
   return (
     <div className={`app-shell${collapsed ? " sidebar-is-collapsed" : ""}`}>
       <aside className={`sidebar${collapsed ? " collapsed" : ""}`}>
-        <button
-          className="brand"
-          onClick={() => go("dashboard")}
-          aria-label="Ir al inicio"
-        >
-          <BrandLogo variant="white" size="sm" />
-        </button>
-        <nav>
-          {renderItem(aviantoHome)}
-          {aviantoPrimaryNavigation.map(renderItem)}
-          {aviantoNavigationGroups.map((group) => {
-            const expanded = openGroup === group.id || group.items.some((item) => item.id === page);
-            return (
-              <section className={`nav-group${expanded ? " expanded" : ""}`} key={group.id}>
-                <button className="nav-group-toggle" onClick={() => setOpenGroup((current) => current === group.id ? "" : group.id)} aria-expanded={expanded} title={group.label}>
-                  <span>{group.label}</span><ChevronDown size={17} aria-hidden="true" />
-                </button>
-                <div className="nav-group-items">{group.items.filter((item) => !item.adminOnly || isAdmin).map(renderItem)}</div>
-              </section>
-            );
-          })}
-        </nav>
-        <div className="sidebar-bottom">
-          <button className="settings" onClick={onLogout} title="Cerrar sesión">
-            <LogOut size={18} /> <span>Cerrar sesión</span>
-          </button>
-          <button
-            className="settings collapse-toggle"
-            onClick={() => setCollapsed((value) => !value)}
-            aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
-            title={collapsed ? "Expandir menú" : "Contraer menú"}
-          >
-            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-            <span>{collapsed ? "Expandir" : "Contraer"}</span>
-          </button>
-        </div>
+        <AviantoSidebarNavigation
+          page={page}
+          isAdmin={isAdmin}
+          variant="sidebar"
+          collapsed={collapsed}
+          onNavigate={go}
+          onLogout={onLogout}
+          onIntake={onIntake}
+          onToggleCollapse={() => setCollapsed((value) => !value)}
+        />
       </aside>
       <main className={`main${collapsed ? " sidebar-collapsed" : ""}`}>
         <AviantoHeader onMenu={openMenu} onHome={() => go("dashboard")} onIntake={onIntake} />
@@ -129,33 +76,15 @@ export function AppShell({
             aria-modal="true"
             aria-label="Menú principal"
           >
-            <button className="drawer-close" onClick={() => setMenuOpen(false)}>
-              Cerrar menú ×
-            </button>
-              {renderItem(aviantoHome)}
-              {aviantoPrimaryNavigation.map(renderItem)}
-             {aviantoNavigationGroups.map((group) => (
-              <section className={`mobile-nav-group${openGroup === group.id ? " expanded" : ""}`} key={group.id}>
-                <button className="mobile-nav-group-toggle" type="button" aria-expanded={openGroup === group.id} onClick={() => toggleGroup(group.id)}>
-                  <span>{group.label}</span><ChevronDown size={17} aria-hidden="true" />
-                </button>
-                <div className="mobile-nav-group-items">
-                  {group.items.filter((item) => !item.adminOnly || isAdmin).map(renderItem)}
-                </div>
-              </section>
-            ))}
-            <button
-              className="button primary"
-              onClick={() => {
-                onIntake();
-                setMenuOpen(false);
-              }}
-            >
-              + Ingresar moto
-            </button>
-            <button className="settings mobile-logout" onClick={onLogout}>
-              <LogOut size={18} /> Cerrar sesión
-            </button>
+            <AviantoSidebarNavigation
+              page={page}
+              isAdmin={isAdmin}
+              variant="drawer"
+              onNavigate={go}
+              onLogout={onLogout}
+              onIntake={onIntake}
+              onClose={() => setMenuOpen(false)}
+            />
           </div>
         </>
       )}

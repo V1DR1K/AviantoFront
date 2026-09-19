@@ -2,6 +2,24 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "../components/avianto-mobile.css";
 import "../components/avianto-layout.css";
-export const metadata: Metadata = { title:"AviantoSoftware | Gestión de taller",description:"Órdenes de trabajo, presupuestos e historial para talleres de motos.", icons:{icon:"/brand/favicon.png"} };
-export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
+export const metadata: Metadata = {
+  title: "AviantoSoftware | Gestión de taller",
+  description: "Órdenes de trabajo, presupuestos e historial para talleres de motos.",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/brand/favicon.png", type: "image/png" }],
+    apple: [{ url: "/brand/pwa/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Avianto",
+  },
+};
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#30348B",
+};
 export default function RootLayout({children}:{children:React.ReactNode}) { return <html lang="es"><body>{/* THESIS: la landing muestra cómo Avianto convierte el diagnóstico en un registro de servicio claro, no en una portada genérica. OWN-WORLD: azul técnico, papel frío, reglas de ficha y una demostración de producto en primer plano. STORY: el taller captura, administración estandariza y el equipo conserva el historial. FIRST VIEWPORT: navegación pública, promesa directa, CTA de demo y ficha sintética visible. FORM: registro de servicio aplicado a una landing B2B, seed 10b6a92. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md */}{children}</body></html>; }

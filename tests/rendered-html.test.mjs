@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 import { parsePrice, priceDraft, priceInput, yearInput } from "../lib/format.ts";
 
@@ -162,7 +162,7 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(motoDetail, /setTab\("fichas"\)[\s\S]*?Abrir ficha taller/);
   assert.match(views, /<FileText size=\{17\} \/>[\s\S]*?<Eye size=\{17\} \/>/);
   assert.match(controller, /wiki:\s*"\/wiki"/);
-  assert.match(shell, /aviantoPrimaryNavigation/);
+  assert.match(shell, /AviantoSidebarNavigation/);
   assert.match(navigation, /id: "wiki", label: "Wiki"/);
   assert.match(wiki, /enviar manualmente la ficha a revisión/);
   assert.match(wiki, /observación opcional/);
@@ -172,6 +172,33 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(wiki, /historiales de pago separados/);
   assert.match(wiki, /El comprador es prospectivo hasta el cierre/);
   assert.match(wiki, /Cancelar una transferencia devuelve la moto a En venta/);
+});
+
+test("configures the Avianto Safari PWA icon and shared responsive navigation", async () => {
+  const [layout, shell, sidebarNavigation, manifest] = await Promise.all([
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/app-shell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/avianto-sidebar-navigation.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"),
+  ]);
+  const parsedManifest = JSON.parse(manifest);
+
+  assert.match(layout, /manifest: "\/manifest\.webmanifest"/);
+  assert.match(layout, /apple-touch-icon\.png/);
+  assert.match(layout, /themeColor: "#30348B"/);
+  assert.match(shell, /AviantoSidebarNavigation/);
+  assert.doesNotMatch(shell, /mobile-nav-group|mobile-logout/);
+  assert.match(sidebarNavigation, /aviantoNavigationGroups/);
+  assert.equal(parsedManifest.name, "Avianto");
+  assert.equal(parsedManifest.start_url, "/app");
+  assert.equal(parsedManifest.display, "standalone");
+  assert.equal(parsedManifest.theme_color, "#30348B");
+  assert.deepEqual(parsedManifest.icons.map((icon) => icon.sizes), ["192x192", "512x512"]);
+
+  for (const asset of ["apple-touch-icon.png", "icon-192.png", "icon-512.png"]) {
+    const result = await stat(new URL(`../public/brand/pwa/${asset}`, import.meta.url));
+    assert.ok(result.size > 1000, `${asset} debe ser un PNG rasterizado válido`);
+  }
 });
 
 test("keeps the sale ficha workflow, read-only transfer registry, and sale checklist contract wired to rendered routes", async () => {
