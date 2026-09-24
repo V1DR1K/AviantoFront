@@ -15,7 +15,7 @@ import type {
 } from "../lib/types";
 import { ConfirmModal, StatusBadge, type Notify } from "./ui";
 import { BudgetBreakdown } from "./budget-breakdown";
-import { StickyActionBar } from "./avianto-layout";
+import { AviantoPageHeader, StickyActionBar } from "./avianto-layout";
 
 type Line = {
   key: string;
@@ -374,19 +374,12 @@ export function FichaForm({
     }
   };
   return (
-    <section className="order-form ficha-form-page">
-      <div className="page-heading">
-        <div>
-          <h1>
-            {editing ? "Editar ficha de trabajo" : "Nueva ficha de trabajo"}
-          </h1>
-          <p>
-            {editing
-              ? "Actualizá los trabajos y las condiciones."
-              : "Buscá la moto por patente y cargá los trabajos a realizar."}
-          </p>
-        </div>
-        <button
+    <section className="order-form ficha-form-page avianto-ficha-form">
+      <AviantoPageHeader
+        eyebrow={editing ? "Ficha de taller · Edición" : "Ficha de taller · Alta"}
+        title={editing ? "Editar ficha de trabajo" : "Nueva ficha de trabajo"}
+        description={editing ? "Actualizá los trabajos y las condiciones." : "Buscá la moto por patente y cargá los trabajos a realizar."}
+        actions={<button
           className="button secondary form-close"
           onClick={() =>
             isDirty ? setCloseConfirmation(true) : onClose()
@@ -394,8 +387,8 @@ export function FichaForm({
         >
           <X size={18} />
           Cerrar
-        </button>
-      </div>
+        </button>}
+      />
       {editing && !editable && (
         <p className="form-notice" role="status">
           Esta ficha ya está en &quot;{loadedEstado}&quot;. Solo se pueden

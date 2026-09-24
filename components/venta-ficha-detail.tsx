@@ -6,7 +6,7 @@ import { api } from "../lib/api";
 import { formatDateInAr, todayInAr } from "../lib/dates";
 import type { AutocompleteResponse, VentaChecklistItemState, VentaFichaResponse } from "../lib/types";
 import { AutocompleteField, ConfirmModal, Dialog, EmptyState, SelectField, StatusBadge, type Notify } from "./ui";
-import { AviantoPage, AviantoRecordHero } from "./avianto-layout";
+import { AviantoPage, AviantoPageHeader, AviantoRecordHero } from "./avianto-layout";
 
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible actualizar la ficha de venta.";
 const checklistStates: VentaChecklistItemState[] = ["Pendiente", "Realizado", "No aplica"];
@@ -91,7 +91,7 @@ export function VentaFichaDetail({
   };
 
   if (!ficha) {
-    return <div className="page"><button className="back" onClick={onBack}>← Volver a ventas</button>{error ? <EmptyState title="No se pudo cargar la ficha de venta" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={() => void load()}>Reintentar</button>} /> : <div className="table-loading" role="status">Cargando ficha de venta...</div>}</div>;
+    return <AviantoPage className="sale-detail-state-page"><AviantoPageHeader eyebrow="Ventas" title="Ficha de venta" description="Seguimiento de comprador, requisitos y transferencia." actions={<button className="button secondary" onClick={onBack}>Volver a ventas</button>} />{error ? <EmptyState title="No se pudo cargar la ficha de venta" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={() => void load()}>Reintentar</button>} /> : <div className="table-loading" role="status">Cargando ficha de venta...</div>}</AviantoPage>;
   }
 
   const sold = ficha.estado === "Vendida";

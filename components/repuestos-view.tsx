@@ -294,8 +294,8 @@ export function RepuestoDetail({
       .then((result) => setClients(result.content))
       .catch((reason) => notify(errorMessage(reason), "error"));
   }, [editOpen, notify]);
-  if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><EmptyState title="No se pudo cargar el pedido" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={load}>Reintentar</button>} /></div>;
-  if (!repuesto) return <div className="page">Cargando…</div>;
+  if (error) return <AviantoPage className="repuesto-detail-state-page"><AviantoPageHeader eyebrow="Pedidos" title="Pedido de repuestos" description="Detalle y seguimiento del pedido." actions={<button className="button secondary" onClick={onBack}>Volver a pedidos</button>} /><EmptyState title="No se pudo cargar el pedido" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={load}>Reintentar</button>} /></AviantoPage>;
+  if (!repuesto) return <AviantoPage className="repuesto-detail-state-page"><AviantoPageHeader eyebrow="Pedidos" title="Pedido de repuestos" description="Estamos preparando el detalle del pedido." /><div className="table-loading" role="status">Cargando pedido…</div></AviantoPage>;
   const locked = repuesto.estado === "Cancelado" || repuesto.estado === "Completado";
   const nextItemStates = (state: RepuestoItemState) => state === "Pendiente de pedir" ? ["Pedido", "Cancelado"] : state === "Pedido" ? ["Recibido", "Cancelado"] : state === "Recibido" ? ["Entregado", "Cancelado"] : [];
   const setItemState = async (itemId: string, estado: RepuestoItemState) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/items/${itemId}/estado`, { method: "PATCH", body: JSON.stringify({ estado }) }); setRepuesto(next); notify(`Ítem marcado como ${estado}.`); } catch (reason) { notify(errorMessage(reason), "error"); } finally { setPending(false); } };
