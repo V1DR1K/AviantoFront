@@ -834,15 +834,15 @@ export function ReportsView({ notify }: { notify: Notify }) {
       .catch((reason) => notify(errorMessage(reason), "error"));
   }, [notify]);
   return (
-    <div className="page">
-      <div className="page-heading"><div><h1>Reportes</h1><p>Indicadores actuales del taller.</p></div></div>
-      <div className="metrics">
+    <AviantoPage className="reports-page">
+      <AviantoPageHeader title="Reportes" description="Indicadores actuales del taller." eyebrow="Análisis" />
+      <div className="metrics avianto-metrics">
         {rows.map((item) => (
           <Metric key={item.etiqueta} label={item.etiqueta} value={money(item.valor)} tone="blue" />
         ))}
       </div>
-      <section className="panel"><h2>Clientes</h2><table><tbody>{clients.map((client) => <tr key={client.id}><td data-label="Cliente">{client.nombre}</td><td data-label="Fichas">{client.fichas} fichas</td></tr>)}</tbody></table></section>
-    </div>
+      <AviantoPanel className="table-panel reports-clients-panel"><div className="panel-head"><div><h2>Clientes</h2><p>Actividad registrada en el padrón del taller.</p></div></div><table><thead><tr><th>Cliente</th><th>Fichas</th></tr></thead><tbody>{clients.map((client) => <tr key={client.id}><td data-label="Cliente">{client.nombre}</td><td data-label="Fichas">{client.fichas} fichas</td></tr>)}</tbody></table></AviantoPanel>
+    </AviantoPage>
   );
 }
 
@@ -855,21 +855,17 @@ export function ServicesView({ onOpenMoto, notify }: { onOpenMoto: (id: string) 
   const withoutRef = rows?.filter((row) => row.sinReferencia && !row.atrasadoKm && !row.atrasadoFecha) ?? [];
   const upcoming = rows?.filter((row) => !row.sinReferencia && !row.atrasadoKm && !row.atrasadoFecha) ?? [];
   return (
-    <div className="page">
-      <div className="page-heading">
-        <div>
-          <h1>Service</h1>
-          <p>Seguimiento del próximo service por motovehículo.</p>
-        </div>
-      </div>
+    <AviantoPage className="services-page">
+      <AviantoPageHeader title="Service" description="Seguimiento del próximo service por motovehículo." eyebrow="Taller" />
       {rows && (
-        <div className="metrics">
+        <div className="metrics avianto-metrics">
           <Metric label="Atrasados" value={String(overdue.length)} tone="danger" />
           <Metric label="Próximos" value={String(upcoming.length)} tone="green" />
           <Metric label="Sin services" value={String(withoutRef.length)} tone="neutral" />
         </div>
       )}
-      <section className="panel table-panel">
+      <AviantoPanel className="table-panel services-table-panel">
+        <div className="panel-head"><div><h2>Planificación de services</h2><p>Próximos vencimientos y estado por moto.</p></div></div>
         {rows?.length ? (
           <table>
             <thead>
@@ -894,7 +890,7 @@ export function ServicesView({ onOpenMoto, notify }: { onOpenMoto: (id: string) 
         ) : (
           <EmptyState title="Sin motovehículos" body="No hay motos para planificar el próximo service." />
         )}
-      </section>
-    </div>
+      </AviantoPanel>
+    </AviantoPage>
   );
 }

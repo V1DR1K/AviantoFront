@@ -86,6 +86,7 @@
   --radius: var(--radius-surface);
   --border-field: var(--color-border-strong);
   --shadow-document: 0 12px 28px rgb(48 52 139 / 0.12);
+  --shadow-card: 0 6px 18px rgb(48 52 139 / 0.07);
   --shadow-modal: 0 20px 65px rgb(0 0 0 / 0.3);
   --shadow: var(--shadow-document);
   --modal-shadow: var(--shadow-modal);
