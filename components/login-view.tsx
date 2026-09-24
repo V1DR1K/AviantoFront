@@ -4,11 +4,13 @@ import { useState } from "react";
 import { LogIn } from "lucide-react";
 import { login, type AuthSession } from "../lib/auth";
 import { Button, type Notify } from "./ui";
+import { BrandLogo } from "./brand-logo";
 
 export function LoginView({ onAuthenticated, notify }: { onAuthenticated: (session: AuthSession) => void; notify: Notify }) {
   const [pending, setPending] = useState(false);
   return (
     <main className="login-page">
+      <BrandLogo className="login-page-brand" variant="color" size="lg" priority />
       <section className="login-card">
         <div>
           <h1>Iniciar sesión</h1>

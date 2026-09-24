@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import Image from "next/image";
 
 type BrandLogoProps = {
   variant?: "color" | "white";
@@ -11,8 +12,10 @@ type BrandLogoProps = {
 
 const sources = {
   color: {
-    lockup: "/brand/avianto-svg/isologotipo.svg",
-    mark: "/brand/avianto-svg/isotipo.svg",
+    // The supplied raster lockup has a tightly cropped artboard; the SVG
+    // lockup keeps the Illustrator canvas whitespace and renders too small in headers.
+    lockup: "/brand/avianto-lockup.png",
+    mark: "/brand/avianto-isotipo.png",
   },
   white: {
     lockup: "/brand/avianto-lockup-white.png",
@@ -34,7 +37,7 @@ export function BrandLogo({
 
   return (
     <span className={`brand-logo brand-logo-${size}${markOnly ? " brand-logo-mark" : ""} ${className}`.trim()}>
-      <img src={source} alt={label} style={style} width={markOnly ? 64 : 238} height={markOnly ? 64 : 64} loading={priority ? "eager" : "lazy"} />
+      <Image src={source} alt={label} style={style} width={markOnly ? 64 : 238} height={markOnly ? 35 : 49} priority={priority} unoptimized />
       {descriptor && <span className="brand-logo-descriptor">Mecánica integral de motos</span>}
     </span>
   );

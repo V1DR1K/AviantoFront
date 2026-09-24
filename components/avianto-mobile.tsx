@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { Menu } from "lucide-react";
 import { BrandLogo } from "./brand-logo";
 
@@ -36,7 +36,7 @@ export function BottomNavigation({ page, onPage, onMenu }: { page: string; onPag
 }
 
 export function AviantoTabs({ tabs, active, onChange }: { tabs: AviantoTab[]; active: string; onChange: (id: string) => void }) {
-  const tabsRef = useRef<HTMLElement>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
   const activeButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const container = tabsRef.current;
@@ -44,11 +44,20 @@ export function AviantoTabs({ tabs, active, onChange }: { tabs: AviantoTab[]; ac
     if (!container || !button || tabs[0]?.id === active) return;
     container.scrollTo({ left: button.offsetLeft - (container.clientWidth - button.offsetWidth) / 2, behavior: "smooth" });
   }, [active, tabs]);
-  return <nav ref={tabsRef} className="avianto-tabs" aria-label="Secciones de la moto">{tabs.map((tab) => <button ref={active === tab.id ? activeButton : undefined} type="button" key={tab.id} className={active === tab.id ? "active" : ""} onClick={() => onChange(tab.id)}>{tab.label}</button>)}</nav>;
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const buttons = Array.from(tabsRef.current?.querySelectorAll<HTMLButtonElement>("[role=tab]") ?? []);
+    const current = buttons.indexOf(event.currentTarget);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1 : (current + (event.key === "ArrowRight" ? 1 : buttons.length - 1)) % buttons.length;
+    buttons[next]?.focus();
+    onChange(tabs[next].id);
+  };
+  return <div ref={tabsRef} className="avianto-tabs" role="tablist" aria-label="Secciones de la moto">{tabs.map((tab) => <button ref={active === tab.id ? activeButton : undefined} type="button" role="tab" aria-controls="moto-tab-panel" aria-selected={active === tab.id} tabIndex={active === tab.id ? 0 : -1} key={tab.id} className={active === tab.id ? "active" : ""} onClick={() => onChange(tab.id)} onKeyDown={handleTabKeyDown}>{tab.label}</button>)}</div>;
 }
 
 export function StatusRail({ items, active, onChange }: { items: { id: string; label: string; count?: number }[]; active: string; onChange: (id: string) => void }) {
-  return <nav className="avianto-status-rail" aria-label="Estados"><div className="avianto-status-rail-scroll">{items.map((item) => <button type="button" key={item.id} className={active === item.id ? "active" : ""} onClick={() => onChange(item.id)}><strong>{item.count ?? 0}</strong><span>{item.label}</span></button>)}</div></nav>;
+  return <nav className="avianto-status-rail" aria-label="Estados"><div className="avianto-status-rail-scroll">{items.map((item) => <button type="button" key={item.id} aria-pressed={active === item.id} className={active === item.id ? "active" : ""} onClick={() => onChange(item.id)}><strong>{item.count ?? 0}</strong><span>{item.label}</span></button>)}</div></nav>;
 }
 
 export function MetricCard({ label, value, detail, tone = "blue" }: { label: string; value: string; detail?: string; tone?: "blue" | "red" | "neutral" }) {

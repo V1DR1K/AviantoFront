@@ -142,9 +142,9 @@ export function Dashboard({
         </section>
         <h2 className="avianto-red-heading">Resumen</h2>
         <div className="avianto-screen-body">
-          <div className="avianto-segmented" role="tablist" aria-label="Circuito del dashboard">
-            <button type="button" className={section === "taller" ? "active" : ""} onClick={() => changeSection("taller")}>Taller</button>
-            <button type="button" className={section === "ventas" ? "active" : ""} onClick={() => changeSection("ventas")}>Ventas</button>
+          <div className="avianto-segmented" role="group" aria-label="Circuito del dashboard">
+            <button type="button" aria-pressed={section === "taller"} className={section === "taller" ? "active" : ""} onClick={() => changeSection("taller")}>Taller</button>
+            <button type="button" aria-pressed={section === "ventas"} className={section === "ventas" ? "active" : ""} onClick={() => changeSection("ventas")}>Ventas</button>
           </div>
           {taller && fichasAgrupadas && <div className="avianto-metric-grid">
             <MetricCard label="Total" value={metric(section === "ventas" ? sales.length : count("Ingresada Taller"))} detail="Ingresadas" />
@@ -160,9 +160,9 @@ export function Dashboard({
         </div>
         {taller && fichasAgrupadas && <>
           <div className="avianto-screen-body">
-            <div className="avianto-segmented" role="tablist" aria-label="Agrupar resultados">
-              <button type="button" className={groupBy === "moto" ? "active" : ""} onClick={() => { setGroupBy("moto"); setTab("Ingresada Taller"); }}>Agrupar x moto</button>
-              <button type="button" className={groupBy === "ficha" ? "active" : ""} onClick={() => { setGroupBy("ficha"); setTab("Pendiente"); }}>Agrupar x ficha</button>
+            <div className="avianto-segmented" role="group" aria-label="Agrupar resultados">
+              <button type="button" aria-pressed={groupBy === "moto"} className={groupBy === "moto" ? "active" : ""} onClick={() => { setGroupBy("moto"); setTab("Ingresada Taller"); }}>Agrupar x moto</button>
+              <button type="button" aria-pressed={groupBy === "ficha"} className={groupBy === "ficha" ? "active" : ""} onClick={() => { setGroupBy("ficha"); setTab("Pendiente"); }}>Agrupar x ficha</button>
             </div>
             <div className="avianto-mobile-list">
               {section === "ventas" ? sales.map((moto) => <VehicleCard key={moto.motoId} variant="dashboard" plate={moto.patente} action={<button type="button" className="text-button" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button>}><VehicleField label="Moto" value={moto.moto} /><VehicleField label="Cliente" value={moto.cliente ?? "—"} /><VehicleField label="Estado" value={<StatusBadge status={moto.estado} />} tone="red" /></VehicleCard>) : groupBy === "moto" ? motos.map((moto) => { const vehicle = splitVehicleName(moto.moto); return <VehicleCard key={moto.motoId} variant="dossier" plate={moto.patente} action={<button type="button" className="text-button" onClick={() => onOpenMoto(moto.motoId)}>Ingresar al perfil</button>}><VehicleField label="Moto" value={vehicle.make} /><VehicleField label="Modelo" value={vehicle.model} /><VehicleField label="Año" value="—" /><VehicleField label="Cliente" value={moto.cliente ?? "—"} /><VehicleField label="Estado" value={<StatusBadge status={moto.estado} />} tone="red" /><VehicleField label="Km" value={moto.kilometraje?.toLocaleString("es-AR") ?? "—"} /><VehicleField label="Fecha ingreso" value={displayLocalDate(moto.fechaIngreso)} /><VehicleField label="Ficha" value={moto.fichaNumero ?? "—"} /></VehicleCard>; }) : fichas.map((ficha) => <VehicleCard key={ficha.id} variant="ficha" plate={ficha.numero} action={<button type="button" className="text-button" onClick={() => void api<FichaResponse>(`/fichas/${ficha.id}`).then(onSelect).catch((reason) => notify(errorMessage(reason), "error"))}>Ver ficha</button>}><VehicleField label="Cliente" value={ficha.cliente} /><VehicleField label="Moto" value={`${ficha.moto} · ${ficha.patente}`} /><VehicleField label="Estado" value={<StatusBadge status={ficha.estado} />} tone="red" /></VehicleCard>)}

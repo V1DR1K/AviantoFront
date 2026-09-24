@@ -50,6 +50,7 @@ export function AviantoSidebarNavigation({
         key={item.id}
         type="button"
         className={`avianto-nav-item${active ? " active" : ""}`}
+        aria-label={item.label}
         aria-current={active ? "page" : undefined}
         onClick={() => go(item.id)}
         title={item.label}
@@ -69,7 +70,8 @@ export function AviantoSidebarNavigation({
         </button>
       )}
       <button type="button" className="avianto-nav-brand" onClick={() => go("dashboard")} aria-label="Ir al inicio">
-        <BrandLogo variant="white" size={isDrawer ? "md" : "sm"} descriptor={isDrawer} />
+        {!isDrawer && <BrandLogo className="avianto-nav-logo-symbol" variant="white" markOnly size="sm" />}
+        <BrandLogo className="avianto-nav-logo-lockup" variant="white" size={isDrawer ? "md" : "sm"} descriptor={isDrawer} />
       </button>
       <nav className="avianto-nav-menu" aria-label={isDrawer ? "Menú principal móvil" : "Menú principal"}>
         {renderItem(aviantoHome)}
@@ -82,6 +84,7 @@ export function AviantoSidebarNavigation({
               <button
                 type="button"
                 className="avianto-nav-group-toggle"
+                aria-label={group.label}
                 onClick={() => setOpenGroup((current) => current === group.id ? "" : group.id)}
                 aria-expanded={expanded}
                 title={group.label}
@@ -100,7 +103,7 @@ export function AviantoSidebarNavigation({
             + Ingresar moto
           </button>
         )}
-        <button type="button" className="avianto-nav-utility" onClick={onLogout} title="Cerrar sesión">
+        <button type="button" className="avianto-nav-utility" onClick={onLogout} aria-label="Cerrar sesión" title="Cerrar sesión">
           <LogOut size={18} aria-hidden="true" />
           <span>Cerrar sesión</span>
         </button>

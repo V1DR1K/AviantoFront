@@ -201,8 +201,8 @@ export function MotoDetail({
     ...(moto.seccion === "Venta" ? [{ id: "venta" as const, label: "Venta" }] : []),
   ];
   const latestFicha = fichas?.content[0] ?? null;
-  const latestService = services?.content[0] ?? null;
-  const serviceHistory = services?.content.slice(1) ?? [];
+  const latestService = servicePage === 1 ? services?.content[0] ?? null : null;
+  const serviceHistory = servicePage === 1 ? services?.content.slice(1) ?? [] : services?.content ?? [];
   const serviceInterval = moto.kmServicePeriodo ?? null;
   return (
     <div className="page avianto-detail-page">
@@ -223,7 +223,7 @@ export function MotoDetail({
         </div>
       </header>
       <AviantoTabs tabs={tabs} active={tab} onChange={(value) => setTab(value as typeof tab)} />
-      <div className="moto-profile-content">
+      <div id="moto-tab-panel" className="moto-profile-content" role="tabpanel" tabIndex={0} aria-label={tabs.find((item) => item.id === tab)?.label}>
       {tab === "general" && (
         <section className="moto-profile-panel moto-profile-general">
           <h2 className="moto-section-title">Datos del vehículo</h2>
@@ -247,7 +247,7 @@ export function MotoDetail({
             <div className="moto-client-grid">
               <VehicleField label="Cliente" value={moto.propietario ?? "—"} />
               <VehicleField label="Teléfono" value={client?.telefono ?? "—"} />
-              <VehicleField label="Localidad" value={client?.direccion ?? "—"} />
+              <VehicleField label="Dirección" value={client?.direccion ?? "—"} />
             </div>
           </div>
           <div className="moto-transfer-history">

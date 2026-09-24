@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { LandingPage } from "../components/landing-page";
 
 export const metadata: Metadata = {
-  title: "Avianto | Gestión de taller",
-  description: "Gestión de órdenes de trabajo, presupuestos e historial para talleres de motos.",
+  title: "Avianto | Mecánica integral de motos",
+  description: "Gestión integral del taller, fichas e historial de motos.",
 };
 
 export default function Home() {

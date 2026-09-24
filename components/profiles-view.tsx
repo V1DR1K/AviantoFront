@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowDownUp, Filter } from "lucide-react";
 import { api } from "../lib/api";
 import { parseIntegerInput } from "../lib/format";
-import type { MarcaMotoResponse, PageResponse, PerfilResponse } from "../lib/types";
+import type { MarcaMotoResponse, PageResponse, PerfilResponse, TallerResponse } from "../lib/types";
 import { AbmFormModal, type AbmField } from "./modal/abm-form-modal";
 import { ConfirmModal, EmptyState, FilterBar, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 import { StatusRail, VehicleCard, VehicleField } from "./avianto-mobile";
@@ -21,6 +21,7 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<PageResponse<PerfilResponse> | null>(null);
   const [brands, setBrands] = useState<MarcaMotoResponse[]>([]);
+  const [workshopInfo, setWorkshopInfo] = useState<Map<string, { date: string | null; fiche: string | null }>>(() => new Map());
   const [editing, setEditing] = useState<PerfilResponse | null>(null);
   const [deleting, setDeleting] = useState<PerfilResponse | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -35,6 +36,13 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
   useEffect(() => {
     void api<MarcaMotoResponse[]>("/configuracion/marcas-moto").then((nextBrands) => setBrands(nextBrands.filter((brand) => brand.activo))).catch((reason) => notify(reason instanceof Error ? reason.message : "No se pudieron cargar los datos de edición.", "error"));
   }, [notify]);
+  useEffect(() => {
+    const controller = new AbortController();
+    void api<TallerResponse>("/dashboard/taller", { signal: controller.signal })
+      .then((dashboard) => setWorkshopInfo(new Map(dashboard.estados.flatMap((item) => item.motos.map((moto) => [moto.motoId, { date: moto.fechaIngreso, fiche: moto.fichaNumero }] as const)))))
+      .catch(() => { if (!controller.signal.aborted) setWorkshopInfo(new Map()); });
+    return () => controller.abort();
+  }, []);
 
   const profileFields: AbmField[] = [
     { key: "marcaId", label: "Marca", type: "select", options: brands.map((brand) => ({ value: brand.id, label: brand.nombre })), required: true },
@@ -90,8 +98,8 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
             <VehicleField label="Cliente" value={profile.propietario ?? "Sin propietario"} />
             <VehicleField label="Estado" value={<StatusBadge status={profile.estado} />} tone="red" />
             <VehicleField label="Km" value={profile.kilometraje?.toLocaleString("es-AR") ?? "—"} />
-            <VehicleField label="Fecha ingreso" value="—" />
-            <VehicleField label="Ficha" value="—" />
+            <VehicleField label="Fecha ingreso" value={workshopInfo.get(profile.id)?.date ? new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(new Date(`${workshopInfo.get(profile.id)?.date}T00:00:00Z`)) : "—"} />
+            <VehicleField label="Ficha" value={workshopInfo.get(profile.id)?.fiche ?? "—"} />
           </VehicleCard>) : <EmptyState title="No hay perfiles" body="Creá el primer Perfil de una moto." action={<button className="button primary" onClick={() => onIntake()}>Ingresar moto</button>} />}
         </div>
         <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />

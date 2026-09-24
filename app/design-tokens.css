@@ -12,6 +12,8 @@
   /* Official artwork delivered with the Avianto visual system. */
   --asset-isologotipo: url("/brand/avianto-svg/isologotipo.svg");
   --asset-isotipo: url("/brand/avianto-svg/isotipo.svg");
+  --asset-isologotipo-raster: url("/brand/avianto-lockup.png");
+  --asset-isotipo-raster: url("/brand/avianto-isotipo.png");
   --asset-fondo-inicio: url("/brand/avianto-svg/fondo-inicio.svg");
   --asset-moto-fondo: url("/brand/avianto-svg/moto-fondo.svg");
   --asset-trama-1: url("/brand/avianto-svg/trama-1.svg");
@@ -25,6 +27,7 @@
   --color-surface-muted: #eceef6;
   --color-border: #d5d7e7;
   --color-border-strong: #b3b6d2;
+  --color-danger-border: #e6aca7;
   --color-text: #171728;
   --color-text-muted: #5f6077;
   --color-label: #3f4161;

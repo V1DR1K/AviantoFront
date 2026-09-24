@@ -3,6 +3,7 @@
 .avianto-mobile-screen { width: 100%; }
 .avianto-dashboard-screen,
 .avianto-profile-screen { display: grid; gap: var(--space-6); width: 100%; }
+.avianto-dashboard-screen { background: var(--brand-white); }
 .avianto-screen-body { display: grid; gap: var(--space-4); width: 100%; }
 
 .avianto-dashboard-hero {
@@ -56,7 +57,7 @@
 .avianto-status-rail button span { font-size: var(--text-xs); }
 .avianto-status-rail button.active { background: var(--brand-white); color: var(--brand-red); box-shadow: inset 0 -3px 0 var(--brand-red); }
 
-.avianto-mobile-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.avianto-mobile-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 22px; }
 .avianto-vehicle-card { overflow: hidden; display: grid; align-content: start; padding: 16px 18px 0; border: 3px solid var(--brand-blue); border-radius: 28px; background: var(--brand-white); }
 .avianto-vehicle-card > header { padding: 10px 16px; border-radius: 12px 12px 0 0; background: var(--brand-blue); color: var(--brand-white); text-align: center; }
 .avianto-vehicle-card > header strong { font-size: 1.45rem; letter-spacing: .03em; }
@@ -80,7 +81,7 @@
 .avianto-vehicle-field .status svg,
 .moto-profile-state .status svg { display: none; }
 .avianto-vehicle-card footer { display: flex; align-items: center; justify-content: center; min-height: 58px; margin: 0 -18px; padding: 9px 16px; border-radius: 0 0 23px 23px; background: var(--color-surface-subtle); }
-.avianto-vehicle-card footer .text-button { min-height: 38px; padding: 8px 14px; border-radius: var(--radius-field); background: var(--brand-blue); color: var(--brand-white); box-shadow: 0 5px 10px rgb(0 0 0 / .18); text-decoration: none; }
+.avianto-vehicle-card footer .text-button { min-height: 44px; padding: 8px 14px; border-radius: var(--radius-field); background: var(--brand-blue); color: var(--brand-white); box-shadow: 0 5px 10px rgb(0 0 0 / .18); text-decoration: none; }
 
 .avianto-profile-intro { display: flex; align-items: center; justify-content: space-between; gap: var(--space-6); }
 .avianto-profile-intro h1 { margin: 0; color: var(--brand-blue); }
@@ -88,11 +89,11 @@
 .avianto-profile-intro .avianto-mobile-cta { width: min(100%, 300px); }
 .avianto-profile-filters { width: 100%; }
 .avianto-vehicle-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-.avianto-vehicle-actions .text-button { min-height: 42px; padding: 8px 12px; }
+.avianto-vehicle-actions .text-button { min-height: 44px; padding: 8px 12px; }
 .avianto-vehicle-actions .danger-action { background: transparent; color: var(--brand-red); box-shadow: none; }
 
 body main.login-page { background: var(--brand-white); }
-body main.login-page::before { background: var(--asset-isotipo) center / min(145vw, 1050px) auto no-repeat; opacity: 1; }
+body main.login-page::before { background: var(--asset-isotipo-raster) center / min(145vw, 1050px) auto no-repeat; opacity: 1; }
 body main.login-page .login-card { border-color: transparent; background-color: var(--brand-blue); background-image: var(--asset-fondo-inicio); background-position: center; background-size: cover; color: var(--brand-white); }
 body main.login-page .login-card h1,
 body main.login-page .login-card p,
@@ -204,7 +205,9 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
   .avianto-intake-button span { font-size: 1.25rem; }
   .avianto-bottom-navigation { position: fixed; right: 0; bottom: 0; left: 0; z-index: 40; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); min-height: var(--mobile-nav-height); padding: 9px 3px calc(8px + env(safe-area-inset-bottom)); background: var(--brand-blue); box-shadow: 0 -5px 18px rgb(0 0 0 / .18); }
   .avianto-bottom-navigation button { display: grid; grid-template-rows: 48px auto; place-items: center; align-content: center; min-width: 44px; min-height: 72px; padding: 2px; border: 0; background: transparent; color: var(--brand-white); }
-  .avianto-bottom-navigation button.active { color: var(--brand-red); }
+  .avianto-bottom-navigation button.active { color: var(--brand-white); }
+  .avianto-bottom-navigation button.active::after { position: absolute; inset: auto auto 3px; width: 30px; height: 3px; border-radius: 2px; background: var(--brand-red); content: ""; }
+  .avianto-bottom-navigation button { position: relative; }
   .avianto-bottom-art { display: block; width: 44px; height: 44px; background: currentColor; -webkit-mask-image: var(--avianto-nav-art); mask-image: var(--avianto-nav-art); -webkit-mask-position: center; mask-position: center; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-size: contain; mask-size: contain; }
   .avianto-bottom-label { font-size: .93rem; font-weight: 800; line-height: 1.1; }
   .page:has(> .avianto-mobile-screen),
@@ -219,7 +222,7 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
   .avianto-dashboard-hero .avianto-mobile-cta { width: 100%; }
   .avianto-red-heading { border-radius: 0; font-size: 1.2rem; }
   .avianto-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
-  .avianto-metric-grid::before { position: absolute; inset: -14px -12px; z-index: -1; background: var(--asset-trama-1) center / 460px auto repeat; content: ""; opacity: .08; }
+  .avianto-metric-grid::before { content: none; }
   .avianto-metric-card { min-height: 112px; padding: 12px 8px; }
   .avianto-metric-card strong { font-size: 2rem; }
   .avianto-metric-card b { font-size: .9rem; }
@@ -256,24 +259,23 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
   .moto-service-history { grid-template-columns: 1fr; gap: 20px; }
   .moto-service-head { display: grid; justify-items: center; }
   .moto-service-head .moto-section-title { margin-inline: auto; }
-  .moto-service-config { display: none; }
+  .moto-service-config { display: inline-flex; min-height: 44px; justify-content: center; margin: 0 auto 8px; }
   .moto-service-feature { grid-template-columns: 1fr; gap: 16px; }
   .moto-service-notes { min-height: 150px; }
-  .moto-service-filters { display: none; }
+  .moto-service-filters { display: block; margin-bottom: 16px; }
   .moto-profile-table { padding-inline: 12px; }
   .moto-profile-table > .panel-head { display: grid; }
   .moto-profile-table > .panel-head .button { width: 100%; }
   .service-modal { width: min(100%, 580px); }
   .service-modal .modal-content { padding: 14px 22px 22px; }
   .service-modal .record-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .service-modal .modal-actions .button.secondary { display: none; }
 }
 
 @media (max-width: 420px) {
   .avianto-mobile-header { grid-template-columns: 42px minmax(0, 1fr) auto; padding-inline: 8px; }
   .avianto-intake-button { padding-inline: 8px; font-size: .72rem; }
-  .avianto-bottom-label { font-size: .84rem; }
-  .avianto-bottom-art { width: 40px; height: 40px; }
+  .avianto-bottom-label { font-size: .9rem; }
+  .avianto-bottom-art { width: 42px; height: 42px; }
   .moto-profile-hero-inner,
   .moto-profile-general,
   .moto-profile-services,

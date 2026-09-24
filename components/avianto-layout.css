@@ -68,6 +68,24 @@ body {
   display: none;
 }
 
+.login-page {
+  grid-template-rows: auto auto;
+  align-content: center;
+  justify-items: center;
+  gap: clamp(14px, 2.5vh, 24px);
+  padding-block: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-bottom));
+}
+
+.login-page-brand {
+  position: relative;
+  z-index: 1;
+  align-items: center;
+  width: min(238px, 72vw);
+}
+
+.login-page-brand img { width: 100%; }
+.login-card { position: relative; z-index: 1; }
+
 .avianto-page,
 .page:not(.avianto-detail-page) {
   width: min(100%, 1600px);
@@ -339,6 +357,7 @@ body {
 
 .modal-backdrop {
   padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  backdrop-filter: blur(5px);
 }
 
 .modal,
@@ -513,8 +532,9 @@ body {
   }
 
   .avianto-bottom-navigation button {
+    position: relative;
     display: grid;
-    grid-template-rows: 48px auto;
+    grid-template-rows: 50px auto;
     place-items: center;
     align-content: center;
     min-width: 44px;
@@ -526,16 +546,26 @@ body {
   }
 
   .avianto-bottom-navigation button.active {
-    color: var(--brand-red);
+    color: var(--brand-white);
+  }
+
+  .avianto-bottom-navigation button.active::after {
+    position: absolute;
+    inset: auto auto 3px;
+    width: 32px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--brand-red);
+    content: "";
   }
 
   .avianto-bottom-art {
-    width: 46px;
-    height: 46px;
+    width: 48px;
+    height: 48px;
   }
 
   .avianto-bottom-label {
-    font-size: 0.94rem;
+    font-size: 0.98rem;
     font-weight: 850;
     line-height: 1.05;
   }
@@ -721,7 +751,7 @@ body {
 
   .table-panel tr,
   .responsive-data-view tr {
-    overflow: hidden;
+    overflow: visible;
     margin-bottom: 14px;
     padding: 8px 15px 12px;
     border: 2px solid var(--brand-blue);
@@ -961,16 +991,30 @@ body {
   }
 
   .avianto-bottom-art {
-    width: 41px;
-    height: 41px;
+    width: 42px;
+    height: 42px;
   }
 
   .avianto-bottom-label {
-    font-size: 0.79rem;
+    font-size: 0.86rem;
   }
 
   .avianto-record-summary {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .modal-backdrop:has(.service-modal) {
+    align-items: center;
+    padding: max(16px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
+  }
+
+  .modal-backdrop:has(.service-modal) .service-modal {
+    width: min(100%, 580px);
+    max-height: calc(100dvh - max(32px, env(safe-area-inset-top)) - max(32px, env(safe-area-inset-bottom)));
+    margin: auto;
+    border-radius: 24px;
   }
 }
 
@@ -1015,6 +1059,8 @@ body {
 .avianto-nav-brand .brand-logo {
   max-width: 100%;
 }
+
+.avianto-nav-logo-symbol { display: none; }
 
 .avianto-nav-menu {
   display: grid;
@@ -1166,6 +1212,9 @@ body {
     display: none;
   }
 
+  .avianto-sidebar-navigation-sidebar.is-collapsed .avianto-nav-logo-lockup { display: none; }
+  .avianto-sidebar-navigation-sidebar.is-collapsed .avianto-nav-logo-symbol { display: inline-flex; }
+
   .app-shell.sidebar-is-collapsed .avianto-nav-group-items,
   .app-shell > .sidebar.collapsed .avianto-nav-group-items {
     padding-left: 0;
@@ -1191,7 +1240,17 @@ body {
   }
 
   .avianto-nav-brand .brand-logo img {
-    width: 54px;
+    width: 52px;
+    max-width: 52px;
+  }
+
+  .avianto-nav-logo-lockup { display: none !important; }
+  .avianto-nav-logo-symbol { display: inline-flex !important; }
+
+  .avianto-nav-brand .avianto-nav-logo-symbol img {
+    width: 52px;
+    height: 36px;
+    object-fit: contain;
   }
 
   .avianto-nav-brand .brand-logo-descriptor,
@@ -1203,8 +1262,11 @@ body {
   }
 
   .avianto-nav-group-items {
+    display: grid !important;
     padding-left: 0;
   }
+
+  .avianto-nav-group-toggle { display: none !important; }
 
   .avianto-nav-item,
   .avianto-nav-utility {
