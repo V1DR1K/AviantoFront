@@ -119,12 +119,12 @@ The palette is intentionally limited: blue establishes the operational world, re
 
 Desktop uses a blue navigation rail, a white workspace header with the signed-in user and motorcycle intake action, and a centered document workspace. Module headings use a blue surface, white text and a red lower rule, extending the vehicle profile's hierarchy to the rest of the console. Two-column dossier layouts keep summaries beside the work.
 
-Tables sit inside keyboard-focusable horizontal scroll regions on desktop and tablet. At mobile widths each row becomes a bordered record with a blue identifier header, labeled fields and explicit actions. The shell uses the designer's sticky white header and blue bottom navigation; filters collapse, metrics use two columns and primary actions span the available width.
+Record collections use the same document composition as Perfiles in SoftwareDesign: an individual blue outline, an inset blue identifier header, white labeled fields and a footer with explicit actions. `AviantoRecordList` composes the shared `VehicleCard` and `VehicleField`; each module chooses its identifier, fields and actions. Desktop and tablet use a responsive grid, while mobile uses one column. Filters and pagination sit outside the individual records. The shell uses the designer's sticky white header and blue bottom navigation; filters collapse, metrics use two columns and primary actions span the available width.
 
 ### Module coverage
 
 - Inicio and Perfiles retain the original motorcycle artwork, data grids, segmented controls and status rail from SoftwareDesign. Perfiles has a visible heading on mobile; its status rail does not invent totals from one paginated result.
-- Fichas, Pedidos, Ventas, Transferencias, Clientes, Motos, Controles, Trabajos and Auditoría share `AviantoPageHeader`, `AviantoPanel` and the responsive table surface. The motorcycle profile's Fichas and Pedidos tabs use the same table primitive.
+- Fichas, Pedidos, Ventas, Transferencias, Services, Clientes, Motos, Controles, Trabajos, Reportes and Auditoría use `AviantoRecordList`. The motorcycle profile's Fichas and Pedidos tabs and the items inside a parts order use the same record primitive. Their definitions preserve all data and state-specific actions from the previous tables.
 - Services adds search and a status filter to the maintenance list. Reportes shows counts, their actual scope and paginated client activity.
 - Wiki uses blue section headings, a desktop contents panel and a sticky horizontal contents bar on mobile. Administración uses matching blue section headers and bounded lists.
 - Shared dialogs have blue headers, white form fields and the same control and focus treatment. Loading, error and empty states remain distinct; the official tool pattern appears at low opacity behind empty states.
@@ -164,6 +164,7 @@ Surfaces use softly rounded technical documents (14px), controls use a compact 9
 
 - White document surfaces, 14px radius and a thin border.
 - Standard inner padding is 23px on desktop and reduced on mobile.
+- Individual record documents follow the supplied Perfiles artwork: 2px blue outline, 24px outer radius (22px on mobile), an inset blue title band and 8px spacing between labeled fields. This supplied composition is the specific exception to the generic 14px panel radius. Descriptive fields span the card; short dates, amounts and states share two columns. The main action occupies a full row and auxiliary actions remain labeled, with a minimum 44px target.
 
 ### Inputs / Fields
 

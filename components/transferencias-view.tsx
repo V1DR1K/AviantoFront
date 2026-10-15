@@ -5,6 +5,7 @@ import { ArrowDownUp, Download, Eye, FileText, Filter } from "lucide-react";
 import { api, download } from "../lib/api";
 import type { PageResponse, TransferResponse } from "../lib/types";
 import { EmptyState, FilterBar, LoadingState, Pagination, SearchBox, StatusBadge, type Notify } from "./ui";
+import { AviantoRecordList } from "./avianto-records";
 import { AviantoPage, AviantoPageHeader, AviantoPanel } from "./avianto-layout";
 
 const date = (value?: string | null) => value ? new Intl.DateTimeFormat("es-AR").format(new Date(value.includes("T") ? value : `${value}T12:00:00`)) : "—";
@@ -65,18 +66,26 @@ export function TransferenciasView({
   const params = { q: query || undefined, fechaDesde: desde || undefined, fechaHasta: hasta || undefined, sortBy: "fechaTransferencia", direction };
   return <AviantoPage>
     <AviantoPageHeader title="Transferencias" description="Registro de solo lectura conectado a las fichas de venta." />
-    <AviantoPanel className="table-panel">
+    <AviantoPanel className="record-list-panel">
       <FilterBar primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Patente, cliente o ficha" />} activeCount={(desde ? 1 : 0) + (hasta ? 1 : 0)}>
         <label><Filter size={16} aria-hidden="true" /><span className="date-label">Desde</span><input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); setPage(1); }} /></label>
         <label><Filter size={16} aria-hidden="true" /><span className="date-label">Hasta</span><input type="date" value={hasta} onChange={(event) => { setHasta(event.target.value); setPage(1); }} /></label>
         <button className="button secondary" onClick={() => { setDirection((value) => value === "DESC" ? "ASC" : "DESC"); setPage(1); }} aria-label="Cambiar orden de transferencias"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
         {!initialMotoId && <button className="button secondary" onClick={() => void download("/transferencias/export.xlsx", "transferencias.xlsx", params).catch((reason) => notify(errorMessage(reason), "error"))}><Download size={17} />Exportar Excel</button>}
       </FilterBar>
-      {result?.content.length ? <table><thead><tr><th>Ficha</th><th>Moto</th><th>Partes</th><th>Cita</th><th>Asistencia</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{result.content.map((transfer) => {
+      {result?.content.length ? <AviantoRecordList label="Transferencias" records={result.content.map((transfer) => {
         const appointment = transfer.citaFecha ? `${date(transfer.citaFecha)} · ${transfer.citaHora?.slice(0, 5) ?? "—"}` : "Sin cita";
         const state = transfer.canceladaAt ? "Cancelada" : transfer.finalizadaAt ? "Finalizada" : transfer.fichaVentaId ? "En proceso" : "Histórica";
-        return <tr key={transfer.id}><td data-label="Ficha">{transfer.fichaVentaId ? <strong>Venta vinculada</strong> : "Registro histórico"}<small>{transfer.finalizadaAt ? `Efectiva ${date(transfer.fechaTransferencia)}` : transfer.canceladaAt ? `Cancelada ${date(transfer.canceladaAt)}` : "Pendiente de finalización"}</small></td><td data-label="Moto"><strong>{transfer.patente}</strong><small>{transfer.moto}</small></td><td data-label="Partes">{transfer.clienteAnterior}<small>hacia {transfer.clienteNuevo}</small></td><td data-label="Cita">{appointment}<small>{transfer.citaLugar || "Lugar pendiente"}</small></td><td data-label="Asistencia">{transfer.asistenciaAt ? "Confirmada" : "Pendiente"}<small>{transfer.asistenciaPor ?? "—"}</small></td><td data-label="Estado"><StatusBadge status={state} /></td><td className="table-actions"><button onClick={() => onOpenMoto(transfer.motoId)} aria-label={`Ver moto ${transfer.patente}`}><Eye size={17} /></button>{transfer.fichaVentaId && <button onClick={() => onOpenSale(transfer.fichaVentaId!)} aria-label={`Abrir ficha de venta de ${transfer.patente}`}><FileText size={17} /></button>}</td></tr>;
-      })}</tbody></table> : loadError ? <EmptyState title="No se pudieron cargar las transferencias" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((value) => value + 1)}>Reintentar</button>} /> : result ? <EmptyState title="No hay transferencias" body={initialMotoId ? "Esta moto no tiene transferencias registradas con los filtros seleccionados." : "No se encontraron transferencias con esos filtros."} /> : <LoadingState label="Cargando transferencias..." />}
+        return { id: transfer.id, title: transfer.patente, fields: [
+          { label: "Moto", value: transfer.moto, wide: true },
+          { label: "Titular anterior", value: transfer.clienteAnterior },
+          { label: "Nuevo titular", value: transfer.clienteNuevo },
+          { label: "Estado", value: <StatusBadge status={state} /> },
+          { label: "Asistencia", value: <>{transfer.asistenciaAt ? "Confirmada" : "Pendiente"}<small>{transfer.asistenciaPor ?? "—"}</small></> },
+          { label: "Cita", value: <>{appointment}<small>{transfer.citaLugar || "Lugar pendiente"}</small></>, wide: true },
+          { label: "Ficha", value: <>{transfer.fichaVentaId ? "Venta vinculada" : "Registro histórico"}<small>{transfer.finalizadaAt ? `Efectiva ${date(transfer.fechaTransferencia)}` : transfer.canceladaAt ? `Cancelada ${date(transfer.canceladaAt)}` : "Pendiente de finalización"}</small></>, wide: true },
+        ], actions: <><button type="button" className="text-button" onClick={() => onOpenMoto(transfer.motoId)} aria-label={`Ver moto ${transfer.patente}`}><Eye size={17} />Abrir perfil</button>{transfer.fichaVentaId && <button type="button" className="text-button secondary" onClick={() => onOpenSale(transfer.fichaVentaId!)} aria-label={`Abrir ficha de venta de ${transfer.patente}`}><FileText size={17} />Abrir venta</button>}</> };
+      })} /> : loadError ? <EmptyState title="No se pudieron cargar las transferencias" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((value) => value + 1)}>Reintentar</button>} /> : result ? <EmptyState title="No hay transferencias" body={initialMotoId ? "Esta moto no tiene transferencias registradas con los filtros seleccionados." : "No se encontraron transferencias con esos filtros."} /> : <LoadingState label="Cargando transferencias..." />}
       {!initialMotoId && <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />}
     </AviantoPanel>
   </AviantoPage>;

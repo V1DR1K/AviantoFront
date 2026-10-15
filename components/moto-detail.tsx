@@ -20,6 +20,7 @@ import type {
 } from "../lib/types";
 import { Dialog, EmptyState, FilterBar, LoadingState, Pagination, SelectField, StatusBadge, type Notify } from "./ui";
 import { AviantoPanel } from "./avianto-layout";
+import { AviantoRecordList } from "./avianto-records";
 import { AviantoTabs, ServiceCard, VehicleField } from "./avianto-mobile";
 
 const date = formatDateInAr;
@@ -293,7 +294,7 @@ export function MotoDetail({
         </section>
       )}
       {tab === "fichas" && (
-        <AviantoPanel className="moto-profile-panel table-panel moto-profile-table">
+        <AviantoPanel className="moto-profile-panel record-list-panel moto-profile-table">
            <div className="panel-head"><div><h2>Fichas</h2><p>Trabajo actual e historial de ingresos al taller.</p></div><button className="button secondary" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewFicha({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nueva ficha</button></div>
            <FilterBar activeCount={(fichaDesde ? 1 : 0) + (fichaHasta ? 1 : 0) + (fichaEstado ? 1 : 0) + (fichaPago ? 1 : 0) + (fichaSort !== "fechaIngreso" ? 1 : 0)}>
              <label><span className="date-label">Desde</span><input type="date" value={fichaDesde} onChange={(event) => { setFichaDesde(event.target.value); setFichaPage(1); }} /></label>
@@ -304,16 +305,20 @@ export function MotoDetail({
              <button className="button secondary" onClick={() => { setFichaDirection((value) => value === "ASC" ? "DESC" : "ASC"); setFichaPage(1); }} aria-label="Cambiar orden de fichas"><ArrowDownUp size={16} />{fichaDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
            </FilterBar>
            {panelErrors.fichas ? <EmptyState title="No se pudieron cargar las fichas" body={panelErrors.fichas} action={<button className="button secondary" onClick={() => loadFichas()}>Reintentar</button>} /> : !fichas ? <LoadingState label="Cargando fichas..." /> : fichas.content.length ? (
-            <table>
-              <thead><tr><th>Ficha</th><th>Ingreso</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
-              <tbody>{fichas.content.map((ficha) => <tr key={ficha.id}><td data-label="Ficha">{ficha.numero}</td><td data-label="Ingreso">{date(ficha.fechaIngreso)}</td><td data-label="Estado"><StatusBadge status={ficha.estado} /></td><td data-label="Pago"><StatusBadge status={ficha.estadoPago} /></td><td data-label="Total">{money(ficha.total)}</td><td className="table-actions"><button onClick={() => onOpenFicha(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
-            </table>
+            <AviantoRecordList label="Fichas de la moto" records={fichas.content.map((ficha) => ({
+              id: ficha.id, title: ficha.numero, label: "Ficha", fields: [
+                { label: "Fecha de ingreso", value: date(ficha.fechaIngreso) },
+                { label: "Total", value: money(ficha.total) },
+                { label: "Estado", value: <StatusBadge status={ficha.estado} /> },
+                { label: "Pago", value: <StatusBadge status={ficha.estadoPago} /> },
+              ], actions: <button type="button" className="text-button" onClick={() => onOpenFicha(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} />Abrir ficha</button>,
+            }))} />
           ) : <EmptyState title="Sin fichas" body="Esta moto todavía no tiene ingresos de trabajo." />}
           <Pagination page={fichaPage} total={fichas?.totalPages || 1} onPage={setFichaPage} />
         </AviantoPanel>
       )}
       {tab === "repuestos" && (
-        <AviantoPanel className="moto-profile-panel table-panel moto-profile-table">
+        <AviantoPanel className="moto-profile-panel record-list-panel moto-profile-table">
            <div className="panel-head"><h2>Pedidos de repuestos</h2><button className="button secondary" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewRepuesto({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nuevo pedido</button></div>
            <FilterBar activeCount={(repuestoDesde ? 1 : 0) + (repuestoHasta ? 1 : 0) + (repuestoEstado ? 1 : 0) + (repuestoPago ? 1 : 0) + (repuestoSort !== "fecha" ? 1 : 0)}>
              <label><span className="date-label">Desde</span><input type="date" value={repuestoDesde} onChange={(event) => { setRepuestoDesde(event.target.value); setRepuestoPage(1); }} /></label>
@@ -324,10 +329,14 @@ export function MotoDetail({
              <button className="button secondary" onClick={() => { setRepuestoDirection((value) => value === "ASC" ? "DESC" : "ASC"); setRepuestoPage(1); }} aria-label="Cambiar orden de pedidos"><ArrowDownUp size={16} />{repuestoDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
            </FilterBar>
            {panelErrors.repuestos ? <EmptyState title="No se pudieron cargar los pedidos" body={panelErrors.repuestos} action={<button className="button secondary" onClick={() => loadRepuestos()}>Reintentar</button>} /> : !repuestos ? <LoadingState label="Cargando pedidos..." /> : repuestos.content.length ? (
-            <table>
-              <thead><tr><th>Pedido</th><th>Fecha</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
-              <tbody>{repuestos.content.map((repuesto) => <tr key={repuesto.id}><td data-label="Pedido">{repuesto.numero}</td><td data-label="Fecha">{date(repuesto.fecha)}</td><td data-label="Estado"><StatusBadge status={repuesto.estado} /></td><td data-label="Pago"><StatusBadge status={repuesto.estadoPago} /></td><td data-label="Total">{money(repuesto.total)}</td><td className="table-actions"><button onClick={() => onOpenRepuesto(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
-            </table>
+            <AviantoRecordList label="Pedidos de la moto" records={repuestos.content.map((repuesto) => ({
+              id: repuesto.id, title: repuesto.numero, label: "Pedido", fields: [
+                { label: "Fecha", value: date(repuesto.fecha) },
+                { label: "Total", value: money(repuesto.total) },
+                { label: "Estado", value: <StatusBadge status={repuesto.estado} /> },
+                { label: "Pago", value: <StatusBadge status={repuesto.estadoPago} /> },
+              ], actions: <button type="button" className="text-button" onClick={() => onOpenRepuesto(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} />Abrir pedido</button>,
+            }))} />
           ) : <EmptyState title="Sin repuestos" body="Aún no hay pedidos de repuestos para esta moto." />}
           <Pagination page={repuestoPage} total={repuestos?.totalPages || 1} onPage={setRepuestoPage} />
         </AviantoPanel>

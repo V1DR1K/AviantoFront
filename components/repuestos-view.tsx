@@ -16,6 +16,7 @@ import type {
 } from "../lib/types";
 import { ConfirmModal, Dialog, EmptyState, FilterBar, LoadingState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 import { PaymentLedger } from "./payment-ledger";
+import { AviantoRecordList } from "./avianto-records";
 import { AviantoPage, AviantoPageHeader, AviantoPanel, AviantoRecordHero } from "./avianto-layout";
 
 const date = formatDateInAr;
@@ -60,7 +61,7 @@ export function RepuestosView({
   return (
     <AviantoPage>
       <AviantoPageHeader title="Pedidos de repuestos" description="Control de compras, recepción y pago de repuestos y accesorios." actions={<button className="button primary" onClick={() => { setCreateOpen(true); loadClients(); }}><Plus size={19} />Nuevo pedido</button>} />
-       <AviantoPanel className="table-panel">
+       <AviantoPanel className="record-list-panel">
          <FilterBar
            primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Número, cliente o patente" />}
            activeCount={(estado !== "Todos" ? 1 : 0) + (desde ? 1 : 0) + (hasta ? 1 : 0) + (sortBy !== "fecha" ? 1 : 0)}
@@ -82,21 +83,20 @@ export function RepuestosView({
             <button className="button secondary" onClick={() => void download("/repuestos/export.xlsx", "repuestos.xlsx", repuestoParams).catch((reason) => notify(errorMessage(reason), "error"))}><Download size={17} />Exportar Excel</button>
          </FilterBar>
         {loadError ? <EmptyState title="No se pudieron cargar los pedidos" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : !result ? <LoadingState label="Cargando pedidos..." /> : result.content.length ? (
-          <table>
-            <thead><tr><th>Pedido</th><th>Moto</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
-            <tbody>{result.content.map((repuesto) => {
-              const editable = repuesto.estado !== "Cancelado" && repuesto.estado !== "Completado";
-              return <tr key={repuesto.id}><td data-label="Pedido">{repuesto.numero}</td><td data-label="Moto">{repuesto.patente}</td><td data-label="Cliente">{repuesto.cliente}</td><td data-label="Fecha">{date(repuesto.fecha)}</td><td data-label="Estado"><StatusBadge status={repuesto.estado} /></td><td data-label="Pago"><StatusBadge status={repuesto.estadoPago} /></td><td data-label="Total">{money(repuesto.total)}</td><td className="table-actions">
-                <button onClick={() => onOpen(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} /></button>
-                {editable ? (
-                  <>
-                    <button onClick={() => { setEditing(repuesto); loadClients(); }} aria-label={`Editar pedido ${repuesto.numero}`}><Edit3 size={17} /></button>
-                    <button className="danger-action" onClick={() => setDeleting(repuesto)} aria-label={`Eliminar pedido ${repuesto.numero}`}><Trash2 size={17} /></button>
-                  </>
-                ) : null}
-              </td></tr>;
-            })}</tbody>
-          </table>
+          <AviantoRecordList label="Pedidos de repuestos" records={result.content.map((repuesto) => {
+            const editable = repuesto.estado !== "Cancelado" && repuesto.estado !== "Completado";
+            return { id: repuesto.id, title: repuesto.numero, label: "Pedido", fields: [
+              { label: "Moto", value: repuesto.patente },
+              { label: "Fecha", value: date(repuesto.fecha) },
+              { label: "Cliente", value: repuesto.cliente, wide: true },
+              { label: "Estado", value: <StatusBadge status={repuesto.estado} /> },
+              { label: "Pago", value: <StatusBadge status={repuesto.estadoPago} /> },
+              { label: "Total", value: money(repuesto.total), wide: true },
+            ], actions: <>
+              <button type="button" className="text-button" onClick={() => onOpen(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} />Abrir pedido</button>
+              {editable && <><button type="button" className="text-button secondary" onClick={() => { setEditing(repuesto); loadClients(); }} aria-label={`Editar pedido ${repuesto.numero}`}><Edit3 size={17} />Editar</button><button type="button" className="text-button danger-action" onClick={() => setDeleting(repuesto)} aria-label={`Eliminar pedido ${repuesto.numero}`}><Trash2 size={17} />Eliminar</button></>}
+            </> };
+          })} />
         ) : <EmptyState title="No hay pedidos con estos filtros" body={desde || hasta ? "No encontramos pedidos en el período seleccionado. Podés consultar todas las fechas." : "Creá un pedido o probá con otra búsqueda."} action={desde || hasta ? <button className="button secondary" onClick={() => { setDesde(""); setHasta(""); setPage(1); }}>Ver todas las fechas</button> : undefined} />}
         <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
       </AviantoPanel>
@@ -310,18 +310,15 @@ export function RepuestoDetail({
         <div className="form-stack">
           <section className="panel">
             <div className="panel-head"><h2>Ítems del pedido</h2></div>
-            <table>
-              <thead><tr><th>Ítem</th><th>Tipo</th><th>Cant.</th><th>Precio</th><th>Subtotal</th><th>Estado</th>{!locked ? <th /> : null}</tr></thead>
-              <tbody>{repuesto.items.map((item) => (
-                <tr key={item.id}>
-                  <td data-label="Ítem">{item.descripcion}</td><td data-label="Tipo">{item.tipo}</td><td data-label="Cant.">{Number(item.cantidad)}</td><td data-label="Precio">{money(item.precio)}</td><td data-label="Subtotal">{money(item.subtotal)}</td>
-                  <td data-label="Estado"><StatusBadge status={item.estado} /></td>
-                  {!locked && <td data-label="Cambiar">
-                    <SelectField value="" disabled={pending} onChange={(value) => value && void setItemState(item.id, value as RepuestoItemState)} ariaLabel={`Cambiar estado de ${item.descripcion}`} placeholder="Cambiar…" options={nextItemStates(item.estado).map((option) => ({ value: option, label: option }))} />
-                  </td>}
-                </tr>
-              ))}</tbody>
-            </table>
+            <AviantoRecordList label="Ítems del pedido" records={repuesto.items.map((item) => ({
+              id: item.id, title: item.descripcion, fields: [
+                { label: "Tipo", value: item.tipo },
+                { label: "Cantidad", value: Number(item.cantidad) },
+                { label: "Precio", value: money(item.precio) },
+                { label: "Subtotal", value: money(item.subtotal) },
+                { label: "Estado", value: <StatusBadge status={item.estado} />, wide: true },
+              ], actions: !locked && <SelectField value="" disabled={pending} onChange={(value) => value && void setItemState(item.id, value as RepuestoItemState)} ariaLabel={`Cambiar estado de ${item.descripcion}`} placeholder="Cambiar estado…" options={nextItemStates(item.estado).map((option) => ({ value: option, label: option }))} />,
+            }))} />
           </section>
         </div>
         <aside className="summary repuesto-summary">

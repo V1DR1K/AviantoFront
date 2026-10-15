@@ -1,0 +1,106 @@
+/* Record documents follow the Perfiles composition from SoftwareDesign. */
+.record-list-panel {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.record-list-panel > .filter-bar,
+.record-list-panel > .panel-head {
+  margin: 0 0 20px;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-surface);
+  background: var(--brand-white);
+}
+
+.record-list-panel > .panel-head + .filter-bar { margin-top: -8px; }
+.record-list-panel > .pagination { margin-top: 24px; border: 1px solid var(--color-border); border-radius: var(--radius-surface); }
+.record-list-panel .empty { border-radius: var(--radius-surface); }
+
+.avianto-record-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  align-items: start;
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.avianto-record-list > li { min-width: 0; }
+.avianto-record-list .avianto-vehicle-card { height: 100%; }
+.avianto-vehicle-card { min-width: 0; border-width: 2px; border-radius: 24px; }
+.avianto-vehicle-card > header { display: grid; align-items: center; min-height: 54px; }
+.avianto-vehicle-card > header strong { min-width: 0; overflow-wrap: anywhere; font-size: 1.375rem; line-height: 1.25; }
+.avianto-vehicle-card-fields { gap: 8px; padding-top: 8px; background: var(--color-surface-subtle); }
+.avianto-vehicle-card-fields:last-child { margin-bottom: 16px; }
+.avianto-vehicle-card .avianto-vehicle-field { border-radius: 4px; }
+.avianto-vehicle-card-record .avianto-vehicle-card-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.avianto-vehicle-card-record .avianto-vehicle-field.is-wide { grid-column: 1 / -1; }
+.avianto-vehicle-card-record .avianto-vehicle-field { align-content: start; gap: 3px; padding: 9px 10px; }
+.avianto-vehicle-card-record .avianto-vehicle-field > dd { font-size: 1rem; line-height: 1.4; }
+.avianto-vehicle-field dd > small { display: block; margin-top: 3px; color: var(--color-text-muted); font-size: .8125rem; font-weight: 400; line-height: 1.4; }
+.avianto-vehicle-field .status { font-size: .9375rem; line-height: 1.4; white-space: normal; }
+.avianto-vehicle-field .record-state { padding: 0; background: transparent; font-size: .9375rem; }
+.avianto-vehicle-field .status svg { flex-shrink: 0; }
+.avianto-vehicle-field dd { font-variant-numeric: tabular-nums; }
+
+.avianto-vehicle-card footer { min-height: 0; margin: 0 -18px; padding: 14px 18px; border-radius: 0 0 22px 22px; background: var(--brand-white); }
+.avianto-vehicle-actions { width: 100%; gap: 8px; }
+.avianto-vehicle-card footer .text-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  gap: 6px;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--brand-blue);
+  border-radius: var(--radius-field);
+  background: var(--brand-blue);
+  color: var(--brand-white);
+  font-size: .875rem;
+  font-weight: 700;
+  line-height: 1.3;
+  box-shadow: none;
+  text-decoration: none;
+}
+
+.avianto-vehicle-actions > .text-button:first-child { flex-basis: 100%; }
+.avianto-vehicle-card footer .text-button.secondary,
+.avianto-vehicle-card footer .text-button:not(:first-child):not(.danger-action) { background: var(--brand-white); color: var(--brand-blue); }
+.avianto-vehicle-card footer .text-button.danger-action { border-color: var(--color-danger-border); background: var(--brand-white); color: var(--color-danger); }
+.avianto-vehicle-card footer .text-button:hover { background: var(--brand-blue-strong); color: var(--brand-white); }
+.avianto-vehicle-card footer .text-button.secondary:hover,
+.avianto-vehicle-card footer .text-button:not(:first-child):not(.danger-action):hover { background: var(--brand-blue-soft); color: var(--brand-blue); }
+.avianto-vehicle-card footer .text-button.danger-action:hover { background: var(--color-danger-soft); color: var(--color-danger); }
+.avianto-vehicle-card footer .text-button:active { transform: translateY(1px); }
+.avianto-vehicle-card footer .text-button:disabled { opacity: .6; cursor: not-allowed; }
+.avianto-vehicle-card footer .text-button > svg { width: 17px; height: 17px; flex-shrink: 0; }
+.avianto-vehicle-actions > .select-field,
+.avianto-vehicle-actions > .select-control { width: 100%; }
+.moto-profile-table.record-list-panel { padding: 0; }
+
+@media (max-width: 767px) {
+  .record-list-panel > .filter-bar,
+  .record-list-panel > .panel-head { padding: 14px; }
+  .record-list-panel > .panel-head { display: grid; gap: 12px; }
+  .record-list-panel > .panel-head .button { width: 100%; }
+  .avianto-record-list { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .avianto-vehicle-card { margin: 0; padding: 14px 14px 0; border-radius: 22px; }
+  .avianto-vehicle-card footer { margin-inline: -14px; padding-inline: 14px; border-radius: 0 0 20px 20px; }
+  .avianto-vehicle-card .avianto-vehicle-field { padding: 8px; }
+  .avianto-vehicle-field > dt { font-size: .75rem; }
+  .avianto-vehicle-field > dd { font-size: 1rem; }
+  .avianto-vehicle-card-record .avianto-vehicle-field > dd { font-size: 1rem; }
+}
+
+@media (max-width: 359px) {
+  .avianto-vehicle-card { padding-inline: 10px; }
+  .avianto-vehicle-card-fields { gap: 6px; }
+  .avianto-vehicle-card footer { margin-inline: -10px; padding-inline: 10px; }
+  .avianto-vehicle-card footer .text-button { padding-inline: 8px; }
+}

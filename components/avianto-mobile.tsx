@@ -64,12 +64,12 @@ export function MetricCard({ label, value, detail, tone = "blue" }: { label: str
   return <article className={`avianto-metric-card tone-${tone}`}><span>{label}</span><div className="avianto-metric-value"><strong>{value}</strong><b>Motos</b></div>{detail && <small>{detail}</small>}</article>;
 }
 
-export function VehicleField({ label, value, tone }: { label: string; value: ReactNode; tone?: "red" | "blue" }) {
-  return <div className={`avianto-vehicle-field${tone ? ` tone-${tone}` : ""}`}><span>{label}</span><strong>{value}</strong></div>;
+export function VehicleField({ label, value, tone, wide }: { label: string; value: ReactNode; tone?: "red" | "blue"; wide?: boolean }) {
+  return <dl className={`avianto-vehicle-field${tone ? ` tone-${tone}` : ""}${wide ? " is-wide" : ""}`}><dt>{label}</dt><dd>{value}</dd></dl>;
 }
 
-export function VehicleCard({ plate, children, action, variant = "dashboard" }: { plate: string; children: ReactNode; action?: ReactNode; variant?: "dashboard" | "profile" | "dossier" | "ficha" }) {
-  return <article className={`avianto-vehicle-card avianto-vehicle-card-${variant}`}><header><strong>{plate}</strong></header><div className="avianto-vehicle-card-fields">{children}</div>{action && <footer>{action}</footer>}</article>;
+export function VehicleCard({ plate, label, children, action, variant = "dashboard" }: { plate: ReactNode; label?: string; children: ReactNode; action?: ReactNode; variant?: "dashboard" | "profile" | "dossier" | "ficha" | "record" }) {
+  return <article className={`avianto-vehicle-card avianto-vehicle-card-${variant}`}><header><strong>{label && <span>{label} </span>}{plate}</strong></header><div className="avianto-vehicle-card-fields">{children}</div>{action && <footer>{action}</footer>}</article>;
 }
 
 export function ServiceCard({ date, km, next, nextKm, notes }: { date: string; km: string; next?: string; nextKm?: string; notes?: string | null }) {

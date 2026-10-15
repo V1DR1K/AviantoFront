@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "../components/avianto-mobile.css";
 import "../components/avianto-layout.css";
+import "../components/avianto-records.css";
 export const metadata: Metadata = {
   title: "Avianto | Mecánica integral de motos",
   description: "Órdenes de trabajo, presupuestos e historial para talleres de motos.",

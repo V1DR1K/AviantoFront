@@ -7,6 +7,7 @@ import { parseIntegerInput } from "../lib/format";
 import type { AuditoriaResponse, ClienteResponse, ControlResponse, MarcaMotoResponse, MotovehiculoResponse, PageResponse, VentaChecklistPlantillaRequest, VentaChecklistPlantillaResponse } from "../lib/types";
 import { ConfirmModal, Dialog, EmptyState, FilterBar, LoadingState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 import { AbmFormModal, type AbmField, VehicleAbmModal } from "./modal/abm-form-modal";
+import { AviantoRecordList } from "./avianto-records";
 import { AviantoPage, AviantoPageHeader, AviantoPanel } from "./avianto-layout";
 
 type Resource = "clients" | "vehicles" | "catalog" | "audit";
@@ -132,7 +133,7 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
           {resource === "vehicles" && onOpenServices && <button className="button secondary" onClick={onOpenServices}>Seguimiento de services</button>}
           <button className="button primary" onClick={() => setEditing({})}><Plus size={19} />Nuevo {config.singular}</button>
         </div>} />
-       <AviantoPanel className="table-panel">
+       <AviantoPanel className="record-list-panel">
          <FilterBar
            primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder={`Buscar ${config.singular}`} />}
            activeCount={filter !== "Todos" ? 1 : 0}
@@ -140,7 +141,14 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
            <SelectField value={filter} onChange={(value) => { setFilter(value); setPage(1); }} options={[{ value: "Todos", label: "Todos" }, { value: "Activo", label: "Activo" }, { value: "Inactivo", label: "Inactivo" }]} icon={Filter} ariaLabel={`Filtrar ${config.title.toLowerCase()} por estado`} />
            {config.exportPath && <button className="button secondary" onClick={() => void download(config.exportPath, `${config.title.toLowerCase()}.xlsx`, params).catch((reason) => notify(requestError(reason), "error"))}><Download size={17} />Exportar Excel</button>}
          </FilterBar>
-        {loadError ? <EmptyState title={`No se pudieron cargar ${config.title.toLowerCase()}`} body={loadError} action={<button className="button secondary" onClick={() => load()}>Reintentar</button>} /> : !loaded ? <LoadingState /> : rows.length ? <table><thead><tr>{config.columns.map((column) => <th key={column}>{column}</th>)}<th>Acciones</th></tr></thead><tbody>{rows.map((row) => <tr key={String(row.id)}>{config.columns.map((column) => <td key={column} data-label={column}>{cell(row, column)}</td>)}<td className="table-actions"><button onClick={() => resource === "vehicles" && onOpenVehicle ? onOpenVehicle(String(row.id)) : setDetail(row)} aria-label={`Ver ${config.singular}`}><Eye size={17} /></button><button onClick={() => setEditing(row)} aria-label={`Editar ${config.singular}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(row)} aria-label={`Eliminar ${config.singular}`}><Trash2 size={17} /></button></td></tr>)}</tbody></table> : <EmptyState title={`No hay ${config.title.toLowerCase()} para mostrar`} body="Probá ajustar los filtros o crear un registro." action={<button className="button primary" onClick={() => setEditing({})}>Crear registro</button>} />}
+        {loadError ? <EmptyState title={`No se pudieron cargar ${config.title.toLowerCase()}`} body={loadError} action={<button className="button secondary" onClick={() => load()}>Reintentar</button>} /> : !loaded ? <LoadingState /> : rows.length ? <AviantoRecordList label={config.title} records={rows.map((row) => {
+          const titleColumn = resource === "vehicles" ? "Patente" : "Nombre";
+          return { id: String(row.id), title: cell(row, titleColumn), fields: config.columns.filter((column) => column !== titleColumn).map((column) => ({ label: column, value: cell(row, column), wide: ["Marca y modelo", "Cliente", "Descripción", "Estado"].includes(column) })), actions: <>
+            <button type="button" className="text-button" onClick={() => resource === "vehicles" && onOpenVehicle ? onOpenVehicle(String(row.id)) : setDetail(row)} aria-label={`Ver ${config.singular} ${cell(row, titleColumn)}`}><Eye size={17} />{resource === "vehicles" ? "Abrir perfil" : "Ver detalle"}</button>
+            <button type="button" className="text-button secondary" onClick={() => setEditing(row)} aria-label={`Editar ${config.singular} ${cell(row, titleColumn)}`}><Edit3 size={17} />Editar</button>
+            <button type="button" className="text-button danger-action" onClick={() => setDeleting(row)} aria-label={`Eliminar ${config.singular} ${cell(row, titleColumn)}`}><Trash2 size={17} />Eliminar</button>
+          </> };
+        })} /> : <EmptyState title={`No hay ${config.title.toLowerCase()} para mostrar`} body="Probá ajustar los filtros o crear un registro." action={<button className="button primary" onClick={() => setEditing({})}>Crear registro</button>} />}
         <Pagination page={page} total={total} onPage={setPage} />
       </AviantoPanel>
       {resource === "vehicles" ? <VehicleAbmModal key={String(editing?.id ?? "new")} open={editing !== null} mode={editing?.id ? "modificar" : "agregar"} initialValues={editing ?? {}} brands={brands} clients={clients} onClose={() => setEditing(null)} onSubmit={submit} onError={(message) => notify(message, "error")} /> : <AbmFormModal key={String(editing?.id ?? "new")} open={editing !== null} resource={config.singular} mode={editing?.id ? "modificar" : "agregar"} fields={fields} initialValues={editing ?? {}} onClose={() => setEditing(null)} onSubmit={submit} onError={(message) => notify(message, "error")} />}
@@ -174,14 +182,20 @@ function AuditView({ notify }: { notify: Notify }) {
   }, [query, module, notify, page, reloadKey]);
   return <AviantoPage className="audit-page">
     <AviantoPageHeader title="Auditoría" description="Altas, ediciones y transiciones de estado registradas." />
-    <AviantoPanel className="table-panel audit-table-panel">
+    <AviantoPanel className="record-list-panel audit-record-list-panel">
       <FilterBar primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Acción o descripción" />} activeCount={module !== "Todos" ? 1 : 0}>
         <SelectField value={module} onChange={(value) => { setModule(value); setPage(1); }} options={[{ value: "Todos", label: "Todos los módulos" }, { value: "Fichas", label: "Fichas" }, { value: "Repuestos", label: "Pedidos" }, { value: "CONFIG", label: "Configuración" }, { value: "Clientes", label: "Clientes" }, { value: "Motovehículos", label: "Motos" }, { value: "VENTAS", label: "Ventas" }, { value: "Services", label: "Services" }, { value: "Perfiles", label: "Perfiles" }]} icon={Filter} ariaLabel="Filtrar auditoría por módulo" />
       </FilterBar>
-      {loadError ? <EmptyState title="No se pudo cargar la auditoría" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : !result ? <LoadingState label="Cargando actividad..." /> : result.content.length ? <table>
-        <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Módulo</th><th>Acción</th><th>Descripción</th><th>Motivo</th><th>Correlación</th></tr></thead>
-        <tbody>{result.content.map((row) => <tr key={row.id}><td data-label="Fecha y hora">{iso(row.fecha)}</td><td data-label="Usuario">{row.usuario ?? "Sistema"}</td><td data-label="Módulo">{row.modulo}</td><td data-label="Acción">{row.accion}</td><td data-label="Descripción">{row.descripcion}</td><td data-label="Motivo">{row.motivo ?? "—"}</td><td data-label="Correlación">{row.correlationId ?? "—"}</td></tr>)}</tbody>
-      </table> : <EmptyState title="No hay registros de auditoría" body="No se encontraron eventos con esos filtros." />}
+      {loadError ? <EmptyState title="No se pudo cargar la auditoría" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : !result ? <LoadingState label="Cargando actividad..." /> : result.content.length ? <AviantoRecordList label="Actividad de auditoría" records={result.content.map((row) => ({
+        id: row.id, title: row.accion, fields: [
+          { label: "Fecha y hora", value: iso(row.fecha) },
+          { label: "Usuario", value: row.usuario ?? "Sistema" },
+          { label: "Módulo", value: row.modulo, wide: true },
+          { label: "Descripción", value: row.descripcion, wide: true },
+          { label: "Motivo", value: row.motivo ?? "—", wide: true },
+          { label: "Correlación", value: row.correlationId ?? "—", wide: true },
+        ],
+      }))} /> : <EmptyState title="No hay registros de auditoría" body="No se encontraron eventos con esos filtros." />}
       <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
     </AviantoPanel>
   </AviantoPage>;

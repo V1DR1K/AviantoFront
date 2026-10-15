@@ -30,6 +30,7 @@ import { ConfirmModal, Dialog, EmptyState, FilterBar, LoadingState, Pagination, 
 import { BudgetBreakdown } from "./budget-breakdown";
 import { PaymentLedger } from "./payment-ledger";
 import { MetricCard, StatusRail, VehicleCard, VehicleField } from "./avianto-mobile";
+import { AviantoRecordList } from "./avianto-records";
 import { AviantoPage, AviantoPageHeader, AviantoPanel, AviantoRecordHero, StickyActionBar } from "./avianto-layout";
 
 const splitVehicleName = (value: string) => {
@@ -212,7 +213,7 @@ export function VentasView({
   const emptyLabel = status === "Todos" ? "para mostrar" : status.toLowerCase();
   return <AviantoPage>
     <AviantoPageHeader title="Ventas" description="Fichas persistentes para seguir comprador, requisitos y transferencia." actions={<button className="button secondary" onClick={onIntake}><Plus size={18} />Ingresar moto</button>} />
-       <AviantoPanel className="table-panel">
+       <AviantoPanel className="record-list-panel">
        <FilterBar
           primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Ficha, patente o comprador" />}
           activeCount={(status !== "Todos" ? 1 : 0) + (sortBy !== "updatedAt" ? 1 : 0)}
@@ -221,12 +222,19 @@ export function VentasView({
           <SelectField value={sortBy} onChange={(value) => { setSortBy(value); setPage(1); }} options={salesSortOptions} icon={Filter} ariaLabel="Ordenar ventas por" />
           <button className="button secondary" onClick={() => { setDirection((value) => value === "DESC" ? "ASC" : "DESC"); setPage(1); }} aria-label="Cambiar orden de ventas"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
         </FilterBar>
-        {result?.content.length ? <table><thead><tr><th>Ficha</th><th>Moto</th><th>Comprador</th><th>Carpeta</th><th>Cita</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{result.content.map((sale) => {
-         const required = sale.items.filter((item) => item.obligatorio);
-         const completed = required.filter((item) => item.estado === "Realizado").length;
-         const appointment = sale.transferencia?.citaFecha ? `${date(sale.transferencia.citaFecha)} · ${sale.transferencia.citaHora?.slice(0, 5) ?? "—"}` : "Sin cita";
-            return <tr key={sale.id}><td data-label="Ficha"><strong>{sale.numero}</strong><small>Actualizada {date(sale.actualizadaEn)}</small></td><td data-label="Moto"><strong>{sale.patente}</strong><small>{sale.moto}</small></td><td data-label={sale.estado === "Vendida" ? "Comprador final" : sale.estado === "Cancelada" ? "Comprador registrado" : "Comprador prospectivo"}>{sale.comprador ?? "Sin comprador"}</td><td data-label="Carpeta">{required.length ? `${completed}/${required.length} obligatorios` : "Sin ítems obligatorios"}<small>{sale.obligatoriosCompletos ? "Completa" : "Incompleta"}</small></td><td data-label="Cita">{appointment}<small>{sale.transferencia?.asistenciaAt ? "Asistencia confirmada" : sale.transferencia ? "Asistencia pendiente" : "Esperando transferencia"}</small></td><td data-label="Estado"><StatusBadge status={sale.estado} /></td><td className="table-actions sales-actions"><button onClick={() => onOpenSale(sale)} aria-label={`Abrir ficha de venta ${sale.numero}`}><FileText size={17} /></button><button onClick={() => onOpenMoto(sale.motoId)} aria-label={`Ver moto ${sale.patente}`}><Eye size={17} /></button></td></tr>;
-        })}</tbody></table> : loadError ? <EmptyState title="No se pudieron cargar las fichas de venta" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((value) => value + 1)}>Reintentar</button>} /> : result ? <EmptyState title={`Sin fichas ${emptyLabel}`} body={query ? "Probá con otra búsqueda." : "No hay fichas de venta dentro de los filtros seleccionados."} /> : <LoadingState label="Cargando fichas de venta..." />}
+        {result?.content.length ? <AviantoRecordList label="Fichas de venta" records={result.content.map((sale) => {
+          const required = sale.items.filter((item) => item.obligatorio);
+          const completed = required.filter((item) => item.estado === "Realizado").length;
+          const appointment = sale.transferencia?.citaFecha ? `${date(sale.transferencia.citaFecha)} · ${sale.transferencia.citaHora?.slice(0, 5) ?? "—"}` : "Sin cita";
+          return { id: sale.id, title: sale.numero, label: "Venta", fields: [
+            { label: "Moto", value: <>{sale.patente}<small>{sale.moto}</small></>, wide: true },
+            { label: sale.estado === "Vendida" ? "Comprador final" : sale.estado === "Cancelada" ? "Comprador registrado" : "Comprador prospectivo", value: sale.comprador ?? "Sin comprador", wide: true },
+            { label: "Estado", value: <StatusBadge status={sale.estado} /> },
+            { label: "Carpeta", value: <>{required.length ? `${completed}/${required.length} obligatorios` : "Sin ítems obligatorios"}<small>{sale.obligatoriosCompletos ? "Completa" : "Incompleta"}</small></> },
+            { label: "Cita", value: <>{appointment}<small>{sale.transferencia?.asistenciaAt ? "Asistencia confirmada" : sale.transferencia ? "Asistencia pendiente" : "Esperando transferencia"}</small></> },
+            { label: "Actualizada", value: date(sale.actualizadaEn) },
+          ], actions: <><button type="button" className="text-button" onClick={() => onOpenSale(sale)} aria-label={`Abrir ficha de venta ${sale.numero}`}><FileText size={17} />Abrir venta</button><button type="button" className="text-button secondary" onClick={() => onOpenMoto(sale.motoId)} aria-label={`Ver moto ${sale.patente}`}><Eye size={17} />Ver moto</button></> };
+        })} /> : loadError ? <EmptyState title="No se pudieron cargar las fichas de venta" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((value) => value + 1)}>Reintentar</button>} /> : result ? <EmptyState title={`Sin fichas ${emptyLabel}`} body={query ? "Probá con otra búsqueda." : "No hay fichas de venta dentro de los filtros seleccionados."} /> : <LoadingState label="Cargando fichas de venta..." />}
        <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
       </AviantoPanel>
     </AviantoPage>;
@@ -307,7 +315,7 @@ export function FichasView({
   return (
     <AviantoPage>
       <AviantoPageHeader title="Fichas de trabajo" description="Consultá y administrá las órdenes de trabajo del taller." actions={<button className="button primary" onClick={onNewOrder}><Plus size={19} />Nueva ficha</button>} />
-       <AviantoPanel className="table-panel">
+       <AviantoPanel className="record-list-panel">
          <FilterBar
             primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder={pendingIntake ? "Patente o moto" : "Número o cliente"} />}
             activeCount={(status !== "Todos" ? 1 : 0) + (pendingIntake ? 0 : (paymentStatus !== "Todos" ? 1 : 0) + (desde ? 1 : 0) + (hasta ? 1 : 0)) + (sortBy !== "fechaIngreso" ? 1 : 0)}
@@ -332,40 +340,29 @@ export function FichasView({
             </button>}
          </FilterBar>
         {loadError ? <EmptyState title="No se pudieron cargar las fichas" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : pendingIntake ? pendingMotos?.content.length ? (
-           <table>
-             <thead><tr><th>Ficha</th><th>Cliente</th><th>Moto</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
-             <tbody>{pendingMotos.content.map((moto) => <tr key={moto.id}><td data-label="Ficha">Sin ficha</td><td data-label="Cliente">{moto.propietario ?? "Sin propietario"}</td><td data-label="Moto">{moto.marca} {moto.modelo}<small>{moto.patente}</small></td><td data-label="Estado"><StatusBadge status={moto.estado} /></td><td data-label="Pago">—</td><td data-label="Total">—</td><td className="table-actions"><button onClick={() => onOpenMoto(moto.id)} aria-label={`Ver perfil ${moto.patente}`}><Eye size={17} /></button></td></tr>)}</tbody>
-           </table>
+           <AviantoRecordList label="Motos pendientes de ficha" records={pendingMotos.content.map((moto) => ({
+             id: moto.id, title: moto.patente, fields: [
+               { label: "Moto", value: `${moto.marca} ${moto.modelo}`, wide: true },
+               { label: "Cliente", value: moto.propietario ?? "Sin propietario", wide: true },
+               { label: "Estado", value: <StatusBadge status={moto.estado} /> },
+               { label: "Ficha", value: "Sin ficha" },
+             ], actions: <button type="button" className="text-button" onClick={() => onOpenMoto(moto.id)} aria-label={`Ver perfil ${moto.patente}`}><Eye size={17} />Abrir perfil</button>,
+           }))} />
          ) : pendingMotos ? <EmptyState title="Sin motos ingresadas" body="No hay motos en Taller pendientes de ficha." /> : <LoadingState label="Cargando motos..." /> : !result ? <LoadingState label="Cargando fichas..." /> : result.content.length ? (
-          <table>
-            <thead>
-              <tr><th>Ficha</th><th>Cliente</th><th>Moto</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr>
-            </thead>
-            <tbody>
-              {result.content.map((ficha) => {
-                  const editable = ficha.estado === "Pendiente" || ficha.estado === "En proceso";
-                return (
-                  <tr key={ficha.id}>
-                    <td data-label="Ficha">{ficha.numero}</td>
-                    <td data-label="Cliente">{ficha.cliente}</td>
-                    <td data-label="Moto">{ficha.moto}<small>{ficha.patente}</small></td>
-                    <td data-label="Estado"><StatusBadge status={ficha.estado} /></td>
-                    <td data-label="Pago"><StatusBadge status={ficha.estadoPago} /></td>
-                    <td data-label="Total">{money(ficha.total)}</td>
-                    <td className="table-actions">
-                      <button onClick={() => onSelect(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} /></button>
-                      {editable ? (
-                        <>
-                          <button onClick={() => onEdit(ficha)} aria-label={`Editar ficha ${ficha.numero}`}><Edit3 size={17} /></button>
-                          <button className="danger-action" onClick={() => onDelete(ficha)} aria-label={`Eliminar ficha ${ficha.numero}`}><Trash2 size={17} /></button>
-                        </>
-                      ) : null}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <AviantoRecordList label="Fichas de trabajo" records={result.content.map((ficha) => {
+            const editable = ficha.estado === "Pendiente" || ficha.estado === "En proceso";
+            return { id: ficha.id, title: ficha.numero, label: "Ficha", fields: [
+              { label: "Moto", value: <>{ficha.moto}<small>{ficha.patente}</small></>, wide: true },
+              { label: "Cliente", value: ficha.cliente, wide: true },
+              { label: "Estado", value: <StatusBadge status={ficha.estado} /> },
+              { label: "Pago", value: <StatusBadge status={ficha.estadoPago} /> },
+              { label: "Fecha de ingreso", value: date(ficha.fechaIngreso) },
+              { label: "Total", value: money(ficha.total) },
+            ], actions: <>
+              <button type="button" className="text-button" onClick={() => onSelect(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} />Abrir ficha</button>
+              {editable && <><button type="button" className="text-button secondary" onClick={() => onEdit(ficha)} aria-label={`Editar ficha ${ficha.numero}`}><Edit3 size={17} />Editar</button><button type="button" className="text-button danger-action" onClick={() => onDelete(ficha)} aria-label={`Eliminar ficha ${ficha.numero}`}><Trash2 size={17} />Eliminar</button></>}
+            </> };
+          })} />
         ) : (
           <EmptyState title="No hay fichas con estos filtros" body={desde || hasta ? "No encontramos fichas en el período seleccionado. Podés ampliar la consulta a todas las fechas." : "Probá con otro cliente, número de ficha o estado."} action={desde || hasta ? <button className="button secondary" onClick={() => { setDesde(""); setHasta(""); setPage(1); }}>Ver todas las fechas</button> : undefined} />
         )}
@@ -840,9 +837,9 @@ export function ReportsView({ notify }: { notify: Notify }) {
     <AviantoPageHeader title="Reportes" description="Indicadores del taller y actividad registrada por cliente." />
     {loadError ? <EmptyState title="No se pudieron cargar los reportes" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : !data ? <LoadingState label="Cargando indicadores..." /> : <>
       <div className="metrics avianto-metrics">{data.summary.map((item) => <Metric key={item.etiqueta} label={item.etiqueta} value={Number(item.valor).toLocaleString("es-AR")} tone="blue" detail={metricDetails[item.etiqueta] ?? "Registros del taller"} />)}</div>
-      <AviantoPanel className="table-panel reports-clients-panel">
+      <AviantoPanel className="record-list-panel reports-clients-panel">
         <div className="panel-head"><div><h2>Fichas por cliente</h2><p>Cantidad de fichas asociadas a cada cliente del padrón.</p></div><span className="muted">{data.clients.totalElements} clientes</span></div>
-        {data.clients.content.length ? <table><thead><tr><th>Cliente</th><th>Fichas registradas</th></tr></thead><tbody>{data.clients.content.map((client) => <tr key={client.id}><td data-label="Cliente">{client.nombre}</td><td data-label="Fichas registradas">{client.fichas ?? 0}</td></tr>)}</tbody></table> : <EmptyState title="Todavía no hay clientes" body="La actividad se mostrará cuando haya clientes registrados en el taller." />}
+        {data.clients.content.length ? <AviantoRecordList label="Fichas por cliente" records={data.clients.content.map((client) => ({ id: client.id, title: client.nombre, fields: [{ label: "Fichas registradas", value: client.fichas ?? 0, wide: true }] }))} /> : <EmptyState title="Todavía no hay clientes" body="La actividad se mostrará cuando haya clientes registrados en el taller." />}
         <Pagination page={page} total={data.clients.totalPages || 1} onPage={setPage} />
       </AviantoPanel>
     </>}
@@ -874,23 +871,21 @@ export function ServicesView({ onOpenMoto, notify }: { onOpenMoto: (id: string) 
       <Metric label="Al día" value={String(upcoming.length)} tone="green" detail="Con el próximo service programado" />
       <Metric label="Sin services" value={String(withoutRef.length)} tone="neutral" detail="Sin un mantenimiento de referencia" />
     </div>}
-    <AviantoPanel className="table-panel services-table-panel">
+    <AviantoPanel className="record-list-panel services-record-list-panel">
       <div className="panel-head"><div><h2>Planificación de services</h2><p>Consultá el próximo mantenimiento o abrí el perfil para registrar uno.</p></div></div>
       <FilterBar primary={<SearchBox value={query} onChange={setQuery} placeholder="Patente, moto o cliente" />} activeCount={filter !== "Todos" ? 1 : 0}>
         <SelectField value={filter} onChange={setFilter} options={[{ value: "Todos", label: "Todos los estados" }, { value: "Atrasado", label: "Atrasados" }, { value: "Al día", label: "Al día" }, { value: "Sin services", label: "Sin services" }]} icon={Filter} ariaLabel="Filtrar services por estado" />
       </FilterBar>
-      {loadError ? <EmptyState title="No se pudieron cargar los services" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : !rows ? <LoadingState label="Cargando services..." /> : visible.length ? <table>
-        <thead><tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Último service</th><th>Próximo service</th><th>Estado</th><th>Acción</th></tr></thead>
-        <tbody>{visible.map((row) => <tr key={row.motoId}>
-          <td data-label="Moto"><strong>{row.patente}</strong><small>{row.moto}</small></td>
-          <td data-label="Cliente">{row.cliente ?? "Sin propietario"}</td>
-          <td data-label="KM actual">{row.kilometraje != null ? `${row.kilometraje.toLocaleString("es-AR")} km` : "—"}</td>
-          <td data-label="Último service">{row.kmUltimoService != null ? `${row.kmUltimoService.toLocaleString("es-AR")} km` : "Sin registro"}</td>
-          <td data-label="Próximo service">{row.proximKm != null ? `${row.proximKm.toLocaleString("es-AR")} km` : "Sin referencia"}{row.proximaFecha && <small>{date(row.proximaFecha)}</small>}{!row.sinReferencia && !row.atrasadoKm && row.kmFaltan != null && <small>Faltan {row.kmFaltan.toLocaleString("es-AR")} km</small>}</td>
-          <td data-label="Estado"><StatusBadge status={stateFor(row)} /></td>
-          <td data-label="Acción"><button className="row-action" onClick={() => onOpenMoto(row.motoId)}>Ver moto</button></td>
-        </tr>)}</tbody>
-      </table> : <EmptyState title="No hay services para mostrar" body="Probá con otra búsqueda o cambiá el estado seleccionado." />}
+      {loadError ? <EmptyState title="No se pudieron cargar los services" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : !rows ? <LoadingState label="Cargando services..." /> : visible.length ? <AviantoRecordList label="Planificación de services" records={visible.map((row) => ({
+        id: row.motoId, title: row.patente, fields: [
+          { label: "Moto", value: row.moto, wide: true },
+          { label: "Cliente", value: row.cliente ?? "Sin propietario", wide: true },
+          { label: "KM actual", value: row.kilometraje != null ? `${row.kilometraje.toLocaleString("es-AR")} km` : "—" },
+          { label: "Último service", value: row.kmUltimoService != null ? `${row.kmUltimoService.toLocaleString("es-AR")} km` : "Sin registro" },
+          { label: "Próximo service", value: <>{row.proximKm != null ? `${row.proximKm.toLocaleString("es-AR")} km` : "Sin referencia"}{row.proximaFecha && <small>{date(row.proximaFecha)}</small>}{!row.sinReferencia && !row.atrasadoKm && row.kmFaltan != null && <small>Faltan {row.kmFaltan.toLocaleString("es-AR")} km</small>}</> },
+          { label: "Estado", value: <StatusBadge status={stateFor(row)} /> },
+        ], actions: <button type="button" className="text-button" onClick={() => onOpenMoto(row.motoId)}>Abrir perfil</button>,
+      }))} /> : <EmptyState title="No hay services para mostrar" body="Probá con otra búsqueda o cambiá el estado seleccionado." />}
     </AviantoPanel>
   </AviantoPage>;
 }
