@@ -34,7 +34,8 @@ export function AviantoSidebarNavigation({
   onClose,
 }: AviantoSidebarNavigationProps) {
   const activeGroup = aviantoNavigationGroups.find((group) => group.items.some((item) => item.id === page))?.id;
-  const [openGroup, setOpenGroup] = useState(activeGroup ?? "taller");
+  const [groupState, setGroupState] = useState({ page, group: activeGroup ?? "taller" });
+  const openGroup = groupState.page === page ? groupState.group : activeGroup ?? groupState.group;
   const isDrawer = variant === "drawer";
 
   const go = (target: string) => {
@@ -77,7 +78,7 @@ export function AviantoSidebarNavigation({
         {renderItem(aviantoHome)}
         {aviantoPrimaryNavigation.map(renderItem)}
         {aviantoNavigationGroups.map((group) => {
-          const expanded = openGroup === group.id || group.items.some((item) => item.id === page);
+          const expanded = openGroup === group.id;
           const visibleItems = group.items.filter((item) => !item.adminOnly || isAdmin);
           return (
             <section className={`avianto-nav-group${expanded ? " expanded" : ""}`} key={group.id}>
@@ -85,7 +86,7 @@ export function AviantoSidebarNavigation({
                 type="button"
                 className="avianto-nav-group-toggle"
                 aria-label={group.label}
-                onClick={() => setOpenGroup((current) => current === group.id ? "" : group.id)}
+                onClick={() => setGroupState({ page, group: openGroup === group.id ? "" : group.id })}
                 aria-expanded={expanded}
                 title={group.label}
               >

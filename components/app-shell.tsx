@@ -2,8 +2,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AuthSession } from "../lib/auth";
 import { AviantoHeader, BottomNavigation } from "./avianto-mobile";
-import { normalizeBottomNavigationPage } from "./avianto-navigation";
+import { aviantoHome, aviantoNavigationGroups, aviantoPrimaryNavigation, normalizeBottomNavigationPage } from "./avianto-navigation";
 import { AviantoSidebarNavigation } from "./avianto-sidebar-navigation";
+import { Plus, UserRound } from "lucide-react";
 export function AppShell({
   children,
   page,
@@ -24,6 +25,7 @@ export function AppShell({
   const drawerRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
   const isAdmin = session.user.rol === "ADMINISTRACION";
+  const currentItem = [aviantoHome, ...aviantoPrimaryNavigation, ...aviantoNavigationGroups.flatMap((group) => group.items)].find((item) => item.id === page);
   const openMenu = () => setMenuOpen(true);
   const go = (target: string) => {
     onPage(target);
@@ -50,6 +52,7 @@ export function AppShell({
   }, [menuOpen]);
   return (
     <div className={`app-shell${collapsed ? " sidebar-is-collapsed" : ""}`}>
+      <a className="skip-link" href="#avianto-content">Saltar al contenido</a>
       <aside className={`sidebar${collapsed ? " collapsed" : ""}`}>
         <AviantoSidebarNavigation
           page={page}
@@ -64,7 +67,11 @@ export function AppShell({
       </aside>
       <main className={`main${collapsed ? " sidebar-collapsed" : ""}`}>
         <AviantoHeader onMenu={openMenu} onHome={() => go("dashboard")} onIntake={onIntake} />
-        {children}
+        <div className="avianto-workspace-header">
+          <div className="avianto-workspace-location"><span>Avianto</span><span aria-hidden="true">/</span><strong>{currentItem?.label ?? "Detalle del registro"}</strong></div>
+          <div className="avianto-workspace-tools"><div className="avianto-user"><UserRound size={19} aria-hidden="true" /><span><strong>{session.user.nombre}</strong><small>{isAdmin ? "Administración" : "Operario"}</small></span></div><button type="button" className="button primary" onClick={onIntake}><Plus size={18} aria-hidden="true" />Ingresar moto</button></div>
+        </div>
+        <div id="avianto-content" tabIndex={-1}>{children}</div>
       </main>
       {menuOpen && (
         <>

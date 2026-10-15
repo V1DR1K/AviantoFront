@@ -26,7 +26,7 @@ import type {
   VentaResponse,
   TrabajoStatus,
 } from "../lib/types";
-import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, FilterBar, LoadingState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 import { BudgetBreakdown } from "./budget-breakdown";
 import { PaymentLedger } from "./payment-ledger";
 import { MetricCard, StatusRail, VehicleCard, VehicleField } from "./avianto-mobile";
@@ -44,8 +44,8 @@ const errorMessage = (reason: unknown) =>
   reason instanceof Error ? reason.message : "No fue posible cargar la información.";
 const workStateClass = (estado: TrabajoStatus) =>
   estado === "Realizado" ? " is-completed" : estado === "Pendiente" ? " is-pending" : " is-cancelled";
-function Metric({ label, value, tone }: { label: string; value: string; tone: string }) {
-  return <section className={`metric ${tone}`}><span>{label}</span><strong>{value}</strong><small>Período seleccionado</small></section>;
+function Metric({ label, value, tone, detail }: { label: string; value: string; tone: string; detail: string }) {
+  return <section className={`metric ${tone}`}><span>{label}</span><strong>{value}</strong><small>{detail}</small></section>;
 }
 function OrderPhotos({ photos, onChange }: { photos: PhotoResponse[]; onChange: () => void }) {
   const [urls, setUrls] = useState<Record<string, string>>({});
@@ -106,6 +106,8 @@ export function Dashboard({
   const [taller, setTaller] = useState<TallerResponse | null>(null);
   const [fichasAgrupadas, setFichasAgrupadas] = useState<DashboardFichasResponse | null>(null);
   const [ventas, setVentas] = useState<VentaResponse | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [groupBy, setGroupBy] = useState<"moto" | "ficha">("moto");
   const [section, setSection] = useState<"taller" | "ventas">(initialSection);
   const [tab, setTab] = useState<string>(initialSection === "ventas" ? "En venta" : "Ingresada Taller");
@@ -115,18 +117,15 @@ export function Dashboard({
       api<DashboardFichasResponse>("/dashboard/fichas"),
       api<VentaResponse>("/dashboard/ventas"),
     ])
-      .then(([nextTaller, nextFichas, nextVentas]) => { setTaller(nextTaller); setFichasAgrupadas(nextFichas); setVentas(nextVentas); })
-      .catch((reason) => notify(errorMessage(reason), "error"));
-  }, [notify]);
+      .then(([nextTaller, nextFichas, nextVentas]) => { setTaller(nextTaller); setFichasAgrupadas(nextFichas); setVentas(nextVentas); setLoadError(null); })
+      .catch((reason) => { setLoadError(errorMessage(reason)); notify(errorMessage(reason), "error"); });
+  }, [notify, reloadKey]);
   const talleres = taller?.estados ?? [];
   const ventasEstados = ventas?.estados ?? [];
   const motos = talleres.find((item) => item.estado === tab)?.motos ?? [];
   const fichas = fichasAgrupadas?.estados.find((item) => item.estado === tab)?.fichas ?? [];
   const estados = groupBy === "moto" ? talleres : fichasAgrupadas?.estados ?? [];
-  const count = (estado: string) => {
-    const item = estados.find((entry) => entry.estado === estado);
-    return item ? "motos" in item ? item.motos.length : item.fichas.length : 0;
-  };
+  const count = (estado: string) => talleres.find((entry) => entry.estado === estado)?.motos.length ?? 0;
   const salesCount = (estado: string) => ventasEstados.find((entry) => entry.estado === estado)?.motos.length ?? 0;
   const sales = ventasEstados.find((item) => item.estado === tab)?.motos ?? [];
   const metric = (value: number) => String(value).padStart(2, "0");
@@ -137,7 +136,7 @@ export function Dashboard({
         <section className="avianto-dashboard-hero">
           <BrandLogo variant="color" markOnly size="lg" />
           <h1>Estado actual del taller</h1>
-          <p>{userName ? `Buenos días, ${userName}` : "Resumen operativo"}</p>
+          <p>{userName ? `Hola, ${userName}` : "Resumen operativo"}</p>
           <button type="button" className="avianto-mobile-cta" onClick={onIntake}>+&nbsp; Ingresar moto</button>
         </section>
         <h2 className="avianto-red-heading">Resumen</h2>
@@ -147,23 +146,21 @@ export function Dashboard({
             <button type="button" aria-pressed={section === "ventas"} className={section === "ventas" ? "active" : ""} onClick={() => changeSection("ventas")}>Ventas</button>
           </div>
           {taller && fichasAgrupadas && <div className="avianto-metric-grid">
-            <MetricCard label="Total" value={metric(section === "ventas" ? sales.length : count("Ingresada Taller"))} detail="Ingresadas" />
-            <MetricCard label="En curso" value={metric(section === "ventas" ? sales.length : count("Pendiente") + count("En proceso") + count("En revisión"))} detail="Pendientes y proceso" />
-            <MetricCard label="Terminadas" value={metric(section === "ventas" ? salesCount("Vendida") : count("Terminada"))} detail="Listas para entregar" />
-            <MetricCard label="Entregadas" value={metric(section === "ventas" ? salesCount("Transferencia en proceso") : count("Entregada"))} detail="Último período" tone="red" />
+            <MetricCard label="Total" value={metric((section === "ventas" ? ventasEstados : talleres).reduce((total, item) => total + item.motos.length, 0))} detail={section === "ventas" ? "Circuito comercial" : "Circuito del taller"} />
+            <MetricCard label={section === "ventas" ? "En venta" : "En curso"} value={metric(section === "ventas" ? salesCount("En venta") : count("Ingresada Taller") + count("Pendiente") + count("En proceso") + count("En revisión"))} detail={section === "ventas" ? "Gestión comercial" : "Ingresadas y en trabajo"} />
+            <MetricCard label={section === "ventas" ? "Transferencias" : "Terminadas"} value={metric(section === "ventas" ? salesCount("Transferencia en proceso") : count("Terminada"))} detail={section === "ventas" ? "En proceso" : "Listas para entregar"} />
+            <MetricCard label={section === "ventas" ? "Vendidas" : "Entregadas"} value={metric(section === "ventas" ? salesCount("Vendida") : count("Entregada"))} detail={section === "ventas" ? "Venta completada" : "Entrega registrada"} tone="red" />
           </div>}
-          {taller && fichasAgrupadas && <StatusRail
-            active={tab}
-            onChange={setTab}
-            items={(section === "ventas" ? ventasEstados : estados).map((item) => ({ id: item.estado, label: item.estado, count: "motos" in item ? item.motos.length : item.fichas.length }))}
-          />}
+          {loadError ? <EmptyState title="No se pudo cargar el resumen" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : !taller && <LoadingState label="Cargando el estado del taller..." />}
         </div>
         {taller && fichasAgrupadas && <>
           <div className="avianto-screen-body">
-            <div className="avianto-segmented" role="group" aria-label="Agrupar resultados">
+            {section === "taller" && <div className="avianto-segmented" role="group" aria-label="Agrupar resultados">
               <button type="button" aria-pressed={groupBy === "moto"} className={groupBy === "moto" ? "active" : ""} onClick={() => { setGroupBy("moto"); setTab("Ingresada Taller"); }}>Agrupar x moto</button>
               <button type="button" aria-pressed={groupBy === "ficha"} className={groupBy === "ficha" ? "active" : ""} onClick={() => { setGroupBy("ficha"); setTab("Pendiente"); }}>Agrupar x ficha</button>
-            </div>
+            </div>}
+            <StatusRail active={tab} onChange={setTab} items={(section === "ventas" ? ventasEstados : estados).map((item) => ({ id: item.estado, label: item.estado, count: "motos" in item ? item.motos.length : item.fichas.length }))} />
+            {(section === "ventas" ? sales.length === 0 : groupBy === "moto" ? motos.length === 0 : fichas.length === 0) && <EmptyState title={`Sin ${section === "taller" && groupBy === "ficha" ? "fichas" : "motos"} en ${tab.toLowerCase()}`} body="Elegí otro estado para consultar los registros del circuito." />}
             <div className="avianto-mobile-list">
               {section === "ventas" ? sales.map((moto) => <VehicleCard key={moto.motoId} variant="dashboard" plate={moto.patente} action={<button type="button" className="text-button" onClick={() => onOpenMoto(moto.motoId)}>Ver moto</button>}><VehicleField label="Moto" value={moto.moto} /><VehicleField label="Cliente" value={moto.cliente ?? "—"} /><VehicleField label="Estado" value={<StatusBadge status={moto.estado} />} tone="red" /></VehicleCard>) : groupBy === "moto" ? motos.map((moto) => { const vehicle = splitVehicleName(moto.moto); return <VehicleCard key={moto.motoId} variant="dossier" plate={moto.patente} action={<button type="button" className="text-button" onClick={() => onOpenMoto(moto.motoId)}>Ingresar al perfil</button>}><VehicleField label="Moto" value={vehicle.make} /><VehicleField label="Modelo" value={vehicle.model} /><VehicleField label="Año" value="—" /><VehicleField label="Cliente" value={moto.cliente ?? "—"} /><VehicleField label="Estado" value={<StatusBadge status={moto.estado} />} tone="red" /><VehicleField label="Km" value={moto.kilometraje?.toLocaleString("es-AR") ?? "—"} /><VehicleField label="Fecha ingreso" value={displayLocalDate(moto.fechaIngreso)} /><VehicleField label="Ficha" value={moto.fichaNumero ?? "—"} /></VehicleCard>; }) : fichas.map((ficha) => <VehicleCard key={ficha.id} variant="ficha" plate={ficha.numero} action={<button type="button" className="text-button" onClick={() => void api<FichaResponse>(`/fichas/${ficha.id}`).then(onSelect).catch((reason) => notify(errorMessage(reason), "error"))}>Ver ficha</button>}><VehicleField label="Cliente" value={ficha.cliente} /><VehicleField label="Moto" value={`${ficha.moto} · ${ficha.patente}`} /><VehicleField label="Estado" value={<StatusBadge status={ficha.estado} />} tone="red" /></VehicleCard>)}
             </div>
@@ -214,7 +211,7 @@ export function VentasView({
   }, [query, status, sortBy, direction, page, notify, reloadKey]);
   const emptyLabel = status === "Todos" ? "para mostrar" : status.toLowerCase();
   return <AviantoPage>
-    <AviantoPageHeader eyebrow="Ventas" title="Ventas" description="Fichas persistentes para seguir comprador, requisitos y transferencia." actions={<button className="button secondary" onClick={onIntake}><Plus size={18} />Ingresar moto</button>} />
+    <AviantoPageHeader title="Ventas" description="Fichas persistentes para seguir comprador, requisitos y transferencia." actions={<button className="button secondary" onClick={onIntake}><Plus size={18} />Ingresar moto</button>} />
        <AviantoPanel className="table-panel">
        <FilterBar
           primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Ficha, patente o comprador" />}
@@ -229,7 +226,7 @@ export function VentasView({
          const completed = required.filter((item) => item.estado === "Realizado").length;
          const appointment = sale.transferencia?.citaFecha ? `${date(sale.transferencia.citaFecha)} · ${sale.transferencia.citaHora?.slice(0, 5) ?? "—"}` : "Sin cita";
             return <tr key={sale.id}><td data-label="Ficha"><strong>{sale.numero}</strong><small>Actualizada {date(sale.actualizadaEn)}</small></td><td data-label="Moto"><strong>{sale.patente}</strong><small>{sale.moto}</small></td><td data-label={sale.estado === "Vendida" ? "Comprador final" : sale.estado === "Cancelada" ? "Comprador registrado" : "Comprador prospectivo"}>{sale.comprador ?? "Sin comprador"}</td><td data-label="Carpeta">{required.length ? `${completed}/${required.length} obligatorios` : "Sin ítems obligatorios"}<small>{sale.obligatoriosCompletos ? "Completa" : "Incompleta"}</small></td><td data-label="Cita">{appointment}<small>{sale.transferencia?.asistenciaAt ? "Asistencia confirmada" : sale.transferencia ? "Asistencia pendiente" : "Esperando transferencia"}</small></td><td data-label="Estado"><StatusBadge status={sale.estado} /></td><td className="table-actions sales-actions"><button onClick={() => onOpenSale(sale)} aria-label={`Abrir ficha de venta ${sale.numero}`}><FileText size={17} /></button><button onClick={() => onOpenMoto(sale.motoId)} aria-label={`Ver moto ${sale.patente}`}><Eye size={17} /></button></td></tr>;
-        })}</tbody></table> : loadError ? <EmptyState title="No se pudieron cargar las fichas de venta" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((value) => value + 1)}>Reintentar</button>} /> : result ? <EmptyState title={`Sin fichas ${emptyLabel}`} body={query ? "Probá con otra búsqueda." : "No hay fichas de venta dentro de los filtros seleccionados."} /> : <div className="table-loading" role="status">Cargando fichas de venta...</div>}
+        })}</tbody></table> : loadError ? <EmptyState title="No se pudieron cargar las fichas de venta" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((value) => value + 1)}>Reintentar</button>} /> : result ? <EmptyState title={`Sin fichas ${emptyLabel}`} body={query ? "Probá con otra búsqueda." : "No hay fichas de venta dentro de los filtros seleccionados."} /> : <LoadingState label="Cargando fichas de venta..." />}
        <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
       </AviantoPanel>
     </AviantoPage>;
@@ -259,6 +256,8 @@ export function FichasView({
   const [direction, setDirection] = useState<"ASC" | "DESC">("DESC");
   const [result, setResult] = useState<PageResponse<FichaResponse> | null>(null);
   const [pendingMotos, setPendingMotos] = useState<PageResponse<MotovehiculoResponse> | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [page, setPage] = useState(1);
   const pendingIntake = status === "Ingresada Taller";
   useEffect(() => {
@@ -272,8 +271,8 @@ export function FichasView({
         sortBy: sortBy === "fechaIngreso" ? "updatedAt" : sortBy === "numero" ? "patente" : sortBy,
         direction,
       })
-        .then(setPendingMotos)
-        .catch((reason) => { if (!controller.signal.aborted) notify(errorMessage(reason), "error"); });
+        .then((next) => { setPendingMotos(next); setLoadError(null); })
+        .catch((reason) => { if (!controller.signal.aborted) { setLoadError(errorMessage(reason)); notify(errorMessage(reason), "error"); } });
       return () => controller.abort();
     }
     void api<PageResponse<FichaResponse>>(
@@ -291,10 +290,10 @@ export function FichasView({
         size: 20,
       },
     )
-      .then(setResult)
-      .catch((reason) => { if (!controller.signal.aborted) notify(errorMessage(reason), "error"); });
+      .then((next) => { setResult(next); setLoadError(null); })
+      .catch((reason) => { if (!controller.signal.aborted) { setLoadError(errorMessage(reason)); notify(errorMessage(reason), "error"); } });
     return () => controller.abort();
-  }, [query, status, paymentStatus, desde, hasta, sortBy, direction, page, pendingIntake, notify]);
+  }, [query, status, paymentStatus, desde, hasta, sortBy, direction, page, pendingIntake, notify, reloadKey]);
   const params = {
     q: query || undefined,
     estado: status === "Todos" ? undefined : status,
@@ -307,11 +306,11 @@ export function FichasView({
   const toggleDirection = () => setDirection((d) => (d === "ASC" ? "DESC" : "ASC"));
   return (
     <AviantoPage>
-      <AviantoPageHeader eyebrow="Taller" title="Fichas de trabajo" description="Consultá y administrá las órdenes de trabajo del taller." actions={<button className="button primary" onClick={onNewOrder}><Plus size={19} />Nueva ficha</button>} />
+      <AviantoPageHeader title="Fichas de trabajo" description="Consultá y administrá las órdenes de trabajo del taller." actions={<button className="button primary" onClick={onNewOrder}><Plus size={19} />Nueva ficha</button>} />
        <AviantoPanel className="table-panel">
          <FilterBar
             primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder={pendingIntake ? "Patente o moto" : "Número o cliente"} />}
-            activeCount={(status !== "Todos" ? 1 : 0) + (pendingIntake ? 0 : (paymentStatus !== "Todos" ? 1 : 0) + (desde !== daysAgoInAr(30) ? 1 : 0) + (hasta !== todayInAr() ? 1 : 0)) + (sortBy !== "fechaIngreso" ? 1 : 0)}
+            activeCount={(status !== "Todos" ? 1 : 0) + (pendingIntake ? 0 : (paymentStatus !== "Todos" ? 1 : 0) + (desde ? 1 : 0) + (hasta ? 1 : 0)) + (sortBy !== "fechaIngreso" ? 1 : 0)}
           >
             <SelectField value={status} onChange={(value) => { setStatus(value as typeof status); setSortBy("fechaIngreso"); setPage(1); }} options={[{ value: "Todos", label: "Todos los estados" }, ...fichaFilterStatuses.map((option) => ({ value: option, label: option }))]} placeholder="Todos los estados" icon={Filter} ariaLabel="Filtrar fichas por estado" />
             {!pendingIntake && <SelectField value={paymentStatus} onChange={(value) => { setPaymentStatus(value as typeof paymentStatus); setPage(1); }} options={[{ value: "Todos", label: "Todos los pagos" }, ...fichaPaymentStatuses.map((option) => ({ value: option, label: option }))]} placeholder="Todos los pagos" icon={Filter} ariaLabel="Filtrar fichas por pago" />}
@@ -332,12 +331,12 @@ export function FichasView({
               <Download size={17} />Exportar Excel
             </button>}
          </FilterBar>
-         {pendingIntake ? pendingMotos?.content.length ? (
+        {loadError ? <EmptyState title="No se pudieron cargar las fichas" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : pendingIntake ? pendingMotos?.content.length ? (
            <table>
              <thead><tr><th>Ficha</th><th>Cliente</th><th>Moto</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
              <tbody>{pendingMotos.content.map((moto) => <tr key={moto.id}><td data-label="Ficha">Sin ficha</td><td data-label="Cliente">{moto.propietario ?? "Sin propietario"}</td><td data-label="Moto">{moto.marca} {moto.modelo}<small>{moto.patente}</small></td><td data-label="Estado"><StatusBadge status={moto.estado} /></td><td data-label="Pago">—</td><td data-label="Total">—</td><td className="table-actions"><button onClick={() => onOpenMoto(moto.id)} aria-label={`Ver perfil ${moto.patente}`}><Eye size={17} /></button></td></tr>)}</tbody>
            </table>
-         ) : pendingMotos ? <EmptyState title="Sin motos ingresadas" body="No hay motos en Taller pendientes de ficha." /> : <div className="table-loading" role="status">Cargando motos...</div> : result?.content.length ? (
+         ) : pendingMotos ? <EmptyState title="Sin motos ingresadas" body="No hay motos en Taller pendientes de ficha." /> : <LoadingState label="Cargando motos..." /> : !result ? <LoadingState label="Cargando fichas..." /> : result.content.length ? (
           <table>
             <thead>
               <tr><th>Ficha</th><th>Cliente</th><th>Moto</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr>
@@ -368,7 +367,7 @@ export function FichasView({
             </tbody>
           </table>
         ) : (
-          <EmptyState title="No hay fichas" body="Creá una nueva o ajustá los filtros." />
+          <EmptyState title="No hay fichas con estos filtros" body={desde || hasta ? "No encontramos fichas en el período seleccionado. Podés ampliar la consulta a todas las fechas." : "Probá con otro cliente, número de ficha o estado."} action={desde || hasta ? <button className="button secondary" onClick={() => { setDesde(""); setHasta(""); setPage(1); }}>Ver todas las fechas</button> : undefined} />
         )}
         <Pagination page={page} total={pendingIntake ? pendingMotos?.totalPages || 1 : result?.totalPages || 1} onPage={setPage} />
       </AviantoPanel>
@@ -823,74 +822,75 @@ export function FichaDetail({
 }
 
 export function ReportsView({ notify }: { notify: Notify }) {
-  const [rows, setRows] = useState<{ etiqueta: string; valor: number }[]>([]);
-  const [clients, setClients] = useState<ClienteResponse[]>([]);
+  const [data, setData] = useState<{ summary: { etiqueta: string; valor: number }[]; clients: PageResponse<ClienteResponse> } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [page, setPage] = useState(1);
   useEffect(() => {
+    const controller = new AbortController();
     void Promise.all([
-      api<{ etiqueta: string; valor: number }[]>("/reportes/resumen"),
-      api<PageResponse<ClienteResponse>>("/clientes", {}, { size: 20 }),
-    ])
-      .then(([nextSummary, page]) => { setRows(nextSummary); setClients(page.content); })
-      .catch((reason) => notify(errorMessage(reason), "error"));
-  }, [notify]);
-  return (
-    <AviantoPage className="reports-page">
-      <AviantoPageHeader title="Reportes" description="Indicadores actuales del taller." eyebrow="Análisis" />
-      <div className="metrics avianto-metrics">
-        {rows.map((item) => (
-          <Metric key={item.etiqueta} label={item.etiqueta} value={money(item.valor)} tone="blue" />
-        ))}
-      </div>
-      <AviantoPanel className="table-panel reports-clients-panel"><div className="panel-head"><div><h2>Clientes</h2><p>Actividad registrada en el padrón del taller.</p></div></div><table><thead><tr><th>Cliente</th><th>Fichas</th></tr></thead><tbody>{clients.map((client) => <tr key={client.id}><td data-label="Cliente">{client.nombre}</td><td data-label="Fichas">{client.fichas} fichas</td></tr>)}</tbody></table></AviantoPanel>
-    </AviantoPage>
-  );
+      api<{ etiqueta: string; valor: number }[]>("/reportes/resumen", { signal: controller.signal }),
+      api<PageResponse<ClienteResponse>>("/clientes", { signal: controller.signal }, { size: 20, page: page - 1 }),
+    ]).then(([summary, clients]) => { setData({ summary, clients }); setLoadError(null); })
+      .catch((reason) => { if (!controller.signal.aborted) { setLoadError(errorMessage(reason)); notify(errorMessage(reason), "error"); } });
+    return () => controller.abort();
+  }, [notify, reloadKey, page]);
+  const metricDetails: Record<string, string> = { "Fichas último mes": "Ingresadas en los últimos 30 días", "Motos con service": "Con un service de referencia", "En proceso": "Pendientes, en proceso y revisión" };
+  return <AviantoPage className="reports-page">
+    <AviantoPageHeader title="Reportes" description="Indicadores del taller y actividad registrada por cliente." />
+    {loadError ? <EmptyState title="No se pudieron cargar los reportes" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : !data ? <LoadingState label="Cargando indicadores..." /> : <>
+      <div className="metrics avianto-metrics">{data.summary.map((item) => <Metric key={item.etiqueta} label={item.etiqueta} value={Number(item.valor).toLocaleString("es-AR")} tone="blue" detail={metricDetails[item.etiqueta] ?? "Registros del taller"} />)}</div>
+      <AviantoPanel className="table-panel reports-clients-panel">
+        <div className="panel-head"><div><h2>Fichas por cliente</h2><p>Cantidad de fichas asociadas a cada cliente del padrón.</p></div><span className="muted">{data.clients.totalElements} clientes</span></div>
+        {data.clients.content.length ? <table><thead><tr><th>Cliente</th><th>Fichas registradas</th></tr></thead><tbody>{data.clients.content.map((client) => <tr key={client.id}><td data-label="Cliente">{client.nombre}</td><td data-label="Fichas registradas">{client.fichas ?? 0}</td></tr>)}</tbody></table> : <EmptyState title="Todavía no hay clientes" body="La actividad se mostrará cuando haya clientes registrados en el taller." />}
+        <Pagination page={page} total={data.clients.totalPages || 1} onPage={setPage} />
+      </AviantoPanel>
+    </>}
+  </AviantoPage>;
 }
 
 export function ServicesView({ onOpenMoto, notify }: { onOpenMoto: (id: string) => void; notify: Notify }) {
   const [rows, setRows] = useState<NextServiceResponse[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("Todos");
   useEffect(() => {
-    void api<NextServiceResponse[]>("/services/proximos").then(setRows).catch((reason) => notify(errorMessage(reason), "error"));
-  }, [notify]);
+    const controller = new AbortController();
+    void api<NextServiceResponse[]>("/services/proximos", { signal: controller.signal })
+      .then((next) => { setRows(next); setLoadError(null); })
+      .catch((reason) => { if (!controller.signal.aborted) { setLoadError(errorMessage(reason)); notify(errorMessage(reason), "error"); } });
+    return () => controller.abort();
+  }, [notify, reloadKey]);
   const overdue = rows?.filter((row) => row.atrasadoKm || row.atrasadoFecha) ?? [];
   const withoutRef = rows?.filter((row) => row.sinReferencia && !row.atrasadoKm && !row.atrasadoFecha) ?? [];
   const upcoming = rows?.filter((row) => !row.sinReferencia && !row.atrasadoKm && !row.atrasadoFecha) ?? [];
-  return (
-    <AviantoPage className="services-page">
-      <AviantoPageHeader title="Service" description="Seguimiento del próximo service por motovehículo." eyebrow="Taller" />
-      {rows && (
-        <div className="metrics avianto-metrics">
-          <Metric label="Atrasados" value={String(overdue.length)} tone="danger" />
-          <Metric label="Próximos" value={String(upcoming.length)} tone="green" />
-          <Metric label="Sin services" value={String(withoutRef.length)} tone="neutral" />
-        </div>
-      )}
-      <AviantoPanel className="table-panel services-table-panel">
-        <div className="panel-head"><div><h2>Planificación de services</h2><p>Próximos vencimientos y estado por moto.</p></div></div>
-        {rows?.length ? (
-          <table>
-            <thead>
-              <tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Último service</th><th>Próximo</th><th>Estado</th><th /></tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.motoId}>
-                  <td data-label="Moto">{row.patente}<small>{row.moto}</small></td>
-                  <td data-label="Cliente">{row.cliente}</td>
-                  <td data-label="KM actual">{row.kilometraje != null ? row.kilometraje.toLocaleString("es-AR") : "—"}</td>
-                  <td data-label="Último service">{row.kmUltimoService != null ? `${row.kmUltimoService.toLocaleString("es-AR")} km` : "—"}</td>
-                  <td data-label="Próximo">{row.sinReferencia || row.atrasadoKm || row.atrasadoFecha
-                    ? <span>{row.proximKm ? `KM ${row.proximKm.toLocaleString("es-AR")}` : "—"}{row.proximaFecha ? ` · ${date(row.proximaFecha)}` : ""}</span>
-                    : <span>{row.proximKm ? `KM ${row.proximKm.toLocaleString("es-AR")}` : "—"}{row.kmFaltan != null ? ` (faltan ${row.kmFaltan.toLocaleString("es-AR")})` : ""}{row.proximaFecha ? ` · ${date(row.proximaFecha)}` : ""}</span>}</td>
-                  <td data-label="Estado"><StatusBadge status={row.sinReferencia ? "Sin services" : row.atrasadoKm || row.atrasadoFecha ? "Atrasado" : "Al día"} /></td>
-                  <td data-label="Acción"><button className="row-action" onClick={() => onOpenMoto(row.motoId)}>Ver moto</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <EmptyState title="Sin motovehículos" body="No hay motos para planificar el próximo service." />
-        )}
-      </AviantoPanel>
-    </AviantoPage>
-  );
+  const stateFor = (row: NextServiceResponse) => row.atrasadoKm || row.atrasadoFecha ? "Atrasado" : row.sinReferencia ? "Sin services" : "Al día";
+  const visible = (rows ?? []).filter((row) => (!query || `${row.patente} ${row.moto} ${row.cliente}`.toLocaleLowerCase("es-AR").includes(query.toLocaleLowerCase("es-AR"))) && (filter === "Todos" || stateFor(row) === filter));
+  return <AviantoPage className="services-page">
+    <AviantoPageHeader title="Services" description="Próximos vencimientos, kilometraje y mantenimiento de cada moto." />
+    {rows && !loadError && <div className="metrics avianto-metrics">
+      <Metric label="Atrasados" value={String(overdue.length)} tone="danger" detail="Superaron la fecha o el kilometraje" />
+      <Metric label="Al día" value={String(upcoming.length)} tone="green" detail="Con el próximo service programado" />
+      <Metric label="Sin services" value={String(withoutRef.length)} tone="neutral" detail="Sin un mantenimiento de referencia" />
+    </div>}
+    <AviantoPanel className="table-panel services-table-panel">
+      <div className="panel-head"><div><h2>Planificación de services</h2><p>Consultá el próximo mantenimiento o abrí el perfil para registrar uno.</p></div></div>
+      <FilterBar primary={<SearchBox value={query} onChange={setQuery} placeholder="Patente, moto o cliente" />} activeCount={filter !== "Todos" ? 1 : 0}>
+        <SelectField value={filter} onChange={setFilter} options={[{ value: "Todos", label: "Todos los estados" }, { value: "Atrasado", label: "Atrasados" }, { value: "Al día", label: "Al día" }, { value: "Sin services", label: "Sin services" }]} icon={Filter} ariaLabel="Filtrar services por estado" />
+      </FilterBar>
+      {loadError ? <EmptyState title="No se pudieron cargar los services" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : !rows ? <LoadingState label="Cargando services..." /> : visible.length ? <table>
+        <thead><tr><th>Moto</th><th>Cliente</th><th>KM actual</th><th>Último service</th><th>Próximo service</th><th>Estado</th><th>Acción</th></tr></thead>
+        <tbody>{visible.map((row) => <tr key={row.motoId}>
+          <td data-label="Moto"><strong>{row.patente}</strong><small>{row.moto}</small></td>
+          <td data-label="Cliente">{row.cliente ?? "Sin propietario"}</td>
+          <td data-label="KM actual">{row.kilometraje != null ? `${row.kilometraje.toLocaleString("es-AR")} km` : "—"}</td>
+          <td data-label="Último service">{row.kmUltimoService != null ? `${row.kmUltimoService.toLocaleString("es-AR")} km` : "Sin registro"}</td>
+          <td data-label="Próximo service">{row.proximKm != null ? `${row.proximKm.toLocaleString("es-AR")} km` : "Sin referencia"}{row.proximaFecha && <small>{date(row.proximaFecha)}</small>}{!row.sinReferencia && !row.atrasadoKm && row.kmFaltan != null && <small>Faltan {row.kmFaltan.toLocaleString("es-AR")} km</small>}</td>
+          <td data-label="Estado"><StatusBadge status={stateFor(row)} /></td>
+          <td data-label="Acción"><button className="row-action" onClick={() => onOpenMoto(row.motoId)}>Ver moto</button></td>
+        </tr>)}</tbody>
+      </table> : <EmptyState title="No hay services para mostrar" body="Probá con otra búsqueda o cambiá el estado seleccionado." />}
+    </AviantoPanel>
+  </AviantoPage>;
 }

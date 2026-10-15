@@ -6,8 +6,9 @@ import { api } from "../lib/api";
 import { parseIntegerInput } from "../lib/format";
 import type { MarcaMotoResponse, PageResponse, PerfilResponse, TallerResponse } from "../lib/types";
 import { AbmFormModal, type AbmField } from "./modal/abm-form-modal";
-import { ConfirmModal, EmptyState, FilterBar, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
+import { ConfirmModal, EmptyState, FilterBar, LoadingState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 import { StatusRail, VehicleCard, VehicleField } from "./avianto-mobile";
+import { AviantoPageHeader } from "./avianto-layout";
 
 const profileStates = ["Disponible", "Ingresada Taller", "Pendiente", "En proceso", "En revisión", "Terminada", "Entregada", "En venta", "Transferencia en proceso", "Vendida"];
 
@@ -20,6 +21,7 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
   const [direction, setDirection] = useState<"ASC" | "DESC">("DESC");
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<PageResponse<PerfilResponse> | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [brands, setBrands] = useState<MarcaMotoResponse[]>([]);
   const [workshopInfo, setWorkshopInfo] = useState<Map<string, { date: string | null; fiche: string | null }>>(() => new Map());
   const [editing, setEditing] = useState<PerfilResponse | null>(null);
@@ -29,8 +31,8 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
   useEffect(() => {
     const controller = new AbortController();
     void api<PageResponse<PerfilResponse>>("/perfiles", { signal: controller.signal }, { dominio: dominio || undefined, moto: motoQuery || undefined, cliente: clienteQuery || undefined, estado: estado || undefined, sortBy, direction, page: page - 1, size: 20 })
-      .then(setResult)
-      .catch((reason) => { if (!controller.signal.aborted) notify(reason instanceof Error ? reason.message : "No se pudieron cargar los perfiles.", "error"); });
+      .then((next) => { setResult(next); setLoadError(null); })
+      .catch((reason) => { if (!controller.signal.aborted) { const message = reason instanceof Error ? reason.message : "No se pudieron cargar los perfiles."; setLoadError(message); notify(message, "error"); } });
     return () => controller.abort();
   }, [dominio, motoQuery, clienteQuery, estado, sortBy, direction, page, reloadKey, notify]);
   useEffect(() => {
@@ -69,10 +71,7 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
   };
   return <div className="page">
     <div className="avianto-mobile-screen avianto-profile-screen">
-      <div className="avianto-screen-body avianto-profile-intro">
-        <div><h1>Perfiles</h1><p>Información integral e historial de cada moto.</p></div>
-        <button type="button" className="avianto-mobile-cta" onClick={() => onIntake()}>+&nbsp; Ingresar moto</button>
-      </div>
+      <AviantoPageHeader title="Perfiles" description="Información integral e historial de cada moto." actions={<button type="button" className="avianto-mobile-cta" onClick={() => onIntake()}>+ Ingresar moto</button>} />
       <div className="avianto-profile-filters">
         <FilterBar primary={<SearchBox value={dominio} onChange={(value) => { setDominio(value); setPage(1); }} placeholder="Dominio" />} activeCount={(motoQuery ? 1 : 0) + (clienteQuery ? 1 : 0) + (estado ? 1 : 0) + (sortBy !== "updatedAt" ? 1 : 0)}>
           <SearchBox value={motoQuery} onChange={(value) => { setMotoQuery(value); setPage(1); }} placeholder="Marca o modelo" />
@@ -82,8 +81,9 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
           <button className="button secondary" onClick={() => { setDirection((value) => value === "ASC" ? "DESC" : "ASC"); setPage(1); }} aria-label="Cambiar orden de perfiles"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
         </FilterBar>
       </div>
-      <StatusRail active={estado || "Todos"} onChange={(value) => { setEstado(value === "Todos" ? "" : value); setPage(1); }} items={[{ id: "Todos", label: "Todos", count: result?.totalElements ?? 0 }, ...profileStates.map((state) => ({ id: state, label: state, count: result?.content.filter((profile) => profile.estado === state).length ?? 0 }))]} />
+      <StatusRail active={estado || "Todos"} onChange={(value) => { setEstado(value === "Todos" ? "" : value); setPage(1); }} items={[{ id: "Todos", label: "Todos" }, ...profileStates.map((state) => ({ id: state, label: state }))]} />
       <div className="avianto-screen-body">
+        {loadError ? <EmptyState title="No se pudieron cargar los perfiles" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : !result ? <LoadingState label="Cargando perfiles..." /> :
         <div className="avianto-mobile-list">
           {result?.content.length ? result.content.map((profile) => <VehicleCard key={profile.id} variant="profile" plate={profile.patente} action={<div className="avianto-vehicle-actions">
             <button type="button" className="text-button" onClick={() => onOpen(profile.id)}>Abrir perfil</button>
@@ -100,8 +100,8 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
             <VehicleField label="Km" value={profile.kilometraje?.toLocaleString("es-AR") ?? "—"} />
             <VehicleField label="Fecha ingreso" value={workshopInfo.get(profile.id)?.date ? new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(new Date(`${workshopInfo.get(profile.id)?.date}T00:00:00Z`)) : "—"} />
             <VehicleField label="Ficha" value={workshopInfo.get(profile.id)?.fiche ?? "—"} />
-          </VehicleCard>) : <EmptyState title="No hay perfiles" body="Creá el primer Perfil de una moto." action={<button className="button primary" onClick={() => onIntake()}>Ingresar moto</button>} />}
-        </div>
+          </VehicleCard>) : <EmptyState title="No hay perfiles para mostrar" body="Probá con otro dominio o ajustá los filtros. También podés registrar una moto." action={<button className="button primary" onClick={() => onIntake()}>Ingresar moto</button>} />}
+        </div>}
         <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
       </div>
     </div>

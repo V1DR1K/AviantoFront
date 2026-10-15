@@ -57,7 +57,7 @@ export function AviantoTabs({ tabs, active, onChange }: { tabs: AviantoTab[]; ac
 }
 
 export function StatusRail({ items, active, onChange }: { items: { id: string; label: string; count?: number }[]; active: string; onChange: (id: string) => void }) {
-  return <nav className="avianto-status-rail" aria-label="Estados"><div className="avianto-status-rail-scroll">{items.map((item) => <button type="button" key={item.id} aria-pressed={active === item.id} className={active === item.id ? "active" : ""} onClick={() => onChange(item.id)}><strong>{item.count ?? 0}</strong><span>{item.label}</span></button>)}</div></nav>;
+  return <nav className="avianto-status-rail" aria-label="Estados"><div className="avianto-status-rail-scroll">{items.map((item) => <button type="button" key={item.id} aria-pressed={active === item.id} className={active === item.id ? "active" : ""} onClick={() => onChange(item.id)}>{item.count !== undefined && <strong>{item.count}</strong>}<span>{item.label}</span></button>)}</div></nav>;
 }
 
 export function MetricCard({ label, value, detail, tone = "blue" }: { label: string; value: string; detail?: string; tone?: "blue" | "red" | "neutral" }) {

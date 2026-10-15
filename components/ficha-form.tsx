@@ -376,7 +376,6 @@ export function FichaForm({
   return (
     <section className="order-form ficha-form-page avianto-ficha-form">
       <AviantoPageHeader
-        eyebrow={editing ? "Ficha de taller · Edición" : "Ficha de taller · Alta"}
         title={editing ? "Editar ficha de trabajo" : "Nueva ficha de trabajo"}
         description={editing ? "Actualizá los trabajos y las condiciones." : "Buscá la moto por patente y cargá los trabajos a realizar."}
         actions={<button

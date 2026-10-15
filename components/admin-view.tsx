@@ -5,7 +5,7 @@ import { Download, Edit3, Eye, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download } from "../lib/api";
 import { parseIntegerInput } from "../lib/format";
 import type { AuditoriaResponse, ClienteResponse, ControlResponse, MarcaMotoResponse, MotovehiculoResponse, PageResponse, VentaChecklistPlantillaRequest, VentaChecklistPlantillaResponse } from "../lib/types";
-import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, SelectField, type Notify } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, FilterBar, LoadingState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 import { AbmFormModal, type AbmField, VehicleAbmModal } from "./modal/abm-form-modal";
 import { AviantoPage, AviantoPageHeader, AviantoPanel } from "./avianto-layout";
 
@@ -37,22 +37,24 @@ function cell(row: DataRow, column: string) {
   if (column === "Motos") return row.motos;
   if (column === "Fichas") return row.fichas;
   if (column === "Año") return row.anio || "—";
-  if (column === "KM") return row.kilometraje || "—";
+  if (column === "KM") return row.kilometraje != null ? Number(row.kilometraje).toLocaleString("es-AR") : "—";
   if (column === "Descripción") return row.descripcion || "—";
   if (column === "Obligatorio") return row.obligatorio === "true" ? "Sí" : "No";
-  if (column === "Orden") return row.orden || "—";
-  if (column === "Estado") return <span className={`record-state ${["Activo", "Activa"].includes(String(row.estado)) ? "active" : "inactive"}`}>{String(row.estado)}</span>;
+  if (column === "Orden") return row.orden ?? "—";
+  if (column === "Estado") return ["Activo", "Inactivo"].includes(String(row.estado)) ? <span className={`record-state ${row.estado === "Activo" ? "active" : "inactive"}`}>{String(row.estado)}</span> : <StatusBadge status={String(row.estado)} />;
   return "—";
 }
 
 export function AdminView({ resource, notify, onOpenVehicle, onOpenServices }: { resource: Resource; notify: Notify; onOpenVehicle?: (id: string) => void; onOpenServices?: () => void }) {
   if (resource === "audit") return <AuditView notify={notify} />;
-  return <Records resource={resource} notify={notify} onOpenVehicle={onOpenVehicle} onOpenServices={onOpenServices} />;
+  return <Records key={resource} resource={resource} notify={notify} onOpenVehicle={onOpenVehicle} onOpenServices={onOpenServices} />;
 }
 
 function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource: Exclude<Resource, "audit">; notify: Notify; onOpenVehicle?: (id: string) => void; onOpenServices?: () => void }) {
   const config = configs[resource];
   const [rows, setRows] = useState<DataRow[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("Todos");
   const [page, setPage] = useState(1);
@@ -69,13 +71,13 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
     const params = { q: query || undefined, activo: filter === "Todos" ? undefined : filter === "Activo", page: page - 1, size: 20 };
     if (resource === "catalog") {
       void api<ControlResponse[]>("/configuracion/controles", { signal: requestSignal }, { includeDeleted: false })
-        .then((list) => { const filtered = list.filter((item) => (!query || `${item.nombre} ${item.descripcion ?? ""}`.toLowerCase().includes(query.toLowerCase())) && (filter === "Todos" || (filter === "Activo" ? item.activo : !item.activo))); setRows(filtered.map((item) => rowFor("catalog", item))); setTotal(1); })
-        .catch((reason) => { if (!requestSignal?.aborted) notify(requestError(reason), "error"); });
+        .then((list) => { const filtered = list.filter((item) => (!query || `${item.nombre} ${item.descripcion ?? ""}`.toLowerCase().includes(query.toLowerCase())) && (filter === "Todos" || (filter === "Activo" ? item.activo : !item.activo))); setRows(filtered.map((item) => rowFor("catalog", item))); setTotal(1); setLoaded(true); setLoadError(null); })
+        .catch((reason) => { if (!requestSignal?.aborted) { setLoadError(requestError(reason)); notify(requestError(reason), "error"); } });
       return () => controller?.abort();
     }
     void api<PageResponse<ClienteResponse | MotovehiculoResponse>>(config.endpoint, { signal: requestSignal }, params)
-      .then((result) => { setRows(result.content.map((item) => rowFor(resource, item))); setTotal(result.totalPages || 1); })
-      .catch((reason) => { if (!requestSignal?.aborted) notify(requestError(reason), "error"); });
+      .then((result) => { setRows(result.content.map((item) => rowFor(resource, item))); setTotal(result.totalPages || 1); setLoaded(true); setLoadError(null); })
+      .catch((reason) => { if (!requestSignal?.aborted) { setLoadError(requestError(reason)); notify(requestError(reason), "error"); } });
     return () => controller?.abort();
   };
 
@@ -126,7 +128,7 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
   const params = { q: query || undefined, activo: filter === "Todos" ? undefined : filter === "Activo" };
   return (
     <AviantoPage>
-      <AviantoPageHeader eyebrow="Administración" title={config.title} description={config.description} actions={<div className="panel-actions">
+      <AviantoPageHeader title={config.title} description={config.description} actions={<div className="panel-actions">
           {resource === "vehicles" && onOpenServices && <button className="button secondary" onClick={onOpenServices}>Seguimiento de services</button>}
           <button className="button primary" onClick={() => setEditing({})}><Plus size={19} />Nuevo {config.singular}</button>
         </div>} />
@@ -138,7 +140,7 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
            <SelectField value={filter} onChange={(value) => { setFilter(value); setPage(1); }} options={[{ value: "Todos", label: "Todos" }, { value: "Activo", label: "Activo" }, { value: "Inactivo", label: "Inactivo" }]} icon={Filter} ariaLabel={`Filtrar ${config.title.toLowerCase()} por estado`} />
            {config.exportPath && <button className="button secondary" onClick={() => void download(config.exportPath, `${config.title.toLowerCase()}.xlsx`, params).catch((reason) => notify(requestError(reason), "error"))}><Download size={17} />Exportar Excel</button>}
          </FilterBar>
-        {rows.length ? <table><thead><tr>{config.columns.map((column) => <th key={column}>{column}</th>)}<th>Acciones</th></tr></thead><tbody>{rows.map((row) => <tr key={String(row.id)}>{config.columns.map((column) => <td key={column} data-label={column}>{cell(row, column)}</td>)}<td className="table-actions"><button onClick={() => resource === "vehicles" && onOpenVehicle ? onOpenVehicle(String(row.id)) : setDetail(row)} aria-label={`Ver ${config.singular}`}><Eye size={17} /></button><button onClick={() => setEditing(row)} aria-label={`Editar ${config.singular}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(row)} aria-label={`Eliminar ${config.singular}`}><Trash2 size={17} /></button></td></tr>)}</tbody></table> : <EmptyState title={`No hay ${config.title.toLowerCase()} para mostrar`} body="Probá ajustar los filtros o crear un registro." action={<button className="button primary" onClick={() => setEditing({})}>Crear registro</button>} />}
+        {loadError ? <EmptyState title={`No se pudieron cargar ${config.title.toLowerCase()}`} body={loadError} action={<button className="button secondary" onClick={() => load()}>Reintentar</button>} /> : !loaded ? <LoadingState /> : rows.length ? <table><thead><tr>{config.columns.map((column) => <th key={column}>{column}</th>)}<th>Acciones</th></tr></thead><tbody>{rows.map((row) => <tr key={String(row.id)}>{config.columns.map((column) => <td key={column} data-label={column}>{cell(row, column)}</td>)}<td className="table-actions"><button onClick={() => resource === "vehicles" && onOpenVehicle ? onOpenVehicle(String(row.id)) : setDetail(row)} aria-label={`Ver ${config.singular}`}><Eye size={17} /></button><button onClick={() => setEditing(row)} aria-label={`Editar ${config.singular}`}><Edit3 size={17} /></button><button className="danger-action" onClick={() => setDeleting(row)} aria-label={`Eliminar ${config.singular}`}><Trash2 size={17} /></button></td></tr>)}</tbody></table> : <EmptyState title={`No hay ${config.title.toLowerCase()} para mostrar`} body="Probá ajustar los filtros o crear un registro." action={<button className="button primary" onClick={() => setEditing({})}>Crear registro</button>} />}
         <Pagination page={page} total={total} onPage={setPage} />
       </AviantoPanel>
       {resource === "vehicles" ? <VehicleAbmModal key={String(editing?.id ?? "new")} open={editing !== null} mode={editing?.id ? "modificar" : "agregar"} initialValues={editing ?? {}} brands={brands} clients={clients} onClose={() => setEditing(null)} onSubmit={submit} onError={(message) => notify(message, "error")} /> : <AbmFormModal key={String(editing?.id ?? "new")} open={editing !== null} resource={config.singular} mode={editing?.id ? "modificar" : "agregar"} fields={fields} initialValues={editing ?? {}} onClose={() => setEditing(null)} onSubmit={submit} onError={(message) => notify(message, "error")} />}
@@ -149,36 +151,58 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
 }
 
 function RecordDetail({ open, title, record, onClose, onEdit }: { open: boolean; title: string; record: DataRow | null; onClose: () => void; onEdit: () => void }) {
-  return <Dialog open={open} title={`Ficha de ${title}`} onClose={onClose}><dl className="record-detail">{Object.entries(record ?? {}).filter(([key]) => !["id", "activo", "estado", "createdAt", "updatedAt"].includes(key)).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{String(value ?? "—")}</dd></div>)}</dl><div className="modal-actions"><button className="button secondary" onClick={onClose}>Cerrar</button><button className="button primary" onClick={onEdit}>Editar</button></div></Dialog>;
+  const labels: Record<string, string> = { nombre: "Nombre", documento: "Documento", telefono: "Teléfono", email: "Email", direccion: "Dirección", descripcion: "Descripción", categorias: "Categorías", obligatorio: "Obligatorio", orden: "Orden", observaciones: "Observaciones", motos: "Motos", fichas: "Fichas", estado: "Estado" };
+  return <Dialog open={open} title={`Ficha de ${title}`} onClose={onClose}>
+    <dl className="record-detail">{Object.entries(labels).filter(([key]) => record && key in record).map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{key === "obligatorio" ? record?.[key] === "true" ? "Sí" : "No" : String(record?.[key] ?? "—") || "—"}</dd></div>)}</dl>
+    <div className="modal-actions"><button className="button secondary" onClick={onClose}>Cerrar</button><button className="button primary" onClick={onEdit}>Editar</button></div>
+  </Dialog>;
 }
 
 function AuditView({ notify }: { notify: Notify }) {
   const [query, setQuery] = useState("");
   const [module, setModule] = useState("Todos");
-  const [rows, setRows] = useState<AuditoriaResponse[]>([]);
+  const [result, setResult] = useState<PageResponse<AuditoriaResponse> | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   useEffect(() => {
-    void api<PageResponse<AuditoriaResponse>>("/auditoria", {}, { q: query || undefined, modulo: module === "Todos" ? undefined : module, page: page - 1, size: 50 }).then((result) => { setRows(result.content); setTotalPages(Math.max(1, result.totalPages)); }).catch((reason) => notify(requestError(reason), "error"));
-  }, [query, module, notify, page]);
-   return <AviantoPage className="audit-page"><AviantoPageHeader title="Auditoría" description="Altas, ediciones y transiciones de estado registradas." eyebrow="Actividad" /><AviantoPanel className="table-panel audit-table-panel"><FilterBar primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Usuario, módulo o descripción" />} activeCount={module !== "Todos" ? 1 : 0}><SelectField value={module} onChange={(value) => { setModule(value); setPage(1); }} options={[{ value: "Todos", label: "Todos" }, { value: "Fichas", label: "Fichas" }, { value: "Repuestos", label: "Repuestos" }, { value: "Configuración", label: "Configuración" }, { value: "Clientes", label: "Clientes" }, { value: "Motovehículos", label: "Motovehículos" }]} icon={Filter} ariaLabel="Filtrar auditoría por módulo" /></FilterBar>{rows.length ? <table><thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Módulo</th><th>Acción</th><th>Descripción</th><th>Motivo</th><th>Correlación</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td data-label="Fecha y hora">{iso(row.fecha)}</td><td data-label="Usuario">{row.usuario}</td><td data-label="Módulo">{row.modulo}</td><td data-label="Acción">{row.accion}</td><td data-label="Descripción">{row.descripcion}</td><td data-label="Motivo">{row.motivo ?? "—"}</td><td data-label="Correlación">{row.correlationId ?? "—"}</td></tr>)}</tbody></table> : <EmptyState title="No hay registros de auditoría" body="No se encontraron eventos con esos filtros." />}{totalPages > 1 && <Pagination page={page} total={totalPages} onPage={setPage} />}</AviantoPanel></AviantoPage>;
+    const controller = new AbortController();
+    void api<PageResponse<AuditoriaResponse>>("/auditoria", { signal: controller.signal }, { q: query || undefined, modulo: module === "Todos" ? undefined : module, page: page - 1, size: 50 })
+      .then((next) => { setResult(next); setLoadError(null); })
+      .catch((reason) => { if (!controller.signal.aborted) { setLoadError(requestError(reason)); notify(requestError(reason), "error"); } });
+    return () => controller.abort();
+  }, [query, module, notify, page, reloadKey]);
+  return <AviantoPage className="audit-page">
+    <AviantoPageHeader title="Auditoría" description="Altas, ediciones y transiciones de estado registradas." />
+    <AviantoPanel className="table-panel audit-table-panel">
+      <FilterBar primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Acción o descripción" />} activeCount={module !== "Todos" ? 1 : 0}>
+        <SelectField value={module} onChange={(value) => { setModule(value); setPage(1); }} options={[{ value: "Todos", label: "Todos los módulos" }, { value: "Fichas", label: "Fichas" }, { value: "Repuestos", label: "Pedidos" }, { value: "CONFIG", label: "Configuración" }, { value: "Clientes", label: "Clientes" }, { value: "Motovehículos", label: "Motos" }, { value: "VENTAS", label: "Ventas" }, { value: "Services", label: "Services" }, { value: "Perfiles", label: "Perfiles" }]} icon={Filter} ariaLabel="Filtrar auditoría por módulo" />
+      </FilterBar>
+      {loadError ? <EmptyState title="No se pudo cargar la auditoría" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : !result ? <LoadingState label="Cargando actividad..." /> : result.content.length ? <table>
+        <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Módulo</th><th>Acción</th><th>Descripción</th><th>Motivo</th><th>Correlación</th></tr></thead>
+        <tbody>{result.content.map((row) => <tr key={row.id}><td data-label="Fecha y hora">{iso(row.fecha)}</td><td data-label="Usuario">{row.usuario ?? "Sistema"}</td><td data-label="Módulo">{row.modulo}</td><td data-label="Acción">{row.accion}</td><td data-label="Descripción">{row.descripcion}</td><td data-label="Motivo">{row.motivo ?? "—"}</td><td data-label="Correlación">{row.correlationId ?? "—"}</td></tr>)}</tbody>
+      </table> : <EmptyState title="No hay registros de auditoría" body="No se encontraron eventos con esos filtros." />}
+      <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
+    </AviantoPanel>
+  </AviantoPage>;
 }
 
 type Setting = { title: string; description: string; endpoint: string; fields: AbmField[]; name: (item: DataRow) => string };
 const settings: Setting[] = [{ title: "Marcas de motos", description: "Opciones disponibles en el alta y edición de motos.", endpoint: "/configuracion/marcas-moto", fields: [{ key: "nombre", label: "Marca", required: true, wide: true }], name: (item) => String(item.nombre) }, { title: "Categorías de revisión", description: "Agrupaciones de controles para el checklist de entrega.", endpoint: "/configuracion/categorias", fields: [{ key: "nombre", label: "Categoría", required: true, wide: true }], name: (item) => String(item.nombre) }, { title: "Usuarios del sistema", description: "Usuarios y perfiles de acceso del taller.", endpoint: "/configuracion/usuarios", fields: [{ key: "username", label: "Usuario", required: true }, { key: "nombre", label: "Nombre", required: true }, { key: "email", label: "Email", type: "email" }, { key: "rol", label: "Perfil", type: "select", required: true, options: [{ value: "ADMINISTRACION", label: "Administración" }, { value: "OPERARIO", label: "Operario" }] }, { key: "password", label: "Contraseña", type: "password" }], name: (item) => `${item.nombre} · ${item.rol === "ADMINISTRACION" ? "Administración" : "Operario"}` }];
 
 export function SettingsView({ notify }: { notify: Notify }) {
-  return <AviantoPage className="settings-page"><AviantoPageHeader title="Administración" description="Marcas, categorías, usuarios y la carpeta de transferencia." eyebrow="Sistema" /><section className="settings-grid avianto-settings-grid">{settings.map((setting) => <ConfigSection key={setting.endpoint} setting={setting} notify={notify} />)}<SaleChecklistSection notify={notify} /></section></AviantoPage>;
+  return <AviantoPage className="settings-page"><AviantoPageHeader title="Administración" description="Marcas, categorías, usuarios y la carpeta de transferencia." /><section className="settings-grid avianto-settings-grid">{settings.map((setting) => <ConfigSection key={setting.endpoint} setting={setting} notify={notify} />)}<SaleChecklistSection notify={notify} /></section></AviantoPage>;
 }
 
 function ConfigSection({ setting, notify }: { setting: Setting; notify: Notify }) {
-  const [entries, setEntries] = useState<DataRow[]>([]);
+  const [entries, setEntries] = useState<DataRow[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [editing, setEditing] = useState<DataRow | null>(null);
   const [deleting, setDeleting] = useState<DataRow | null>(null);
   const load = (signal?: AbortSignal) => {
     const controller = signal ? null : new AbortController();
     const requestSignal = signal ?? controller?.signal;
-    void api<DataRow[]>(setting.endpoint, { signal: requestSignal }).then(setEntries).catch((reason) => { if (!requestSignal?.aborted) notify(requestError(reason), "error"); });
+    void api<DataRow[]>(setting.endpoint, { signal: requestSignal }).then((next) => { setEntries(next); setLoadError(null); }).catch((reason) => { if (!requestSignal?.aborted) { setLoadError(requestError(reason)); notify(requestError(reason), "error"); } });
     return () => controller?.abort();
   };
   useEffect(load, [setting.endpoint, notify]);
@@ -193,7 +217,7 @@ function ConfigSection({ setting, notify }: { setting: Setting; notify: Notify }
       notify(requestError(reason), "error");
     }
   };
-  return <section className="panel config-section"><div className="config-head"><div><h2>{setting.title}</h2><p>{setting.description}</p></div><button className="button secondary" onClick={() => setEditing({})}><Plus size={16} />Agregar</button></div><ul className="config-list">{entries.map((entry) => <li key={String(entry.id)}><span>{setting.name(entry)}</span><div className="table-actions"><button onClick={() => setEditing(entry)} aria-label={`Editar ${setting.name(entry)}`}><Edit3 size={16} /></button><button className="danger-action" onClick={() => setDeleting(entry)} aria-label={`Eliminar ${setting.name(entry)}`}><Trash2 size={16} /></button></div></li>)}</ul><AbmFormModal key={String(editing?.id ?? "new")} open={editing !== null} resource={setting.title.slice(0, -1).toLowerCase()} mode={editing?.id ? "modificar" : "agregar"} initialValues={editing ?? {}} fields={setting.fields} onClose={() => setEditing(null)} onSubmit={submit} onError={(message) => notify(message, "error")} /><ConfirmModal open={deleting !== null} title="Eliminar configuración" body={`¿Querés eliminar “${deleting ? setting.name(deleting) : ""}”?`} confirmLabel="Sí, eliminar" onClose={() => setDeleting(null)} onConfirm={async () => { if (!deleting) return; const selected = deleting; setDeleting(null); try { await api(`${setting.endpoint}/${selected.id}`, { method: "DELETE" }); load(); notify("Configuración eliminada correctamente."); } catch (reason) { notify(requestError(reason), "error"); throw reason; } }} /></section>;
+  return <section className="panel config-section"><div className="config-head"><div><h2>{setting.title}</h2><p>{setting.description}</p></div><button className="button secondary" onClick={() => setEditing({})}><Plus size={16} />Agregar</button></div>{loadError ? <EmptyState title="No se pudo cargar la configuración" body={loadError} action={<button className="button secondary" onClick={() => load()}>Reintentar</button>} /> : !entries ? <LoadingState /> : !entries.length ? <div className="config-empty"><strong>No hay registros</strong><p>Agregá el primer registro de esta sección.</p></div> : <ul className="config-list">{entries.map((entry) => <li key={String(entry.id)}><span>{setting.name(entry)}</span><div className="table-actions"><button onClick={() => setEditing(entry)} aria-label={`Editar ${setting.name(entry)}`}><Edit3 size={16} /></button><button className="danger-action" onClick={() => setDeleting(entry)} aria-label={`Eliminar ${setting.name(entry)}`}><Trash2 size={16} /></button></div></li>)}</ul>}<AbmFormModal key={String(editing?.id ?? "new")} open={editing !== null} resource={setting.title.slice(0, -1).toLowerCase()} mode={editing?.id ? "modificar" : "agregar"} initialValues={editing ?? {}} fields={setting.fields} onClose={() => setEditing(null)} onSubmit={submit} onError={(message) => notify(message, "error")} /><ConfirmModal open={deleting !== null} title="Eliminar configuración" body={`¿Querés eliminar “${deleting ? setting.name(deleting) : ""}”?`} confirmLabel="Sí, eliminar" onClose={() => setDeleting(null)} onConfirm={async () => { if (!deleting) return; const selected = deleting; setDeleting(null); try { await api(`${setting.endpoint}/${selected.id}`, { method: "DELETE" }); load(); notify("Configuración eliminada correctamente."); } catch (reason) { notify(requestError(reason), "error"); throw reason; } }} /></section>;
 }
 
 const saleChecklistFields: AbmField[] = [

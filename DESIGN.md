@@ -15,7 +15,7 @@ colors:
 typography:
   display:
     fontFamily: "Arboria, Segoe UI Variable, sans-serif"
-    fontSize: "clamp(2rem, 3.4vw, 3.25rem)"
+    fontSize: "2rem"
     fontWeight: 700
     lineHeight: 1.08
   body:
@@ -117,17 +117,34 @@ The palette is intentionally limited: blue establishes the operational world, re
 
 ## Layout
 
-Desktop uses a fixed blue navigation rail and a fluid document workspace. Pages remain centered at a practical reading width, with two-column dossier layouts where a summary is useful. Tables preserve their minimum readable width and scroll horizontally instead of collapsing data into unreadable columns.
+Desktop uses a blue navigation rail, a white workspace header with the signed-in user and motorcycle intake action, and a centered document workspace. Module headings use a blue surface, white text and a red lower rule, extending the vehicle profile's hierarchy to the rest of the console. Two-column dossier layouts keep summaries beside the work.
 
-At tablet widths the rail collapses to icons while every navigation destination remains available; multi-column work reflows. At mobile widths the shell becomes a sticky header plus bottom navigation, filters stack, dashboard metrics use a responsive grid, and critical actions remain full-width with generous touch targets.
+Tables sit inside keyboard-focusable horizontal scroll regions on desktop and tablet. At mobile widths each row becomes a bordered record with a blue identifier header, labeled fields and explicit actions. The shell uses the designer's sticky white header and blue bottom navigation; filters collapse, metrics use two columns and primary actions span the available width.
+
+### Module coverage
+
+- Inicio and Perfiles retain the original motorcycle artwork, data grids, segmented controls and status rail from SoftwareDesign. Perfiles has a visible heading on mobile; its status rail does not invent totals from one paginated result.
+- Fichas, Pedidos, Ventas, Transferencias, Clientes, Motos, Controles, Trabajos and Auditoría share `AviantoPageHeader`, `AviantoPanel` and the responsive table surface. The motorcycle profile's Fichas and Pedidos tabs use the same table primitive.
+- Services adds search and a status filter to the maintenance list. Reportes shows counts, their actual scope and paginated client activity.
+- Wiki uses blue section headings, a desktop contents panel and a sticky horizontal contents bar on mobile. Administración uses matching blue section headers and bounded lists.
+- Shared dialogs have blue headers, white form fields and the same control and focus treatment. Loading, error and empty states remain distinct; the official tool pattern appears at low opacity behind empty states.
+- Dialogs and confirmations render through a body portal, above the mobile navigation. They lock background scrolling, contain keyboard focus and restore focus on close; select menus and notifications have explicit overlay levels.
+
+### Data and readability
+
+Summary counts remain stable when changing the selected status or grouping. Sales use commercial labels. Reports count records without currency formatting. Empty date-filtered lists offer a direct action to consult all dates. Semantic state colors are preserved; overdue maintenance is a risk, missing service history is a warning and up-to-date maintenance is positive.
+
+Arboria is specified by the brand manual, but licensed webfont files are absent from the supplied assets. The font token preserves Arboria when installed, with Segoe UI as the current fallback. No substitute brand lettering is drawn.
+
+The red lower rule on module headings is an intentional brand treatment derived from the red section bands in SoftwareDesign. It is the narrow exception to the mechanical detector's generic warning about accent borders on rounded surfaces.
 
 ## Elevation & Depth
 
-Depth is structural and restrained. White record surfaces use a soft blue-tinted lift; tables rely on rules and grouping; dialogs use a stronger neutral shadow and backdrop. Decorative floating effects are not part of the system.
+Depth is structural and restrained. Ordinary panels and metrics use a thin border, while tables rely on rules and grouping. Dialogs use a stronger neutral shadow and backdrop. Decorative floating effects are not part of the system.
 
 ### Shadow Vocabulary
 
-- **Document lift** (`0 12px 28px rgb(48 52 139 / 0.12)`): panels, metrics, summaries and forms.
+- **Document lift** (`0 8px 24px rgb(48 52 139 / 0.09)`): retained for branded dossier surfaces where elevation is needed.
 - **Modal lift** (`0 20px 65px rgb(0 0 0 / 0.3)`): protected dialogs and confirmations.
 
 ## Shapes
@@ -145,7 +162,7 @@ Surfaces use softly rounded technical documents (14px), controls use a compact 9
 
 ### Cards / Containers
 
-- White document surfaces, 14px radius, thin border and document lift.
+- White document surfaces, 14px radius and a thin border.
 - Standard inner padding is 23px on desktop and reduced on mobile.
 
 ### Inputs / Fields

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Children, isValidElement, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 
 const classes = (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ");
@@ -11,17 +11,14 @@ export function AviantoPageHeader({
   title,
   description,
   actions,
-  eyebrow,
 }: {
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
-  eyebrow?: ReactNode;
 }) {
   return (
     <header className="page-heading avianto-page-heading">
       <div>
-        {eyebrow && <span className="avianto-eyebrow">{eyebrow}</span>}
         <h1>{title}</h1>
         {description && <p>{description}</p>}
       </div>
@@ -39,7 +36,14 @@ export function AviantoPanel({
   className?: string;
   as?: "section" | "article" | "div";
 }) {
-  return <Component className={classes("panel", "avianto-panel", className)}>{children}</Component>;
+  return <Component className={classes("panel", "avianto-panel", className)}>{Children.map(children, (child) => {
+    if (!isValidElement(child) || child.type !== "table") return child;
+    return (
+      // Keyboard users need to focus the region to scroll wide tables.
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      <div className="avianto-table-scroll" role="region" aria-label="Tabla de registros" tabIndex={0}>{child}</div>
+    );
+  })}</Component>;
 }
 
 export function AviantoRecordHero({

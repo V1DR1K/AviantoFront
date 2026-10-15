@@ -152,7 +152,7 @@ function Flow({ steps, label }: { steps: string[]; label: string }) {
 export function WikiView() {
   return (
     <AviantoPage className="wiki-page">
-      <AviantoPageHeader eyebrow="Conocimiento" title="Wiki operativa" description="Definiciones, estados y transiciones para trabajar con una única interpretación en todo el equipo." />
+      <AviantoPageHeader title="Wiki operativa" description="Definiciones, estados y transiciones para trabajar con una única interpretación en todo el equipo." />
 
       <div className="wiki-layout">
         <nav className="panel wiki-toc" aria-label="Índice de Wiki">

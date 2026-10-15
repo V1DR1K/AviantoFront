@@ -91,7 +91,7 @@ export function VentaFichaDetail({
   };
 
   if (!ficha) {
-    return <AviantoPage className="sale-detail-state-page"><AviantoPageHeader eyebrow="Ventas" title="Ficha de venta" description="Seguimiento de comprador, requisitos y transferencia." actions={<button className="button secondary" onClick={onBack}>Volver a ventas</button>} />{error ? <EmptyState title="No se pudo cargar la ficha de venta" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={() => void load()}>Reintentar</button>} /> : <div className="table-loading" role="status">Cargando ficha de venta...</div>}</AviantoPage>;
+    return <AviantoPage className="sale-detail-state-page"><AviantoPageHeader title="Ficha de venta" description="Seguimiento de comprador, requisitos y transferencia." actions={<button className="button secondary" onClick={onBack}>Volver a ventas</button>} />{error ? <EmptyState title="No se pudo cargar la ficha de venta" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={() => void load()}>Reintentar</button>} /> : <div className="table-loading" role="status">Cargando ficha de venta...</div>}</AviantoPage>;
   }
 
   const sold = ficha.estado === "Vendida";

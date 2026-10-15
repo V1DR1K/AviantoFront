@@ -18,7 +18,8 @@ import type {
   TransferResponse,
   VentaFichaResponse,
 } from "../lib/types";
-import { Dialog, EmptyState, FilterBar, Pagination, SelectField, StatusBadge, type Notify } from "./ui";
+import { Dialog, EmptyState, FilterBar, LoadingState, Pagination, SelectField, StatusBadge, type Notify } from "./ui";
+import { AviantoPanel } from "./avianto-layout";
 import { AviantoTabs, ServiceCard, VehicleField } from "./avianto-mobile";
 
 const date = formatDateInAr;
@@ -189,8 +190,8 @@ export function MotoDetail({
       setCircuitSaving(false);
     }
   };
-  if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><EmptyState title="No se pudo cargar la moto" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={load}>Reintentar</button>} /></div>;
-  if (!moto) return <div className="page"><div className="table-loading" role="status">Cargando moto...</div></div>;
+  if (error) return <div className="page"><button className="back" onClick={onBack}>← Volver</button><EmptyState title="No se pudo cargar la moto" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={() => load()}>Reintentar</button>} /></div>;
+  if (!moto) return <div className="page"><LoadingState label="Cargando perfil de la moto..." /></div>;
 
   const tabs: { id: typeof tab; label: string }[] = [
     { id: "general", label: "Datos" },
@@ -287,12 +288,12 @@ export function MotoDetail({
               <SelectField value={serviceSort} onChange={(value) => { setServiceSort(value); setServicePage(1); }} options={[{ value: "fecha", label: "Fecha" }, { value: "kilometraje", label: "Kilometraje" }]} icon={Filter} ariaLabel="Ordenar services por" />
              <button className="button secondary" onClick={() => { setServiceDirection((value) => value === "ASC" ? "DESC" : "ASC"); setServicePage(1); }} aria-label="Cambiar orden de services"><ArrowDownUp size={16} />{serviceDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
            </FilterBar></div>
-           {panelErrors.services ? <EmptyState title="No se pudo cargar el historial" body={panelErrors.services} action={<button className="button secondary" onClick={loadServices}>Reintentar</button>} /> : serviceHistory.length ? <div className="moto-service-history">{serviceHistory.map((service) => <ServiceCard key={service.id} date={date(service.fecha)} km={service.kilometraje.toLocaleString("es-AR")} next={serviceInterval ? `+${serviceInterval.toLocaleString("es-AR")} km` : "—"} nextKm={serviceInterval ? (service.kilometraje + serviceInterval).toLocaleString("es-AR") : "—"} notes={service.observaciones} />)}</div> : <EmptyState title="Sin historial anterior" body="El último service registrado se muestra arriba." />}
+           {panelErrors.services ? <EmptyState title="No se pudo cargar el historial" body={panelErrors.services} action={<button className="button secondary" onClick={() => loadServices()}>Reintentar</button>} /> : !services ? <LoadingState label="Cargando historial..." /> : serviceHistory.length ? <div className="moto-service-history">{serviceHistory.map((service) => <ServiceCard key={service.id} date={date(service.fecha)} km={service.kilometraje.toLocaleString("es-AR")} next={serviceInterval ? `+${serviceInterval.toLocaleString("es-AR")} km` : "—"} nextKm={serviceInterval ? (service.kilometraje + serviceInterval).toLocaleString("es-AR") : "—"} notes={service.observaciones} />)}</div> : <EmptyState title="Sin historial anterior" body={latestService ? "El último service registrado se muestra arriba." : "Registrá el primer service para comenzar el historial de mantenimiento."} />}
           <Pagination page={servicePage} total={services?.totalPages || 1} onPage={setServicePage} />
         </section>
       )}
       {tab === "fichas" && (
-        <section className="moto-profile-panel table-panel moto-profile-table">
+        <AviantoPanel className="moto-profile-panel table-panel moto-profile-table">
            <div className="panel-head"><div><h2>Fichas</h2><p>Trabajo actual e historial de ingresos al taller.</p></div><button className="button secondary" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewFicha({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nueva ficha</button></div>
            <FilterBar activeCount={(fichaDesde ? 1 : 0) + (fichaHasta ? 1 : 0) + (fichaEstado ? 1 : 0) + (fichaPago ? 1 : 0) + (fichaSort !== "fechaIngreso" ? 1 : 0)}>
              <label><span className="date-label">Desde</span><input type="date" value={fichaDesde} onChange={(event) => { setFichaDesde(event.target.value); setFichaPage(1); }} /></label>
@@ -302,17 +303,17 @@ export function MotoDetail({
               <SelectField value={fichaSort} onChange={(value) => { setFichaSort(value); setFichaPage(1); }} options={[{ value: "fechaIngreso", label: "Fecha" }, { value: "estado", label: "Estado" }, { value: "estadoPago", label: "Pago" }]} icon={Filter} ariaLabel="Ordenar fichas por" />
              <button className="button secondary" onClick={() => { setFichaDirection((value) => value === "ASC" ? "DESC" : "ASC"); setFichaPage(1); }} aria-label="Cambiar orden de fichas"><ArrowDownUp size={16} />{fichaDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
            </FilterBar>
-           {panelErrors.fichas ? <EmptyState title="No se pudieron cargar las fichas" body={panelErrors.fichas} action={<button className="button secondary" onClick={loadFichas}>Reintentar</button>} /> : fichas?.content.length ? (
+           {panelErrors.fichas ? <EmptyState title="No se pudieron cargar las fichas" body={panelErrors.fichas} action={<button className="button secondary" onClick={() => loadFichas()}>Reintentar</button>} /> : !fichas ? <LoadingState label="Cargando fichas..." /> : fichas.content.length ? (
             <table>
               <thead><tr><th>Ficha</th><th>Ingreso</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
               <tbody>{fichas.content.map((ficha) => <tr key={ficha.id}><td data-label="Ficha">{ficha.numero}</td><td data-label="Ingreso">{date(ficha.fechaIngreso)}</td><td data-label="Estado"><StatusBadge status={ficha.estado} /></td><td data-label="Pago"><StatusBadge status={ficha.estadoPago} /></td><td data-label="Total">{money(ficha.total)}</td><td className="table-actions"><button onClick={() => onOpenFicha(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
             </table>
           ) : <EmptyState title="Sin fichas" body="Esta moto todavía no tiene ingresos de trabajo." />}
           <Pagination page={fichaPage} total={fichas?.totalPages || 1} onPage={setFichaPage} />
-        </section>
+        </AviantoPanel>
       )}
       {tab === "repuestos" && (
-        <section className="moto-profile-panel table-panel moto-profile-table">
+        <AviantoPanel className="moto-profile-panel table-panel moto-profile-table">
            <div className="panel-head"><h2>Pedidos de repuestos</h2><button className="button secondary" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewRepuesto({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nuevo pedido</button></div>
            <FilterBar activeCount={(repuestoDesde ? 1 : 0) + (repuestoHasta ? 1 : 0) + (repuestoEstado ? 1 : 0) + (repuestoPago ? 1 : 0) + (repuestoSort !== "fecha" ? 1 : 0)}>
              <label><span className="date-label">Desde</span><input type="date" value={repuestoDesde} onChange={(event) => { setRepuestoDesde(event.target.value); setRepuestoPage(1); }} /></label>
@@ -322,14 +323,14 @@ export function MotoDetail({
               <SelectField value={repuestoSort} onChange={(value) => { setRepuestoSort(value); setRepuestoPage(1); }} options={[{ value: "fecha", label: "Fecha" }, { value: "estado", label: "Estado" }, { value: "estadoPago", label: "Pago" }]} icon={Filter} ariaLabel="Ordenar pedidos por" />
              <button className="button secondary" onClick={() => { setRepuestoDirection((value) => value === "ASC" ? "DESC" : "ASC"); setRepuestoPage(1); }} aria-label="Cambiar orden de pedidos"><ArrowDownUp size={16} />{repuestoDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
            </FilterBar>
-           {panelErrors.repuestos ? <EmptyState title="No se pudieron cargar los pedidos" body={panelErrors.repuestos} action={<button className="button secondary" onClick={loadRepuestos}>Reintentar</button>} /> : repuestos?.content.length ? (
+           {panelErrors.repuestos ? <EmptyState title="No se pudieron cargar los pedidos" body={panelErrors.repuestos} action={<button className="button secondary" onClick={() => loadRepuestos()}>Reintentar</button>} /> : !repuestos ? <LoadingState label="Cargando pedidos..." /> : repuestos.content.length ? (
             <table>
               <thead><tr><th>Pedido</th><th>Fecha</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
               <tbody>{repuestos.content.map((repuesto) => <tr key={repuesto.id}><td data-label="Pedido">{repuesto.numero}</td><td data-label="Fecha">{date(repuesto.fecha)}</td><td data-label="Estado"><StatusBadge status={repuesto.estado} /></td><td data-label="Pago"><StatusBadge status={repuesto.estadoPago} /></td><td data-label="Total">{money(repuesto.total)}</td><td className="table-actions"><button onClick={() => onOpenRepuesto(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} /></button></td></tr>)}</tbody>
             </table>
           ) : <EmptyState title="Sin repuestos" body="Aún no hay pedidos de repuestos para esta moto." />}
           <Pagination page={repuestoPage} total={repuestos?.totalPages || 1} onPage={setRepuestoPage} />
-        </section>
+        </AviantoPanel>
       )}
       </div>
       <Dialog open={serviceOpen} title="Registrar Service" className="service-modal" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)}>

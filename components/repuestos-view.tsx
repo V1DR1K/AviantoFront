@@ -14,7 +14,7 @@ import type {
   RepuestoResponse,
   RepuestoState,
 } from "../lib/types";
-import { ConfirmModal, Dialog, EmptyState, FilterBar, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, FilterBar, LoadingState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 import { PaymentLedger } from "./payment-ledger";
 import { AviantoPage, AviantoPageHeader, AviantoPanel, AviantoRecordHero } from "./avianto-layout";
 
@@ -44,12 +44,14 @@ export function RepuestosView({
   const [direction, setDirection] = useState<"ASC" | "DESC">("DESC");
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<PageResponse<RepuestoResponse> | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [createOpen, setCreateOpen] = useState(startCreate);
   const [editing, setEditing] = useState<RepuestoResponse | null>(null);
   const [deleting, setDeleting] = useState<RepuestoResponse | null>(null);
   const [clients, setClients] = useState<ClienteResponse[]>([]);
   const repuestoParams = useMemo(() => ({ estado: estado === "Todos" ? undefined : estado, q: query || undefined, fechaDesde: desde || undefined, fechaHasta: hasta || undefined, sortBy, direction }), [estado, query, desde, hasta, sortBy, direction]);
-  useEffect(() => { const controller = new AbortController(); void api<PageResponse<RepuestoResponse>>("/repuestos", { signal: controller.signal }, { ...repuestoParams, page: page - 1, size: 20 }).then(setResult).catch((err) => { if (!controller.signal.aborted) notify(errorMessage(err), "error"); }); return () => controller.abort(); }, [repuestoParams, page, notify]);
+  useEffect(() => { const controller = new AbortController(); void api<PageResponse<RepuestoResponse>>("/repuestos", { signal: controller.signal }, { ...repuestoParams, page: page - 1, size: 20 }).then((next) => { setResult(next); setLoadError(null); }).catch((err) => { if (!controller.signal.aborted) { setLoadError(errorMessage(err)); notify(errorMessage(err), "error"); } }); return () => controller.abort(); }, [repuestoParams, page, notify, reloadKey]);
   const loadClients = () => void api<PageResponse<ClienteResponse>>("/clientes", {}, { size: 100, activo: true }).then((r) => setClients(r.content)).catch(() => undefined);
   const refresh = () => void api<PageResponse<RepuestoResponse>>("/repuestos", {}, { ...repuestoParams, page: page - 1, size: 20 }).then(setResult).catch((err) => notify(errorMessage(err), "error"));
   const loadVehicles = useCallback(async (clienteId: string) => { const r = await api<PageResponse<MotovehiculoResponse>>("/motovehiculos", {}, { clienteId, size: 100, activo: true }); return r.content.filter((moto) => moto.ingresada && moto.seccion === "Taller"); }, []);
@@ -57,11 +59,11 @@ export function RepuestosView({
   useEffect(() => { if (createPrefill) loadClients(); }, [createPrefill]);
   return (
     <AviantoPage>
-      <AviantoPageHeader eyebrow="Taller" title="Pedidos de repuestos" description="Control de compras, recepción y pago de repuestos y accesorios." actions={<button className="button primary" onClick={() => { setCreateOpen(true); loadClients(); }}><Plus size={19} />Nuevo pedido</button>} />
+      <AviantoPageHeader title="Pedidos de repuestos" description="Control de compras, recepción y pago de repuestos y accesorios." actions={<button className="button primary" onClick={() => { setCreateOpen(true); loadClients(); }}><Plus size={19} />Nuevo pedido</button>} />
        <AviantoPanel className="table-panel">
          <FilterBar
            primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Número, cliente o patente" />}
-           activeCount={(estado !== "Todos" ? 1 : 0) + (desde !== daysAgoInAr(30) ? 1 : 0) + (hasta !== todayInAr() ? 1 : 0) + (sortBy !== "fecha" ? 1 : 0)}
+           activeCount={(estado !== "Todos" ? 1 : 0) + (desde ? 1 : 0) + (hasta ? 1 : 0) + (sortBy !== "fecha" ? 1 : 0)}
          >
            <SelectField value={estado} onChange={(value) => { setEstado(value as typeof estado); setPage(1); }} options={repuestoStates.map((option) => ({ value: option, label: option }))} placeholder="Todos" icon={Filter} ariaLabel="Filtrar pedidos por estado" />
           <label>
@@ -79,7 +81,7 @@ export function RepuestosView({
           </button>
             <button className="button secondary" onClick={() => void download("/repuestos/export.xlsx", "repuestos.xlsx", repuestoParams).catch((reason) => notify(errorMessage(reason), "error"))}><Download size={17} />Exportar Excel</button>
          </FilterBar>
-        {result?.content.length ? (
+        {loadError ? <EmptyState title="No se pudieron cargar los pedidos" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : !result ? <LoadingState label="Cargando pedidos..." /> : result.content.length ? (
           <table>
             <thead><tr><th>Pedido</th><th>Moto</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th>Pago</th><th>Total</th><th /></tr></thead>
             <tbody>{result.content.map((repuesto) => {
@@ -95,7 +97,7 @@ export function RepuestosView({
               </td></tr>;
             })}</tbody>
           </table>
-        ) : <EmptyState title="No hay pedidos de repuestos" body="Creá uno nuevo o ajustá los filtros." />}
+        ) : <EmptyState title="No hay pedidos con estos filtros" body={desde || hasta ? "No encontramos pedidos en el período seleccionado. Podés consultar todas las fechas." : "Creá un pedido o probá con otra búsqueda."} action={desde || hasta ? <button className="button secondary" onClick={() => { setDesde(""); setHasta(""); setPage(1); }}>Ver todas las fechas</button> : undefined} />}
         <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
       </AviantoPanel>
       <CreateRepuestoDialog
@@ -294,8 +296,8 @@ export function RepuestoDetail({
       .then((result) => setClients(result.content))
       .catch((reason) => notify(errorMessage(reason), "error"));
   }, [editOpen, notify]);
-  if (error) return <AviantoPage className="repuesto-detail-state-page"><AviantoPageHeader eyebrow="Pedidos" title="Pedido de repuestos" description="Detalle y seguimiento del pedido." actions={<button className="button secondary" onClick={onBack}>Volver a pedidos</button>} /><EmptyState title="No se pudo cargar el pedido" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={load}>Reintentar</button>} /></AviantoPage>;
-  if (!repuesto) return <AviantoPage className="repuesto-detail-state-page"><AviantoPageHeader eyebrow="Pedidos" title="Pedido de repuestos" description="Estamos preparando el detalle del pedido." /><div className="table-loading" role="status">Cargando pedido…</div></AviantoPage>;
+  if (error) return <AviantoPage className="repuesto-detail-state-page"><AviantoPageHeader title="Pedido de repuestos" description="Detalle y seguimiento del pedido." actions={<button className="button secondary" onClick={onBack}>Volver a pedidos</button>} /><EmptyState title="No se pudo cargar el pedido" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={load}>Reintentar</button>} /></AviantoPage>;
+  if (!repuesto) return <AviantoPage className="repuesto-detail-state-page"><AviantoPageHeader title="Pedido de repuestos" description="Estamos preparando el detalle del pedido." /><div className="table-loading" role="status">Cargando pedido…</div></AviantoPage>;
   const locked = repuesto.estado === "Cancelado" || repuesto.estado === "Completado";
   const nextItemStates = (state: RepuestoItemState) => state === "Pendiente de pedir" ? ["Pedido", "Cancelado"] : state === "Pedido" ? ["Recibido", "Cancelado"] : state === "Recibido" ? ["Entregado", "Cancelado"] : [];
   const setItemState = async (itemId: string, estado: RepuestoItemState) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(`/repuestos/${repuesto.id}/items/${itemId}/estado`, { method: "PATCH", body: JSON.stringify({ estado }) }); setRepuesto(next); notify(`Ítem marcado como ${estado}.`); } catch (reason) { notify(errorMessage(reason), "error"); } finally { setPending(false); } };

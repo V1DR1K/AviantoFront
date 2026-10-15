@@ -9,7 +9,6 @@ import {
   MessageCircle,
   Wrench,
 } from "lucide-react";
-import Link from "next/link";
 import { BrandLogo } from "./brand-logo";
 
 const whatsappUrl = "https://wa.me/5493412639357?text=Hola%2C%20quiero%20conocer%20Avianto";
@@ -24,7 +23,9 @@ export function LandingPage() {
         <nav className="landing-nav" aria-label="Navegación principal">
           <a href="#como-funciona">Cómo funciona</a>
           <a href="#para-talleres">Para talleres</a>
-          <Link className="landing-login" href="/login"><LogIn size={16} /> Ingresar</Link>
+          {/* Full navigation avoids the deployed Vinext Link transition failure. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a className="landing-login" href="/login"><LogIn size={16} /> Ingresar</a>
           <a className="landing-contact" href={whatsappUrl} target="_blank" rel="noreferrer"><MessageCircle size={16} /> Contactanos</a>
         </nav>
       </header>

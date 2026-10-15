@@ -4,7 +4,7 @@ Frontend responsive para gestión de fichas, reparaciones, repuestos, pagos y ve
 
 ## Inicio
 
-1. Copiar `.env.example` como `.env.local` y definir la URL de API si no se usa el proxy local.
+1. Copiar `.env.example` como `.env.local` y definir la URL de API si no se usa el proxy local. Para una API remota, configurar `AVIANTO_API_PROXY` con su origen (por ejemplo, `https://avianto.neticar.com.ar`); el servidor de desarrollo enviará las solicitudes `/api` a ese destino.
 2. `npm install`
 3. `npm run dev`
 4. `npm run build` para producción.
@@ -28,4 +28,4 @@ Para una instalación local reproducible, usar el `docker-compose.full.yml` del 
 
 ## Marca
 
-Los tokens en `app/globals.css` (`--navy`, `--blue`, `--green`, tipografía, radios y elevación) son el único punto de adaptación inicial para incorporar el futuro manual de marca.
+`app/design-tokens.css` define la paleta oficial, tipografía, espaciado, radios y recursos gráficos. `components/avianto-layout.css` contiene el sistema compartido de páginas, tablas, estados, formularios y navegación. `DESIGN.md` documenta su aplicación a cada módulo. Los archivos de Arboria no están incluidos: el sistema usa Arboria si está instalada y conserva una alternativa legible del sistema.

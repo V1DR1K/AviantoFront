@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
-import { AlertTriangle, Check, CheckCircle2, ChevronDown, Clock3, Info, Search, SlidersHorizontal, X, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, Clock3, FileSearch, Info, Search, SlidersHorizontal, X, type LucideIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { AutocompleteResponse } from "../lib/types";
 
@@ -36,9 +36,10 @@ export function Button({
 function statusToneValue(status: string) {
   const s = status.toLowerCase();
   if (s.includes("cancel") || s.includes("no pag") || s.includes("correc")) return "danger";
-  if (s.includes("aprob") || s.includes("pag") || s.includes("terminada") || s.includes("entreg") || s.includes("realiz") || s.includes("recibido") || s.includes("finalizada")) return "success";
+  if (s === "al día" || s.includes("aprob") || s.includes("pag") || s.includes("terminada") || s.includes("entreg") || s.includes("realiz") || s.includes("recibido") || s.includes("finalizada")) return "success";
   if (s.includes("ingresada") || s === "pendiente" || s === "disponible") return "info";
-  if (s.includes("atrasad") || s.includes("sin service")) return "danger";
+  if (s.includes("atrasad")) return "danger";
+  if (s.includes("sin service")) return "warning";
   if (s.includes("revisi")) return "violet";
   if (s.includes("parcial") || s.includes("para ") || s.includes("pedido") || s.includes("curso") || s.includes("taller") || s.includes("trabaj") || s.includes("proc")) return "warning";
   return "neutral";
@@ -52,12 +53,18 @@ function StatusIcon({ status }: { status: string }) {
   return <Clock3 size={14} />;
 }
 
+let openModalCount = 0;
+let priorBodyOverflow = "";
+
 function useModalFocus(open: boolean, onClose: () => void) {
   const ref = useRef<HTMLElement>(null);
   const prior = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!open) return;
     prior.current = document.activeElement as HTMLElement;
+    if (openModalCount === 0) priorBodyOverflow = document.body.style.overflow;
+    openModalCount += 1;
+    document.body.style.overflow = "hidden";
     const frame = requestAnimationFrame(() =>
       ref.current
         ?.querySelector<HTMLElement>(
@@ -67,6 +74,8 @@ function useModalFocus(open: boolean, onClose: () => void) {
     );
     return () => {
       cancelAnimationFrame(frame);
+      openModalCount -= 1;
+      if (openModalCount === 0) document.body.style.overflow = priorBodyOverflow;
       prior.current?.focus();
     };
   }, [open]);
@@ -334,7 +343,7 @@ export function SelectField({
       <select
         className="select-native"
         value={value}
-        onChange={(event) => { setActiveIndex(-1); onChange(event.target.value); }}
+        onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
         required={required}
         tabIndex={-1}
@@ -503,13 +512,13 @@ export function ConfirmModal({
   const [modalRef, onModalKeyDown] = useModalFocus(open, onClose);
   const [pending, setPending] = useState(false);
   const titleId = useId();
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
   const run = () => {
     if (pending) return;
     setPending(true);
     void Promise.resolve().then(onConfirm).catch(() => undefined).finally(() => setPending(false));
   };
-  return (
+  return createPortal(
     <div className="modal-backdrop">
       <section
         ref={modalRef}
@@ -538,7 +547,7 @@ export function ConfirmModal({
           </div>
         </div>
       </section>
-    </div>
+    </div>, document.body
   );
 }
 export function Dialog({
@@ -568,8 +577,8 @@ export function Dialog({
   };
   const [modalRef, onModalKeyDown] = useModalFocus(open, requestClose);
   const titleId = useId();
-  if (!open) return null;
-  return (
+  if (!open || typeof document === "undefined") return null;
+  return createPortal(
     <div role="presentation" className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}>
       <section
         ref={modalRef}
@@ -602,7 +611,7 @@ export function Dialog({
         onClose={() => setDiscardOpen(false)}
         onConfirm={() => { setDiscardOpen(false); onClose(); }}
       />
-    </div>
+    </div>, document.body
   );
 }
 export function Toast({
@@ -646,12 +655,18 @@ export function EmptyState({
 }) {
   return (
     <div className="empty">
-      <div className="empty-mark">—</div>
+      <div className="empty-mark"><FileSearch size={28} aria-hidden="true" /></div>
       <h3>{title}</h3>
       <p>{body}</p>
       {action}
     </div>
   );
+}
+export function LoadingState({ label = "Cargando registros..." }: { label?: string }) {
+  return <div className="avianto-loading" role="status" aria-busy="true">
+    <p>{label}</p>
+    <div className="avianto-skeleton-list" aria-hidden="true">{[0, 1, 2].map((row) => <div key={row}><span /><span /><span /></div>)}</div>
+  </div>;
 }
 export function Pagination({
   page,

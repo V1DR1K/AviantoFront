@@ -21,7 +21,7 @@
   --brand-pattern-opacity: 0.78;
 
   /* Product neutrals and semantic colors. */
-  --color-canvas: #f6f6fa;
+  --color-canvas: #f5f5fa;
   --color-surface: var(--brand-white);
   --color-surface-subtle: #f0f1f8;
   --color-surface-muted: #eceef6;
@@ -66,7 +66,7 @@
   --text-body: 0.9375rem;
   --text-lg: 1.125rem;
   --text-xl: 1.5rem;
-  --text-display: clamp(2rem, 3.4vw, 3.25rem);
+  --text-display: 2.5rem;
   --leading-tight: 1.08;
   --leading-body: 1.5;
 
@@ -85,8 +85,8 @@
   --radius-pill: 999px;
   --radius: var(--radius-surface);
   --border-field: var(--color-border-strong);
-  --shadow-document: 0 12px 28px rgb(48 52 139 / 0.12);
-  --shadow-card: 0 6px 18px rgb(48 52 139 / 0.07);
+  --shadow-document: 0 8px 24px rgb(48 52 139 / 0.09);
+  --shadow-card: 0 4px 14px rgb(48 52 139 / 0.06);
   --shadow-modal: 0 20px 65px rgb(0 0 0 / 0.3);
   --shadow: var(--shadow-document);
   --modal-shadow: var(--shadow-modal);
