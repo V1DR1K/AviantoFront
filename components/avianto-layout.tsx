@@ -1,4 +1,4 @@
-import { Children, isValidElement, type ReactNode } from "react";
+import { Children, isValidElement, type HTMLAttributes, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 
 const classes = (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ");
@@ -31,12 +31,15 @@ export function AviantoPanel({
   children,
   className,
   as: Component = "section",
+  variant = "plain",
+  ...props
 }: {
   children: ReactNode;
   className?: string;
-  as?: "section" | "article" | "div";
-}) {
-  return <Component className={classes("panel", "avianto-panel", className)}>{Children.map(children, (child) => {
+  as?: "section" | "article" | "div" | "aside";
+  variant?: "plain" | "section";
+} & HTMLAttributes<HTMLElement>) {
+  return <Component {...props} className={classes("panel", "avianto-panel", variant === "section" && "avianto-panel-section", className)}>{Children.map(children, (child) => {
     if (!isValidElement(child) || child.type !== "table") return child;
     return (
       // Keyboard users need to focus the region to scroll wide tables.
@@ -44,6 +47,21 @@ export function AviantoPanel({
       <div className="avianto-table-scroll" role="region" aria-label="Tabla de registros" tabIndex={0}>{child}</div>
     );
   })}</Component>;
+}
+
+/** A branded section header for record details, checklists and payment panels. */
+export function AviantoPanelHeader({ title, actions, description, headingId, level = 2 }: {
+  title: ReactNode;
+  actions?: ReactNode;
+  description?: ReactNode;
+  headingId?: string;
+  level?: 2 | 3;
+}) {
+  const Heading = level === 3 ? "h3" : "h2";
+  return <header className="panel-head avianto-panel-header">
+    <div><Heading id={headingId}>{title}</Heading>{description && <p>{description}</p>}</div>
+    {actions && <div className="avianto-panel-header-actions">{actions}</div>}
+  </header>;
 }
 
 export function AviantoRecordHero({

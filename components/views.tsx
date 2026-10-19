@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowDownUp, Download, Edit3, Eye, FileDown, FileText, Filter, Plus, Trash2 } from "lucide-react";
+import { ArrowDownUp, Check, Download, Edit3, Eye, FileDown, FileText, Filter, Plus, Trash2, X } from "lucide-react";
 import { api, download, objectUrl } from "../lib/api";
 import { integerInput, money, parseIntegerInput, paymentAmount } from "../lib/format";
 import { daysAgoInAr, formatDateInAr, todayInAr } from "../lib/dates";
@@ -31,7 +31,7 @@ import { BudgetBreakdown } from "./budget-breakdown";
 import { PaymentLedger } from "./payment-ledger";
 import { MetricCard, StatusRail, VehicleCard, VehicleField } from "./avianto-mobile";
 import { AviantoRecordList } from "./avianto-records";
-import { AviantoPage, AviantoPageHeader, AviantoPanel, AviantoRecordHero, StickyActionBar } from "./avianto-layout";
+import { AviantoPage, AviantoPageHeader, AviantoPanel, AviantoPanelHeader, AviantoRecordHero, StickyActionBar } from "./avianto-layout";
 
 const splitVehicleName = (value: string) => {
   const [make, ...modelParts] = value.trim().split(/\s+/);
@@ -396,10 +396,10 @@ function ItemRow({
       )}
       <div className="detail-work-copy">
         <strong>{item.descripcion}</strong>
-        <span>{money(Number(item.precioUnitario))}{item.descuento > 0 && ` · descuento ${money(Number(item.descuento))}`}{item.estadoTrabajo !== "Pendiente" && ` · ${item.estadoTrabajo}`}</span>
+        <div className="detail-work-meta"><span>{money(Number(item.precioUnitario))}{item.descuento > 0 && ` · descuento ${money(Number(item.descuento))}`}</span><StatusBadge status={item.estadoTrabajo} /></div>
         {item.observacionTrabajo && <p className="work-observation">{item.observacionTrabajo}</p>}
       </div>
-      {canDelete && <button type="button" className="danger-action" onClick={onDelete} aria-label={`Eliminar trabajo ${item.descripcion}`}><Trash2 size={17} /></button>}
+      {canDelete && <button type="button" className="danger-action" onClick={onDelete} aria-label={`Eliminar trabajo ${item.descripcion}`}><Trash2 size={17} />Eliminar</button>}
     </div>
   );
 }
@@ -562,10 +562,10 @@ export function FichaDetail({
   };
   if (!ficha)
     return (
-      <div className="page">
-        <button className="back" onClick={onBack}>← Volver a fichas</button>
-        {error ? <EmptyState title="No se pudo cargar la ficha" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={load}>Reintentar</button>} /> : <div className="table-loading" role="status">Cargando ficha...</div>}
-      </div>
+      <AviantoPage className="ficha-detail-page">
+        <AviantoPageHeader title="Ficha de taller" actions={<button className="button secondary" onClick={onBack}>Volver a fichas</button>} />
+        {error ? <EmptyState title="No se pudo cargar la ficha" body="Revisá la notificación y volvé a intentar." action={<button className="button secondary" onClick={load}>Reintentar</button>} /> : <LoadingState label="Cargando ficha..." />}
+      </AviantoPage>
     );
   const update = async (path: string, body: Record<string, string>, id: string, successMessage?: string) => {
     if (pending) return;
@@ -647,7 +647,7 @@ export function FichaDetail({
   if (current !== "Terminada" && current !== "Entregada" && current !== "Cancelada")
        bottomActions.push({ key: "cancelar", label: "Cancelar ficha", className: "danger", onClick: () => onConfirm({ title: "Cancelar ficha", body: "La ficha quedará cancelada. El historial conservará el registro para auditoría.", confirmLabel: "Cancelar ficha", successMessage: "Ficha cancelada.", action: () => api<FichaResponse>(`/fichas/${ficha.id}/estado`, { method: "PATCH", body: JSON.stringify({ estado: "Cancelada" }) }).then(setFicha) }) });
   return (
-    <AviantoPage>
+    <AviantoPage className="ficha-detail-page">
       <AviantoRecordHero
         eyebrow={ficha.numero}
         title={ficha.patente}
@@ -657,21 +657,21 @@ export function FichaDetail({
         onBack={onBack}
         backLabel="Volver a fichas"
       />
-      <ol className={`flow-steps${current === "Cancelada" ? " canceled" : ""}`}>
+      <ol className={`flow-steps${current === "Cancelada" ? " canceled" : ""}`} aria-label="Etapas de la ficha">
         {flowSteps.map((step) => {
           const index = flowSteps.indexOf(step);
           const done = current !== "Cancelada" && currentStep >= 0 && index < currentStep;
           const isCurrent = current !== "Cancelada" && index === currentStep;
           return (
-            <li key={`${step}-${isCurrent ? "current" : done ? "done" : "pending"}`} className={`flow-step${isCurrent ? " current" : ""}${done ? " done" : ""}`}>
-              <span>{done ? "✓" : index + 1}</span>
+            <li key={`${step}-${isCurrent ? "current" : done ? "done" : "pending"}`} className={`flow-step${isCurrent ? " current" : ""}${done ? " done" : ""}`} aria-current={isCurrent ? "step" : undefined}>
+              <span aria-hidden="true">{done ? <Check size={18} /> : index + 1}</span>
               <strong>{step}</strong>
             </li>
           );
         })}
         {current === "Cancelada" && (
-          <li className="flow-step flow-step-end current">
-            <span>✕</span>
+          <li className="flow-step flow-step-end current" aria-current="step">
+            <span aria-hidden="true"><X size={18} /></span>
             <strong>Cancelada</strong>
           </li>
         )}
@@ -685,13 +685,11 @@ export function FichaDetail({
       <PaymentLedger resource="fichas" documentId={ficha.id} documentState={ficha.estado} estadoPago={ficha.estadoPago} total={ficha.total} montoCobrado={ficha.montoCobrado} saldoPendiente={ficha.saldoPendiente} onDocumentChange={load} notify={notify} />
       <section className="detail-grid">
         <div className="form-stack">
-          <section className="panel">
-            <div className="panel-head">
-              <h2>Detalle de reparación</h2>
-              <button className="button secondary" onClick={() => void download(`/fichas/${ficha.id}/pdf`, `${ficha.numero}.pdf`).catch((reason) => notify(errorMessage(reason), "error"))}>
+          <AviantoPanel variant="section" className="ficha-repair-panel">
+            <AviantoPanelHeader title="Detalle de reparación" actions={<button className="button secondary" onClick={() => void download(`/fichas/${ficha.id}/pdf`, `${ficha.numero}.pdf`).catch((reason) => notify(errorMessage(reason), "error"))}>
                 <FileDown size={17} />PDF
-              </button>
-            </div>
+              </button>} />
+            <div className="avianto-panel-body">
             <p className="observation">{ficha.observaciones || "Sin observaciones."}</p>
              {current !== "En revisión" && <div className="line-items-list detail-work-list">
                {ficha.trabajos.map((item) => (
@@ -707,14 +705,13 @@ export function FichaDetail({
               ))}
             </div>}
             <OrderPhotos photos={ficha.fotos} onChange={() => void load()} />
+            </div>
+          </AviantoPanel>
              {ficha.estado === "En revisión" && revision && (
-              <section className="revision-panel">
-                <div className="panel-head">
-                  <h3>Revisión</h3>
-                  <span className="muted">{revision.estado === "APROBADA" ? `Aprobada${revision.forzada ? " (forzada)" : ""}${revision.aprobadoAt ? ` · ${date(revision.aprobadoAt)}` : ""}` : "Controles pendientes"}</span>
-                </div>
+              <AviantoPanel variant="section" className="revision-panel">
+                <AviantoPanelHeader title="Revisión" description={revision.estado === "APROBADA" ? `Aprobada${revision.forzada ? " (forzada)" : ""}${revision.aprobadoAt ? ` · ${date(revision.aprobadoAt)}` : ""}` : "Controles pendientes"} />
                 {revision.estado !== "APROBADA" && (
-                  <div className="line-items-list revision-control-list">
+                  <div className="avianto-panel-body"><div className="line-items-list revision-control-list">
                      {revision.controles.map((control) => (
                        <div key={control.id} className="line-item revision-control">
                          <label className="revision-check">
@@ -723,28 +720,29 @@ export function FichaDetail({
                          <div className="revision-control-copy">
                            <strong>{control.control}</strong>
                            <span>{control.categorias}{control.obligatorio ? " · Obligatorio" : ""}</span>
+                           <StatusBadge status={control.estado} />
                            {control.estado === "No aplica" && <small>No aplica</small>}
                            {control.observacion?.trim() ? <p className="revision-control-observation">{control.observacion}</p> : null}
                          </div>
                          <button type="button" className="revision-note-trigger" onClick={() => openRevisionNote(control)}>{control.observacion ? "Editar observación" : "Agregar observación"}</button>
                        </div>
                      ))}
-                  </div>
+                  </div></div>
                 )}
-              </section>
+              </AviantoPanel>
             )}
-          </section>
         </div>
-        <aside className="summary ficha-summary">
-          <h3>Presupuesto</h3>
-          <dl className="summary-facts">
-            <div><dt>Ficha</dt><dd>{ficha.numero}</dd></div>
-            <div><dt>Cliente</dt><dd>{ficha.cliente}</dd></div>
-            <div><dt>Moto</dt><dd>{ficha.moto}</dd></div>
-            <div><dt>Dominio</dt><dd>{ficha.patente}</dd></div>
-            <div><dt>Ingreso</dt><dd>{ficha.fechaIngreso ? date(ficha.fechaIngreso) : "—"}</dd></div>
-            <div><dt>Entrega estimada</dt><dd>{ficha.fechaEntregaEstimada ? date(ficha.fechaEntregaEstimada) : "—"}</dd></div>
-          </dl>
+        <AviantoPanel as="aside" variant="section" className="summary ficha-summary">
+          <AviantoPanelHeader title="Presupuesto" level={3} />
+          <div className="avianto-panel-body">
+          <div className="ficha-facts-grid">
+            <VehicleField label="Ficha" value={ficha.numero} />
+            <VehicleField label="Dominio" value={ficha.patente} />
+            <VehicleField label="Cliente" value={ficha.cliente} wide />
+            <VehicleField label="Moto" value={ficha.moto} wide />
+            <VehicleField label="Ingreso" value={ficha.fechaIngreso ? date(ficha.fechaIngreso) : "—"} />
+            <VehicleField label="Entrega estimada" value={ficha.fechaEntregaEstimada ? date(ficha.fechaEntregaEstimada) : "—"} />
+          </div>
           <section className="summary-economic-status" aria-labelledby={`ficha-${ficha.id}-economic-status`}>
             <div className="summary-economic-status-head"><h4 id={`ficha-${ficha.id}-economic-status`}>Estado de pago</h4><StatusBadge status={estadoPagoPresupuesto} /></div>
             <div className="budget-payment-balance" aria-label="Estado económico combinado de ficha y repuestos">
@@ -787,9 +785,10 @@ export function FichaDetail({
             montoCobradoPresupuesto={montoCobradoPresupuesto}
             saldoPendientePresupuesto={saldoPendientePresupuesto}
           />
-        </aside>
+          </div>
+        </AviantoPanel>
       </section>
-      <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)}>
+      <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)} className="ficha-service-modal">
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveService(); }}>
         <label>Kilometraje<input type="text" inputMode="numeric" value={integerInput(serviceKm)} onChange={(event) => setServiceKm(event.target.value)} required /></label>
           <label>Fecha<input type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
@@ -799,7 +798,7 @@ export function FichaDetail({
       </Dialog>
       <Dialog open={closeOpen} title="Aprobar revisión" onClose={() => setCloseOpen(false)} className="delivery-modal" dirty={selectedServiceIds.length > 0}>
          <p>Seleccioná los services previos que quieras asociar a la ficha antes de continuar.</p>
-        {priorServices.length > 0 && <section className="line-items-list"><h3>Services previos sin ficha</h3>{priorServices.map((service) => <label key={service.id} className="line-check"><input type="checkbox" checked={selectedServiceIds.includes(service.id)} onChange={(event) => setSelectedServiceIds((ids) => event.target.checked ? [...ids, service.id] : ids.filter((id) => id !== service.id))} />{date(service.fecha)} · {service.kilometraje} km{service.observaciones ? ` · ${service.observaciones}` : ""}</label>)}</section>}
+        {priorServices.length > 0 && <section className="ficha-service-options"><h3>Services previos sin ficha</h3>{priorServices.map((service) => <label key={service.id} className="line-check"><input type="checkbox" checked={selectedServiceIds.includes(service.id)} onChange={(event) => setSelectedServiceIds((ids) => event.target.checked ? [...ids, service.id] : ids.filter((id) => id !== service.id))} /><span>{date(service.fecha)} · {service.kilometraje} km{service.observaciones ? ` · ${service.observaciones}` : ""}</span></label>)}</section>}
         {!priorServices.length && <p>No hay services previos para asociar.</p>}
         <div className="modal-actions">
           <button type="button" className="button secondary" onClick={() => setCloseOpen(false)}>Cancelar</button>

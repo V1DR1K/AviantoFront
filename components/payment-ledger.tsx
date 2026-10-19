@@ -7,6 +7,7 @@ import { parsePrice, paymentAmount, priceInput } from "../lib/format";
 import { formatDateInAr, formatDateTimeInAr, todayInAr } from "../lib/dates";
 import type { PagoResponse, PaymentMethod } from "../lib/types";
 import { ConfirmModal, Dialog, SelectField, StatusBadge, type Notify } from "./ui";
+import { AviantoPanel, AviantoPanelHeader } from "./avianto-layout";
 
 const paymentMethods: PaymentMethod[] = ["Efectivo", "Transferencia", "Débito", "Crédito", "Mercado Pago", "Otro"];
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible actualizar los pagos.";
@@ -115,11 +116,9 @@ export function PaymentLedger({
   };
 
   return (
-    <section className="panel payment-ledger" aria-labelledby={`${resource}-${documentId}-payments`}>
-      <div className="payment-ledger-head">
-        <div><h2 id={`${resource}-${documentId}-payments`}>Pagos</h2><StatusBadge status={estadoPago} /></div>
-      <button type="button" className="button primary payment-register" disabled={!canRegister} onClick={() => { setIdempotencyKey(crypto.randomUUID()); setFormOpen(true); }}><CircleDollarSign size={18} />{registerLabel}</button>
-      </div>
+    <AviantoPanel variant="section" className="payment-ledger" aria-labelledby={`${resource}-${documentId}-payments`}>
+      <AviantoPanelHeader headingId={`${resource}-${documentId}-payments`} title={<>Pagos<StatusBadge status={estadoPago} /></>} actions={<button type="button" className="button primary payment-register" disabled={!canRegister} onClick={() => { setIdempotencyKey(crypto.randomUUID()); setFormOpen(true); }}><CircleDollarSign size={18} />{registerLabel}</button>} />
+      <div className="avianto-panel-body">
       <div className="payment-balance" aria-label="Balance de pagos del documento">
         <div><span>Total</span><strong>{paymentAmount(total)}</strong></div>
         <div><span>Cobrado</span><strong>{paymentAmount(montoCobrado)}</strong></div>
@@ -153,6 +152,7 @@ export function PaymentLedger({
         </form>
       </Dialog>
       <ConfirmModal open={paymentToAnnul !== null} title="Anular pago" body={`Vas a anular el pago de ${paymentAmount(paymentToAnnul?.monto ?? 0)}. El movimiento permanecerá visible en el historial y se recalculará el saldo.`} confirmLabel="Anular pago" onClose={() => setPaymentToAnnul(null)} onConfirm={annulPayment} />
-    </section>
+      </div>
+    </AviantoPanel>
   );
 }

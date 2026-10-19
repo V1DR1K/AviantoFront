@@ -109,6 +109,7 @@ The palette is intentionally limited: blue establishes the operational world, re
 - **Display:** bold responsive heading for the primary task on a screen.
 - **Title:** 18–24px semibold heading for panels and record sections.
 - **Body:** 15px with 1.5 line-height for ordinary interface copy.
+- **Data:** 16px for emphasized values inside operational records.
 - **Label:** 12px bold with restrained tracking for metadata, filters and table headings.
 
 ### Named Rules
@@ -128,6 +129,7 @@ Record collections use the same document composition as Perfiles in SoftwareDesi
 - Services adds search and a status filter to the maintenance list. Reportes shows counts, their actual scope and paginated client activity.
 - Wiki uses blue section headings, a desktop contents panel and a sticky horizontal contents bar on mobile. Administración uses matching blue section headers and bounded lists.
 - Shared dialogs have blue headers, white form fields and the same control and focus treatment. Loading, error and empty states remain distinct; the official tool pattern appears at low opacity behind empty states.
+- Every Ficha stage (including cancellation) shares the same branded progress, repair rows, review checklist, payments and budget. `AviantoPanel` with `variant="section"`, `AviantoPanelHeader` and `.avianto-panel-body` provide the blue section header and tokenized content padding; `VehicleField` supplies the dossier fields. Workflow styles live in `avianto-workflow.css` and preserve the existing state transitions, calculations and actions.
 - Dialogs and confirmations render through a body portal, above the mobile navigation. They lock background scrolling, contain keyboard focus and restore focus on close; select menus and notifications have explicit overlay levels.
 
 ### Data and readability

@@ -118,7 +118,7 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(fichaForm, /const isDirty = editing/);
   assert.match(fichaForm, /beforeunload/);
   assert.match(fichaForm, /Hay cambios sin guardar en esta ficha/);
-  assert.match(views, /<h3>Presupuesto<\/h3>/);
+  assert.match(views, /<AviantoPanelHeader title="Presupuesto" level=\{3\} \/>/);
   assert.match(fichaForm, /Trabajos y servicios[\s\S]*?Repuestos y accesorios[\s\S]*?<BudgetBreakdown/);
   assert.match(budgetBreakdown, /Trabajos y servicios[\s\S]*?Repuestos y accesorios[\s\S]*?Subtotal[\s\S]*?IVA 21%[\s\S]*?Total presupuesto/);
   assert.match(stylesheet, /\.budget-breakdown \{[\s\S]*?margin-top: 18px;/);
@@ -138,7 +138,7 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(paymentLedger, /parsePrice\(amount\)/);
   assert.match(paymentLedger, /paymentAmount\(total\)/);
   assert.match(paymentLedger, /Documento cancelado: no admite nuevos pagos/);
-  assert.match(paymentLedger, /className="panel payment-ledger"/);
+  assert.match(paymentLedger, /<AviantoPanel variant="section" className="payment-ledger"/);
   assert.match(paymentLedger, /className="button primary payment-register"/);
   assert.match(paymentLedger, /Saldo cubierto: no admite nuevos pagos/);
   assert.match(paymentLedger, /title="Anular pago"/);

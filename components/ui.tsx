@@ -36,7 +36,7 @@ export function Button({
 function statusToneValue(status: string) {
   const s = status.toLowerCase();
   if (s.includes("cancel") || s.includes("no pag") || s.includes("correc")) return "danger";
-  if (s === "al día" || s.includes("aprob") || s.includes("pag") || s.includes("terminada") || s.includes("entreg") || s.includes("realiz") || s.includes("recibido") || s.includes("finalizada")) return "success";
+  if (s === "al día" || s === "revisado" || s.includes("aprob") || s.includes("pag") || s.includes("terminada") || s.includes("entreg") || s.includes("realiz") || s.includes("recibido") || s.includes("finalizada")) return "success";
   if (s.includes("ingresada") || s === "pendiente" || s === "disponible") return "info";
   if (s.includes("atrasad")) return "danger";
   if (s.includes("sin service")) return "warning";
