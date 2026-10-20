@@ -94,7 +94,8 @@
 .ficha-detail-page .revision-control-list { display: grid; gap: var(--space-3); margin: 0; }
 .ficha-detail-page .detail-work-list { overflow: visible; border: 0; border-radius: 0; background: transparent; }
 .ficha-detail-page .line-item .status { display: inline-flex; font-size: var(--text-sm); }
-.ficha-detail-page .avianto-task-list > .line-item {
+.ficha-detail-page .avianto-task-list > .line-item,
+.ficha-detail-page .detail-work-list > .detail-work-item {
   display: grid;
   grid-template-columns: var(--size-touch-target) minmax(0, 1fr) auto;
   grid-template-areas: "check content delete";
@@ -112,8 +113,9 @@
 .ficha-detail-page .detail-work-item:not(.can-mark):not(.can-delete) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "content"; }
 .ficha-detail-page .detail-work-copy > strong,
 .ficha-detail-page .revision-control-copy > strong { color: var(--brand-blue); font-size: var(--text-md); line-height: var(--leading-body); overflow-wrap: anywhere; }
-.ficha-detail-page .detail-work-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-top: var(--space-2); color: var(--color-text-muted); font-size: var(--text-sm); }
-.ficha-detail-page .detail-work-meta > span:not(.status) { color: var(--color-text-muted); font-size: var(--text-body); }
+.ficha-detail-page .detail-work-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); min-width: 0; margin-top: var(--space-2); color: var(--color-text-muted); font-size: var(--text-sm); }
+.ficha-detail-page .detail-work-meta > span:not(.status) { min-width: 0; color: var(--color-text-muted); font-size: var(--text-body); overflow-wrap: anywhere; }
+.ficha-detail-page .detail-work-meta > .status { flex: 0 1 auto; max-width: 100%; white-space: normal; }
 .ficha-detail-page .detail-work-item .danger-action { display: inline-flex; width: auto; min-width: var(--size-touch-target); min-height: var(--size-touch-target); gap: var(--space-2); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-danger-border); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-danger); }
 .ficha-detail-page .detail-work-item.is-cancelled .detail-work-copy > strong { color: var(--color-text-muted); text-decoration: line-through; }
 .ficha-detail-page .revision-control-list { overflow: visible; border: 0; border-radius: 0; background: transparent; }
@@ -160,7 +162,11 @@
   .ficha-detail-page { --ficha-section-gap: var(--space-5); }
   .ficha-detail-page .ficha-actions { grid-template-columns: minmax(0, 1fr) auto; padding: var(--space-3); }
   .ficha-detail-page .ficha-actions > .button { white-space: normal; }
-  .ficha-detail-page .avianto-task-list > .line-item { grid-template-columns: var(--size-touch-target) minmax(0, 1fr); grid-template-areas: "check content" "delete delete"; gap: var(--space-2); padding: var(--space-3); }
+  .ficha-detail-page .avianto-task-list > .line-item,
+  .ficha-detail-page .detail-work-list > .detail-work-item { grid-template-columns: var(--size-touch-target) minmax(0, 1fr); grid-template-areas: "check content" ". delete"; gap: var(--space-2); padding: var(--space-3); }
+  .ficha-detail-page .detail-work-item:not(.can-mark) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "content" "delete"; }
+  .ficha-detail-page .detail-work-item:not(.can-delete) { grid-template-columns: var(--size-touch-target) minmax(0, 1fr); grid-template-areas: "check content"; }
+  .ficha-detail-page .detail-work-item:not(.can-mark):not(.can-delete) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "content"; }
   .ficha-detail-page .detail-work-item .danger-action { justify-self: end; }
   .ficha-detail-page .revision-control-list > .revision-control { grid-template-areas: "check content" ". note"; }
   .ficha-detail-page .revision-note-trigger { justify-self: stretch; }
