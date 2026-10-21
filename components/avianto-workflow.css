@@ -60,6 +60,39 @@
 .ficha-detail-page .detail-grid { grid-template-columns: minmax(0, 1.35fr) minmax(340px, 1fr); align-items: start; gap: var(--ficha-section-gap); }
 .ficha-detail-page .form-stack { min-width: 0; gap: var(--ficha-section-gap); }
 .ficha-detail-page .ficha-summary { position: static; }
+.ficha-detail-page .ficha-summary .avianto-panel-header-actions { align-items: center; }
+.ficha-detail-page .ficha-summary .budget-breakdown { margin-top: var(--space-5); }
+.ficha-detail-page .ficha-observations { display: grid; gap: var(--space-2); margin-bottom: var(--space-4); }
+.ficha-detail-page .ficha-observations h3 { margin: 0; color: var(--brand-blue); font-size: var(--text-md); }
+.ficha-detail-page .ficha-observations .observation { margin: 0; }
+.ficha-detail-page .ficha-orders-panel .summary-linked-orders { gap: var(--space-3); }
+.ficha-detail-page .ficha-orders-panel .summary-linked-order {
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+.ficha-detail-page .ficha-orders-panel .summary-linked-order:first-child { padding-top: var(--space-4); }
+.ficha-detail-page .ficha-orders-panel .summary-linked-order-head { flex-wrap: wrap; align-items: center; }
+.ficha-detail-page .ficha-orders-panel .summary-order-items > div { min-width: 0; flex-wrap: wrap; }
+.ficha-detail-page .ficha-orders-panel .summary-order-items span { min-width: 0; overflow-wrap: anywhere; }
+.ficha-detail-page .ficha-orders-panel .summary-order-items strong { white-space: nowrap; }
+.ficha-detail-page .ficha-orders-panel .summary-linked-order-action { min-height: var(--size-touch-target); align-self: start; }
+.ficha-detail-page .ficha-orders-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-field);
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+}
+.ficha-detail-page .ficha-orders-total strong { color: var(--brand-blue); font-variant-numeric: tabular-nums; }
 
 .ficha-detail-page .flow-steps {
   display: flex;
@@ -86,7 +119,7 @@
 .ficha-detail-page .ficha-actions { align-items: center; gap: var(--space-3); margin: 0 0 var(--ficha-section-gap); padding: var(--space-3); border-color: var(--color-border); box-shadow: none; background: var(--color-surface); backdrop-filter: none; }
 .ficha-detail-page .ficha-more-trigger { min-height: var(--size-touch-target); }
 .ficha-detail-page .ficha-more-actions > div { max-width: calc(100vw - var(--space-8)); border-color: var(--color-border); box-shadow: var(--shadow-document); }
-.ficha-detail-page .payment-ledger { margin-bottom: var(--ficha-section-gap); }
+.ficha-detail-page .payment-ledger { margin-bottom: 0; }
 .ficha-detail-page .observation { padding: var(--space-4); background: var(--color-surface-subtle); color: var(--color-text); line-height: var(--leading-body); overflow-wrap: anywhere; }
 
 .ficha-detail-page .avianto-task-list,

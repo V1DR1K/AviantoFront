@@ -682,7 +682,6 @@ export function FichaDetail({
           {bottomActions.some((action) => action.className !== "primary") && <MoreActions actions={bottomActions.filter((action) => action.className !== "primary")} pending={Boolean(pending)} />}
         </StickyActionBar>
       )}
-      <PaymentLedger resource="fichas" documentId={ficha.id} documentState={ficha.estado} estadoPago={ficha.estadoPago} total={ficha.total} montoCobrado={ficha.montoCobrado} saldoPendiente={ficha.saldoPendiente} onDocumentChange={load} notify={notify} />
       <section className="detail-grid">
         <div className="form-stack">
           <AviantoPanel variant="section" className="ficha-repair-panel">
@@ -690,7 +689,10 @@ export function FichaDetail({
                 <FileDown size={17} />PDF
               </button>} />
             <div className="avianto-panel-body">
-            <p className="observation">{ficha.observaciones || "Sin observaciones."}</p>
+            <section className="ficha-observations" aria-label="Observaciones de la ficha">
+              <h3>Observaciones</h3>
+              <p className="observation">{ficha.observaciones || "Sin observaciones."}</p>
+            </section>
              {current !== "En revisión" && <div className="line-items-list detail-work-list">
                {ficha.trabajos.map((item) => (
                 <ItemRow
@@ -707,6 +709,30 @@ export function FichaDetail({
             <OrderPhotos photos={ficha.fotos} onChange={() => void load()} />
             </div>
           </AviantoPanel>
+          <AviantoPanel variant="section" className="ficha-orders-panel">
+            <AviantoPanelHeader
+              title="Pedidos de repuestos y accesorios"
+              actions={!locked ? <button type="button" className="button secondary" onClick={() => onNewRepuesto({ motoId: ficha.motoId, clienteId: ficha.clienteId, fichaId: ficha.id })}><Plus size={17} />Nuevo pedido</button> : undefined}
+            />
+            <div className="avianto-panel-body">
+              {linkedRepuestos.length ? <div className="summary-linked-orders">{linkedRepuestos.map((pedido) => (
+                <article key={pedido.id} className={`summary-linked-order${pedido.estado === "Cancelado" ? " cancelled" : ""}`}>
+                  <div className="summary-linked-order-head">
+                    <strong>{pedido.numero}</strong>
+                    <div className="summary-linked-order-status"><StatusBadge status={pedido.estado} /><StatusBadge status={pedido.estadoPago} /></div>
+                  </div>
+                  <small>{pedido.proveedor ? `Proveedor: ${pedido.proveedor}` : "Sin proveedor"}</small>
+                  <div className="summary-order-items">{pedido.items.map((item) => <div key={item.id} className={item.estado === "Cancelado" ? "cancelled" : ""}><span>{item.descripcion} · {item.tipo} · {Number(item.cantidad)} u. · {item.estado}</span><strong>{money(item.subtotal)}</strong></div>)}</div>
+                  {pedido.observaciones && <small>{pedido.observaciones}</small>}
+                  <div className="summary-work-total"><span>Total pedido</span><strong>{pedido.estado === "Cancelado" ? "—" : money(pedido.total)}</strong></div>
+                  {pedido.estado !== "Cancelado" && <div className="summary-payment-amounts"><span>Cobrado <strong>{paymentAmount(pedido.montoCobrado)}</strong></span><span>Saldo <strong>{paymentAmount(pedido.saldoPendiente)}</strong></span></div>}
+                  <button type="button" className="text-button summary-linked-order-action" onClick={() => onOpenRepuesto(pedido.id)}>Abrir pedido</button>
+                </article>
+              ))}</div> : <p className="summary-empty">No hay pedidos vinculados a esta ficha.</p>}
+              <div className="ficha-orders-total"><span>Total repuestos vinculados</span><strong>{money(totalRepuestos)}</strong></div>
+            </div>
+          </AviantoPanel>
+          <PaymentLedger resource="fichas" documentId={ficha.id} documentState={ficha.estado} estadoPago={ficha.estadoPago} total={ficha.total} montoCobrado={ficha.montoCobrado} saldoPendiente={ficha.saldoPendiente} onDocumentChange={load} notify={notify} />
              {ficha.estado === "En revisión" && revision && (
               <AviantoPanel variant="section" className="revision-panel">
                 <AviantoPanelHeader title="Revisión" description={revision.estado === "APROBADA" ? `Aprobada${revision.forzada ? " (forzada)" : ""}${revision.aprobadoAt ? ` · ${date(revision.aprobadoAt)}` : ""}` : "Controles pendientes"} />
@@ -733,7 +759,7 @@ export function FichaDetail({
             )}
         </div>
         <AviantoPanel as="aside" variant="section" className="summary ficha-summary">
-          <AviantoPanelHeader title="Presupuesto" level={3} />
+          <AviantoPanelHeader title="Presupuesto" level={3} actions={<StatusBadge status={estadoPagoPresupuesto} />} />
           <div className="avianto-panel-body">
           <div className="ficha-facts-grid">
             <VehicleField label="Ficha" value={ficha.numero} />
@@ -743,39 +769,6 @@ export function FichaDetail({
             <VehicleField label="Ingreso" value={ficha.fechaIngreso ? date(ficha.fechaIngreso) : "—"} />
             <VehicleField label="Entrega estimada" value={ficha.fechaEntregaEstimada ? date(ficha.fechaEntregaEstimada) : "—"} />
           </div>
-          <section className="summary-economic-status" aria-labelledby={`ficha-${ficha.id}-economic-status`}>
-            <div className="summary-economic-status-head"><h4 id={`ficha-${ficha.id}-economic-status`}>Estado de pago</h4><StatusBadge status={estadoPagoPresupuesto} /></div>
-            <div className="budget-payment-balance" aria-label="Estado económico combinado de ficha y repuestos">
-              <div><span>Presupuesto total</span><strong>{paymentAmount(totalPresupuesto)}</strong></div>
-              <div><span>Monto pagado</span><strong>{paymentAmount(montoCobradoPresupuesto)}</strong></div>
-              <div><span>Saldo pendiente</span><strong>{paymentAmount(saldoPendientePresupuesto)}</strong></div>
-            </div>
-          </section>
-          {ficha.observaciones && <section className="summary-group"><h4>Observaciones</h4><p className="summary-note">{ficha.observaciones}</p></section>}
-          <section className="summary-work-list" aria-label="Trabajos de la ficha">
-            <h4>Trabajos y servicios</h4>
-            {ficha.trabajos.map((item) => (
-                <div key={item.id} className={`summary-work${workStateClass(item.estadoTrabajo)}${item.estadoTrabajo === "Cancelado" ? " cancelled" : ""}`}>
-                  <div className="summary-work-head"><strong>{item.descripcion}</strong><strong>{money(item.subtotal)}</strong></div>
-                  <div className="summary-work-total"><small>Precio {money(item.precioUnitario)}{item.descuento > 0 && ` · Descuento ${money(item.descuento)}`}</small><small className="work-state-label">{item.estadoTrabajo}</small></div>
-                {item.observacionTrabajo && <small>{item.observacionTrabajo}</small>}
-              </div>
-            ))}
-          </section>
-           <section className="summary-group">
-             <div className="summary-group-head"><h4>Pedidos de repuestos y accesorios</h4>{!locked && <button className="text-button" onClick={() => onNewRepuesto({ motoId: ficha.motoId, clienteId: ficha.clienteId, fichaId: ficha.id })}>Nuevo pedido</button>}</div>
-            {linkedRepuestos.length ? <div className="summary-linked-orders">{linkedRepuestos.map((pedido) => (
-              <article key={pedido.id} className={`summary-linked-order${pedido.estado === "Cancelado" ? " cancelled" : ""}`}>
-                <div className="summary-linked-order-head"><strong>{pedido.numero}</strong><div className="summary-linked-order-status"><StatusBadge status={pedido.estado} /><StatusBadge status={pedido.estadoPago} /></div></div>
-                <small>{pedido.proveedor ? `Proveedor: ${pedido.proveedor}` : "Sin proveedor"}</small>
-                <div className="summary-order-items">{pedido.items.map((item) => <div key={item.id} className={item.estado === "Cancelado" ? "cancelled" : ""}><span>{item.descripcion} · {item.tipo} · {Number(item.cantidad)} u. · {item.estado}</span><strong>{money(item.subtotal)}</strong></div>)}</div>
-                {pedido.observaciones && <small>{pedido.observaciones}</small>}
-                <div className="summary-work-total"><span>Total pedido</span><strong>{pedido.estado === "Cancelado" ? "—" : money(pedido.total)}</strong></div>
-                {pedido.estado !== "Cancelado" && <div className="summary-payment-amounts"><span>Cobrado <strong>{paymentAmount(pedido.montoCobrado)}</strong></span><span>Saldo <strong>{paymentAmount(pedido.saldoPendiente)}</strong></span></div>}
-                <button className="text-button summary-linked-order-action" onClick={() => onOpenRepuesto(pedido.id)}>Abrir pedido</button>
-              </article>
-            ))}</div> : <p className="summary-empty">No hay pedidos vinculados a esta ficha.</p>}
-          </section>
           <BudgetBreakdown
             subtotalTrabajos={subtotalTrabajos}
             totalRepuestos={totalRepuestos}
