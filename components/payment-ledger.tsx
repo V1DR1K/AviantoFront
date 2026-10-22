@@ -49,6 +49,7 @@ export function PaymentLedger({
   const settled = !cancelled && saldoPendiente <= 0;
   const canRegister = !cancelled && !settled;
   const registerLabel = cancelled ? "Documento cancelado" : settled ? "Saldo cubierto" : "Registrar pago";
+  const registerAction = <button type="button" className="button primary payment-register" disabled={!canRegister} onClick={() => { setIdempotencyKey(crypto.randomUUID()); setFormOpen(true); }}><CircleDollarSign size={18} />{registerLabel}</button>;
 
   const loadPayments = async () => {
     try {
@@ -119,10 +120,10 @@ export function PaymentLedger({
 
   return (
     <AviantoPanel variant="section" className={`payment-ledger${presentation === "ficha" ? " ficha-payment-ledger" : ""}`} aria-labelledby={`${resource}-${documentId}-payments`}>
-      <AviantoPanelHeader headingId={`${resource}-${documentId}-payments`} title={<>Pagos<StatusBadge status={estadoPago} /></>} actions={<button type="button" className="button primary payment-register" disabled={!canRegister} onClick={() => { setIdempotencyKey(crypto.randomUUID()); setFormOpen(true); }}><CircleDollarSign size={18} />{registerLabel}</button>} />
+      <AviantoPanelHeader headingId={`${resource}-${documentId}-payments`} title={<>Pagos<StatusBadge status={estadoPago} /></>} actions={presentation === "ficha" ? undefined : registerAction} />
       <div className="avianto-panel-body">
       <div className="payment-balance" aria-label="Balance de pagos del documento">
-        <div><span>{presentation === "ficha" ? "Presupuesto ficha" : "Total"}</span><strong>{paymentAmount(total)}</strong></div>
+        <div><span>{presentation === "ficha" ? "Presupuesto total" : "Total"}</span><strong>{paymentAmount(total)}</strong></div>
         <div><span>{presentation === "ficha" ? "Pagado" : "Cobrado"}</span><strong>{paymentAmount(montoCobrado)}</strong></div>
         <div><span>{presentation === "ficha" ? "Pendiente" : "Saldo pendiente"}</span><strong>{paymentAmount(saldoPendiente)}</strong></div>
       </div>
@@ -142,6 +143,7 @@ export function PaymentLedger({
           ))}
         </ol>
       ) : <p className="payment-history-empty">Todavía no hay pagos registrados.</p>}
+      {presentation === "ficha" && <div className="ficha-payment-actions">{registerAction}</div>}
       <Dialog open={formOpen && !cancelled} title="Registrar pago" onClose={closeForm} dirty={Boolean(amount || paymentDate !== todayInAr() || paymentMethod)} className="payment-ledger-modal">
         <form className="record-form payment-form" onSubmit={(event) => { event.preventDefault(); void registerPayment(); }}>
           <p>El importe se agregará al historial de este documento.</p>

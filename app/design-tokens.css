@@ -38,6 +38,11 @@
   --color-danger-soft: var(--brand-red-soft);
   --color-warning: #855d06;
   --color-warning-soft: #fff7dc;
+  --color-work-done-soft: #cff2b4;
+  --color-work-pending-soft: #f3c0b7;
+  --color-work-ordered-soft: #f4edb5;
+  --color-work-received-soft: #afe5eb;
+  --color-process-ink: #a85800;
   --color-violet: #6552b6;
   --color-violet-soft: #f0edff;
 
