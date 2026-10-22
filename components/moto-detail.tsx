@@ -203,6 +203,8 @@ export function MotoDetail({
     ...(moto.seccion === "Venta" ? [{ id: "venta" as const, label: "Venta" }] : []),
   ];
   const latestFicha = fichas?.content[0] ?? null;
+  const openFicha = fichas?.content.find((ficha) => ["Pendiente", "En proceso", "En revisión"].includes(ficha.estado)) ?? null;
+  const fichaHistory = fichas?.content.filter((ficha) => ficha.id !== openFicha?.id) ?? [];
   const latestService = servicePage === 1 ? services?.content[0] ?? null : null;
   const serviceHistory = servicePage === 1 ? services?.content.slice(1) ?? [] : services?.content ?? [];
   const serviceInterval = moto.kmServicePeriodo ?? null;
@@ -294,8 +296,19 @@ export function MotoDetail({
         </section>
       )}
       {tab === "fichas" && (
-        <AviantoPanel className="moto-profile-panel record-list-panel moto-profile-table">
-           <div className="panel-head"><div><h2>Historial de fichas</h2><p>Ingresos al taller, estados y pagos de esta moto.</p></div><button className="button secondary" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewFicha({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nueva ficha</button></div>
+        <AviantoPanel className="moto-profile-panel record-list-panel moto-profile-table ficha-profile-panel">
+           {openFicha && <article className="ficha-profile-current" aria-label={`Ficha activa ${openFicha.numero}`}>
+             <h2>{openFicha.numero}</h2>
+             <div className="ficha-profile-current-fields">
+               <VehicleField label="Fecha de ingreso" value={date(openFicha.fechaIngreso)} />
+               <VehicleField label="Total" value={money(openFicha.total)} />
+               <VehicleField label="Estado" value={<StatusBadge status={openFicha.estado} />} />
+               <VehicleField label="Pago" value={<StatusBadge status={openFicha.estadoPago} />} />
+             </div>
+             <button type="button" className="button primary" onClick={() => onOpenFicha(openFicha)}><Eye size={17} />Abrir ficha</button>
+           </article>}
+           <button className="button primary ficha-profile-new" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewFicha({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nueva ficha</button>
+           <header className="ficha-profile-history-heading"><h2>Historial de fichas</h2></header>
            <FilterBar activeCount={(fichaDesde ? 1 : 0) + (fichaHasta ? 1 : 0) + (fichaEstado ? 1 : 0) + (fichaPago ? 1 : 0) + (fichaSort !== "fechaIngreso" ? 1 : 0)}>
              <label><span className="date-label">Desde</span><input type="date" value={fichaDesde} onChange={(event) => { setFichaDesde(event.target.value); setFichaPage(1); }} /></label>
              <label><span className="date-label">Hasta</span><input type="date" value={fichaHasta} onChange={(event) => { setFichaHasta(event.target.value); setFichaPage(1); }} /></label>
@@ -304,8 +317,8 @@ export function MotoDetail({
               <SelectField value={fichaSort} onChange={(value) => { setFichaSort(value); setFichaPage(1); }} options={[{ value: "fechaIngreso", label: "Fecha" }, { value: "estado", label: "Estado" }, { value: "estadoPago", label: "Pago" }]} icon={Filter} ariaLabel="Ordenar fichas por" />
              <button className="button secondary" onClick={() => { setFichaDirection((value) => value === "ASC" ? "DESC" : "ASC"); setFichaPage(1); }} aria-label="Cambiar orden de fichas"><ArrowDownUp size={16} />{fichaDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
            </FilterBar>
-           {panelErrors.fichas ? <EmptyState title="No se pudieron cargar las fichas" body={panelErrors.fichas} action={<button className="button secondary" onClick={() => loadFichas()}>Reintentar</button>} /> : !fichas ? <LoadingState label="Cargando fichas..." /> : fichas.content.length ? (
-            <AviantoRecordList label="Fichas de la moto" records={fichas.content.map((ficha) => ({
+           {panelErrors.fichas ? <EmptyState title="No se pudieron cargar las fichas" body={panelErrors.fichas} action={<button className="button secondary" onClick={() => loadFichas()}>Reintentar</button>} /> : !fichas ? <LoadingState label="Cargando fichas..." /> : fichaHistory.length ? (
+            <AviantoRecordList label="Fichas anteriores de la moto" records={fichaHistory.map((ficha) => ({
               id: ficha.id, title: ficha.numero, label: "Ficha", fields: [
                 { label: "Fecha de ingreso", value: date(ficha.fechaIngreso) },
                 { label: "Total", value: money(ficha.total) },
@@ -313,7 +326,7 @@ export function MotoDetail({
                 { label: "Pago", value: <StatusBadge status={ficha.estadoPago} /> },
               ], actions: <button type="button" className="text-button" onClick={() => onOpenFicha(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} />Abrir ficha</button>,
             }))} />
-          ) : <EmptyState title="Sin fichas" body="Esta moto todavía no tiene ingresos de trabajo." />}
+          ) : !openFicha ? <EmptyState title="Sin fichas" body="Esta moto todavía no tiene ingresos de trabajo." /> : <p className="ficha-history-empty">No hay fichas anteriores para mostrar.</p>}
           <Pagination page={fichaPage} total={fichas?.totalPages || 1} onPage={setFichaPage} />
         </AviantoPanel>
       )}

@@ -12,6 +12,8 @@ export function BudgetBreakdown({
   descuentoControl,
   montoCobradoPresupuesto,
   saldoPendientePresupuesto,
+  showTotal = true,
+  showPaymentBalance = true,
 }: {
   subtotalTrabajos: number;
   totalRepuestos: number;
@@ -21,6 +23,8 @@ export function BudgetBreakdown({
   descuentoControl?: ReactNode;
   montoCobradoPresupuesto?: number;
   saldoPendientePresupuesto?: number;
+  showTotal?: boolean;
+  showPaymentBalance?: boolean;
 }) {
   const subtotal = Math.max(0, subtotalTrabajos - descuentoGlobal) + totalRepuestos;
   return (
@@ -32,8 +36,8 @@ export function BudgetBreakdown({
         <div className="budget-breakdown-row budget-subtotal"><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
         {iva > 0 && <div className="budget-breakdown-row"><span>IVA 21%</span><strong>{money(iva)}</strong></div>}
       </div>
-      <div className="budget-total total"><span>Total presupuesto</span><strong>{money(totalPresupuesto)}</strong></div>
-      {montoCobradoPresupuesto !== undefined && saldoPendientePresupuesto !== undefined && (
+      {showTotal && <div className="budget-total total"><span>Total presupuesto</span><strong>{money(totalPresupuesto)}</strong></div>}
+      {showPaymentBalance && montoCobradoPresupuesto !== undefined && saldoPendientePresupuesto !== undefined && (
         <div className="budget-payment-balance" aria-label="Saldo combinado de ficha y repuestos">
           <div><span>Cobrado (ficha + repuestos)</span><strong>{paymentAmount(montoCobradoPresupuesto)}</strong></div>
           <div><span>Saldo pendiente (ficha + repuestos)</span><strong>{paymentAmount(saldoPendientePresupuesto)}</strong></div>

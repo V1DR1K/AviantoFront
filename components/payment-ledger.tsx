@@ -22,6 +22,7 @@ export function PaymentLedger({
   saldoPendiente,
   onDocumentChange,
   notify,
+  presentation = "default",
 }: {
   resource: "fichas" | "repuestos";
   documentId: string;
@@ -32,6 +33,7 @@ export function PaymentLedger({
   saldoPendiente: number;
   onDocumentChange: () => Promise<void>;
   notify: Notify;
+  presentation?: "default" | "ficha";
 }) {
   const [payments, setPayments] = useState<PagoResponse[] | null>(null);
   const [historyError, setHistoryError] = useState(false);
@@ -116,13 +118,13 @@ export function PaymentLedger({
   };
 
   return (
-    <AviantoPanel variant="section" className="payment-ledger" aria-labelledby={`${resource}-${documentId}-payments`}>
+    <AviantoPanel variant="section" className={`payment-ledger${presentation === "ficha" ? " ficha-payment-ledger" : ""}`} aria-labelledby={`${resource}-${documentId}-payments`}>
       <AviantoPanelHeader headingId={`${resource}-${documentId}-payments`} title={<>Pagos<StatusBadge status={estadoPago} /></>} actions={<button type="button" className="button primary payment-register" disabled={!canRegister} onClick={() => { setIdempotencyKey(crypto.randomUUID()); setFormOpen(true); }}><CircleDollarSign size={18} />{registerLabel}</button>} />
       <div className="avianto-panel-body">
       <div className="payment-balance" aria-label="Balance de pagos del documento">
-        <div><span>Total</span><strong>{paymentAmount(total)}</strong></div>
-        <div><span>Cobrado</span><strong>{paymentAmount(montoCobrado)}</strong></div>
-        <div><span>Saldo pendiente</span><strong>{paymentAmount(saldoPendiente)}</strong></div>
+        <div><span>{presentation === "ficha" ? "Presupuesto ficha" : "Total"}</span><strong>{paymentAmount(total)}</strong></div>
+        <div><span>{presentation === "ficha" ? "Pagado" : "Cobrado"}</span><strong>{paymentAmount(montoCobrado)}</strong></div>
+        <div><span>{presentation === "ficha" ? "Pendiente" : "Saldo pendiente"}</span><strong>{paymentAmount(saldoPendiente)}</strong></div>
       </div>
       {cancelled ? <p className="payment-notice">Documento cancelado: no admite nuevos pagos.</p> : settled && <p className="payment-notice payment-settled">Saldo cubierto: no admite nuevos pagos.</p>}
       <div className="payment-history-head"><h3>Historial de pagos</h3><span>{payments ? `${payments.length} registro${payments.length === 1 ? "" : "s"}` : "Cargando..."}</span></div>
