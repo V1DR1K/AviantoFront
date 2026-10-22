@@ -258,17 +258,33 @@
 }
 
 .ficha-record-back svg { color: var(--brand-red); }
-.ficha-record-hero h1 { margin: 0; color: var(--brand-white); font-size: var(--text-display); line-height: 1; text-align: center; }
+.ficha-record-hero h1 {
+  display: grid;
+  place-items: center;
+  width: min(760px, 100%);
+  min-height: 54px;
+  margin: 0 auto;
+  padding: 4px 12px;
+  border-radius: var(--radius-field);
+  background: var(--brand-white);
+  color: var(--brand-blue);
+  font-size: var(--text-display);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
 
 .ficha-record-vehicle {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 2px;
-  overflow: hidden;
+  gap: 4px;
+  overflow: visible;
   width: min(760px, 100%);
   margin-inline: auto;
-  border-radius: var(--radius-field);
-  background: var(--brand-white);
+  border-radius: 0;
+  background: transparent;
   color: var(--brand-blue);
 }
 
@@ -278,6 +294,7 @@
   min-width: 0;
   min-height: 46px;
   padding: 8px 12px;
+  border-radius: var(--radius-field);
   background: var(--brand-white);
   font-size: var(--text-md);
   overflow-wrap: anywhere;
@@ -400,7 +417,7 @@
   overflow: hidden;
   padding: 0;
   border: 2px solid var(--brand-blue);
-  border-radius: var(--radius-surface);
+  border-radius: var(--radius-dossier);
   background: var(--color-surface);
   box-shadow: none;
 }
@@ -539,14 +556,16 @@
 }
 
 @media (max-width: 767px) {
-  .ficha-detail-page { gap: var(--space-4); padding: 0 0 calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 28px); }
+  .page.avianto-page.ficha-detail-page { gap: var(--space-4); padding: 0 0 calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 28px); }
   .ficha-record-hero { gap: var(--space-2); margin: 0 -14px; padding: 14px 18px 20px; border-radius: 0; }
   .ficha-record-hero-meta { min-height: 36px; }
-  .ficha-record-hero h1 { font-size: var(--text-display); }
+  .ficha-record-hero h1 { min-height: 46px; font-size: var(--text-xl); }
   .ficha-record-vehicle strong { min-height: 42px; padding: 7px 8px; font-size: var(--text-sm); }
   .ficha-record-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ficha-record-actions > strong,
   .ficha-record-actions > button { min-width: 0; width: 100%; min-height: 46px; padding-inline: 8px; font-size: var(--text-md); }
+  .ficha-detail-page .ficha-record-actions > strong,
+  .ficha-detail-page .ficha-record-actions > button { min-height: var(--size-touch-target); }
   .ficha-detail-page > .flow-steps { margin-inline: -14px; border-inline: 0; border-radius: 0; scroll-snap-type: inline proximity; }
   .ficha-detail-page > .flow-steps > .flow-step { flex-basis: clamp(108px, 28vw, 132px); min-width: clamp(108px, 28vw, 132px); min-height: 56px; padding-inline: 10px; }
   .ficha-detail-page .ficha-actions { position: sticky; z-index: 35; bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom)); grid-template-columns: minmax(0, 1fr) minmax(118px, .6fr); margin: 0 -14px; padding: 8px 14px; border-radius: 0; box-shadow: 0 -5px 14px rgb(48 52 139 / .12); }
@@ -557,19 +576,19 @@
   .ficha-design-section > .avianto-panel-header h2,
   .ficha-design-section > .avianto-panel-header h3 { padding: 7px 12px; font-size: var(--text-md); }
   .ficha-design-section > .avianto-panel-header .button { min-height: 44px; padding-inline: 10px; font-size: var(--text-sm); }
-  .ficha-design-card.avianto-panel { border-radius: var(--radius-surface); }
+  .ficha-design-card.avianto-panel { border-radius: var(--radius-dossier); }
   .ficha-design-card > .avianto-panel-body { gap: var(--space-2); padding: 10px; }
-  .ficha-table-heading { grid-template-columns: 40px minmax(0, 1fr) 80px 86px 40px; min-height: 40px; padding-inline: 6px; }
+  .ficha-table-heading { grid-template-columns: 44px minmax(0, 1fr) 78px 78px 44px; min-height: 40px; padding-inline: 6px; }
   .ficha-table-heading > span { font-size: var(--text-xs); }
   .ficha-order-table-heading { grid-template-columns: minmax(0, 1fr) 86px 90px; }
-  .ficha-detail-page .detail-work-list > .detail-work-item { grid-template-columns: 40px minmax(0, 1fr) 40px; grid-template-areas: "check description actions" "check meta actions" "check observation actions"; gap: 2px 6px; padding: 7px 2px; }
+  .ficha-detail-page .detail-work-list > .detail-work-item { grid-template-columns: 44px minmax(0, 1fr) minmax(68px, max-content) minmax(72px, max-content) 44px; grid-template-areas: "check description status price actions" "check observation observation observation actions"; gap: 2px 4px; padding: 7px 2px; }
   .ficha-detail-page .detail-work-copy > strong { padding-top: 2px; font-size: var(--text-sm); }
-  .ficha-detail-page .detail-work-meta { display: flex; grid-area: meta; flex-wrap: wrap; align-items: center; gap: 5px; margin: 0; }
-  .ficha-detail-page .detail-work-meta > .status { justify-self: start; font-size: var(--text-xs); }
-  .ficha-detail-page .detail-work-price { padding: 2px 6px; font-size: var(--text-xs); }
+  .ficha-detail-page .detail-work-meta { display: contents; }
+  .ficha-detail-page .detail-work-meta > .status { justify-self: center; font-size: var(--text-xs); }
+  .ficha-detail-page .detail-work-price { padding: 2px 4px; font-size: var(--text-xs); }
   .ficha-detail-page .detail-work-item .work-observation { padding-bottom: 4px; font-size: var(--text-xs); }
   .ficha-detail-page .detail-work-actions,
-  .ficha-detail-page .detail-work-item .danger-action { width: 40px; min-width: 40px; min-height: var(--size-touch-target); }
+  .ficha-detail-page .detail-work-item .danger-action { width: var(--size-touch-target); min-width: var(--size-touch-target); min-height: var(--size-touch-target); }
   .ficha-total-pair > div { min-height: 56px; padding: 8px; font-size: var(--text-sm); }
   .ficha-total-pair strong { font-size: var(--text-sm); }
   .ficha-detail-page .summary-linked-order-head { grid-template-columns: minmax(0, 1fr) auto; }
@@ -597,9 +616,12 @@
 }
 
 @media (max-width: 360px) {
-  .ficha-detail-page .detail-work-list > .detail-work-item { grid-template-columns: 36px minmax(0, 1fr) 36px; gap: 2px 4px; }
+  .ficha-detail-page .ficha-table-heading { grid-template-columns: minmax(0, 1fr) 78px 76px; }
+  .ficha-detail-page .ficha-table-heading > span:first-child,
+  .ficha-detail-page .ficha-table-heading > span:last-child { display: none; }
+  .ficha-detail-page .detail-work-list > .detail-work-item { grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) minmax(64px, max-content) 44px; grid-template-areas: "check description description description actions" "check status status price actions" "check observation observation observation actions"; gap: 2px 2px; padding-inline: 0; }
   .ficha-detail-page .detail-work-actions,
-  .ficha-detail-page .detail-work-item .danger-action { width: 36px; min-width: 36px; }
+  .ficha-detail-page .detail-work-item .danger-action { width: var(--size-touch-target); min-width: var(--size-touch-target); }
   .ficha-total-pair > div { align-items: flex-start; flex-direction: column; justify-content: center; }
   .ficha-profile-current-fields .avianto-vehicle-field > dd { font-size: var(--text-sm); }
 }
@@ -607,10 +629,33 @@
 @media (max-width: 767px) and (max-height: 680px) {
   .ficha-record-hero { gap: 4px; padding-block: 6px 10px; }
   .ficha-record-hero-meta { min-height: 28px; }
-  .ficha-record-hero h1 { font-size: var(--text-xl); }
-  .ficha-record-vehicle strong { min-height: 36px; padding-block: 4px; }
+  .ficha-record-hero h1 { min-height: 38px; font-size: var(--text-xl); }
+  .ficha-record-vehicle strong { min-height: 32px; padding-block: 4px; }
   .ficha-record-actions > strong,
-  .ficha-record-actions > button { min-height: 40px; }
+  .ficha-record-actions > button { min-height: var(--size-touch-target); }
+}
+
+@media (max-width: 767px) {
+  .modal-backdrop:has(.payment-ledger-modal) {
+    align-items: center;
+    padding: max(12px, env(safe-area-inset-top)) 12px calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 12px);
+  }
+
+  .modal-backdrop:has(.payment-ledger-modal) .payment-ledger-modal {
+    width: 100%;
+    max-width: 540px;
+    max-height: calc(100dvh - max(12px, env(safe-area-inset-top)) - var(--mobile-nav-height) - env(safe-area-inset-bottom) - 12px);
+    margin: auto;
+    padding-bottom: 0;
+    border-radius: var(--radius-surface);
+  }
+
+  .payment-ledger-modal .dialog-close {
+    width: var(--size-touch-target);
+    height: var(--size-touch-target);
+  }
+
+  .payment-ledger-modal .modal-actions .button { min-height: var(--size-touch-target); }
 }
 
 @media (prefers-reduced-motion: reduce) {

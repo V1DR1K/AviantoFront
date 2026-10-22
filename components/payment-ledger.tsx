@@ -142,7 +142,7 @@ export function PaymentLedger({
           ))}
         </ol>
       ) : <p className="payment-history-empty">Todavía no hay pagos registrados.</p>}
-      <Dialog open={formOpen && !cancelled} title="Registrar pago" onClose={closeForm} dirty={Boolean(amount || paymentDate !== todayInAr() || paymentMethod)}>
+      <Dialog open={formOpen && !cancelled} title="Registrar pago" onClose={closeForm} dirty={Boolean(amount || paymentDate !== todayInAr() || paymentMethod)} className="payment-ledger-modal">
         <form className="record-form payment-form" onSubmit={(event) => { event.preventDefault(); void registerPayment(); }}>
           <p>El importe se agregará al historial de este documento.</p>
           <div className="payment-form-grid">
@@ -153,7 +153,7 @@ export function PaymentLedger({
           <div className="modal-actions"><button type="button" className="button secondary" disabled={saving} onClick={closeForm}>Cancelar</button><button className="button primary" disabled={saving}>{saving ? "Registrando..." : "Registrar pago"}</button></div>
         </form>
       </Dialog>
-      <ConfirmModal open={paymentToAnnul !== null} title="Anular pago" body={`Vas a anular el pago de ${paymentAmount(paymentToAnnul?.monto ?? 0)}. El movimiento permanecerá visible en el historial y se recalculará el saldo.`} confirmLabel="Anular pago" onClose={() => setPaymentToAnnul(null)} onConfirm={annulPayment} />
+      <ConfirmModal open={paymentToAnnul !== null} title="Anular pago" body={`Vas a anular el pago de ${paymentAmount(paymentToAnnul?.monto ?? 0)}. El movimiento permanecerá visible en el historial y se recalculará el saldo.`} confirmLabel="Anular pago" onClose={() => setPaymentToAnnul(null)} onConfirm={annulPayment} className="payment-ledger-modal" />
       </div>
     </AviantoPanel>
   );

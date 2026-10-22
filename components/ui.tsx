@@ -500,6 +500,7 @@ export function ConfirmModal({
   variant = "danger",
   onConfirm,
   onClose,
+  className = "",
 }: {
   open: boolean;
   title: string;
@@ -508,6 +509,7 @@ export function ConfirmModal({
   variant?: "danger" | "success";
   onConfirm: () => void | Promise<unknown>;
   onClose: () => void;
+  className?: string;
 }) {
   const [modalRef, onModalKeyDown] = useModalFocus(open, onClose);
   const [pending, setPending] = useState(false);
@@ -523,7 +525,7 @@ export function ConfirmModal({
       <section
         ref={modalRef}
         onKeyDownCapture={onModalKeyDown}
-        className="modal confirm-modal"
+        className={`modal confirm-modal ${className}`}
         role="dialog"
         tabIndex={-1}
         aria-modal="true"
