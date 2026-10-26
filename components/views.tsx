@@ -713,7 +713,7 @@ export function FichaDetail({
       )}
       <div className="ficha-flow-sections">
         <section className="ficha-design-section" aria-label="Detalle de ficha">
-          <AviantoPanelHeader title="Detalle de ficha" actions={<button type="button" className="button secondary ficha-pdf-action" onClick={() => void download(`/fichas/${ficha.id}/pdf`, `${ficha.numero}.pdf`).catch((reason) => notify(errorMessage(reason), "error"))}><FileDown size={17} />PDF</button>} />
+          <AviantoPanelHeader title="Detalle de ficha" actions={<button type="button" className="button primary ficha-pdf-action" onClick={() => void download(`/fichas/${ficha.id}/pdf`, `${ficha.numero}.pdf`).catch((reason) => notify(errorMessage(reason), "error"))}><FileDown size={17} />PDF</button>} />
           <AviantoPanel className="ficha-design-card ficha-repair-panel">
             <div className="ficha-table-heading" role="rowgroup">
               <span aria-hidden="true"></span><span>Trabajos</span><span>Estado</span><span>Total</span><span aria-hidden="true"></span>
@@ -745,7 +745,7 @@ export function FichaDetail({
         <section className="ficha-design-section" aria-label="Detalle de pedidos">
           <AviantoPanelHeader
             title="Detalle de pedidos"
-            actions={!locked ? <button type="button" className="button secondary ficha-new-order" onClick={() => onNewRepuesto({ motoId: ficha.motoId, clienteId: ficha.clienteId, fichaId: ficha.id })}><Plus size={17} />Nuevo pedido</button> : undefined}
+            actions={!locked ? <button type="button" className="button primary ficha-new-order" onClick={() => onNewRepuesto({ motoId: ficha.motoId, clienteId: ficha.clienteId, fichaId: ficha.id })}><Plus size={17} />Nuevo pedido</button> : undefined}
           />
           <AviantoPanel className="ficha-design-card ficha-orders-panel">
             <div className="ficha-table-heading ficha-order-table-heading" role="rowgroup">

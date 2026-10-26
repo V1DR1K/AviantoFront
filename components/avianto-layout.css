@@ -1377,7 +1377,7 @@ a { text-underline-offset: 3px; }
 .avianto-page-heading .button.secondary:hover { background: rgb(255 255 255 / .12); }
 .avianto-page-heading :focus-visible { outline-color: var(--brand-white); }
 .button { min-height: 44px; transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease; }
-.button.secondary { border-color: var(--color-border-strong); }
+.button.secondary { border-color: var(--brand-blue); }
 .button.secondary:hover { background: var(--brand-blue-soft); border-color: var(--brand-blue); }
 .button:disabled, button:disabled { cursor: not-allowed; }
 .search, .select-control, .filter-bar label { border-color: var(--color-border-strong); color: var(--brand-blue); }
