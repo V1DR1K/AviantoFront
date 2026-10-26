@@ -435,7 +435,7 @@ function MoreActions({ actions, pending }: { actions: { key: string; label: stri
   }, []);
   return (
     <div ref={detailsRef} className={`ficha-more-actions${open ? " is-open" : ""}`} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false); }}>
-      <button type="button" className="ficha-more-trigger" aria-expanded={open} onClick={() => setOpen((value) => !value)}>Más acciones</button>
+      <button type="button" className="ficha-more-trigger" aria-expanded={open} onClick={() => setOpen((value) => !value)}>Más acciones<ChevronDown size={16} aria-hidden="true" /></button>
       <div aria-hidden={!open}>{actions.map((action) => <button key={action.key} className={`button large ${action.className}`} disabled={pending} onClick={() => { setOpen(false); action.onClick(); }}>{action.label}</button>)}</div>
     </div>
   );
@@ -692,8 +692,8 @@ export function FichaDetail({
           const done = current !== "Cancelada" && currentStep >= 0 && index < currentStep;
           const isCurrent = current !== "Cancelada" && index === currentStep;
           return (
-            <li key={`${step}-${isCurrent ? "current" : done ? "done" : "pending"}`} className={`flow-step${isCurrent ? " current" : ""}${done ? " done" : ""}`} aria-current={isCurrent ? "step" : undefined}>
-              <span aria-hidden="true">{done ? <Check size={18} /> : index + 1}</span>
+            <li key={`${step}-${isCurrent ? "current" : done ? "done" : "pending"}`} className={`flow-step${isCurrent ? " current" : ""}${done ? " done" : ""}`} data-step={index + 1} aria-current={isCurrent ? "step" : undefined}>
+              <span aria-hidden="true" data-step={index + 1}>{done ? <Check size={18} /> : index + 1}</span>
               <strong>{step}</strong>
             </li>
           );
