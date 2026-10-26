@@ -637,7 +637,9 @@
   .ficha-detail-page .detail-work-item .work-observation { padding-bottom: 4px; font-size: var(--text-xs); }
   .ficha-detail-page .detail-work-actions,
   .ficha-detail-page .detail-work-item .danger-action { width: var(--size-touch-target); min-width: var(--size-touch-target); min-height: var(--size-touch-target); }
-  .ficha-total-pair > div { min-height: 56px; padding: 8px; font-size: var(--text-sm); }
+  .ficha-total-pair { grid-template-columns: minmax(0, 1fr); gap: 4px; overflow: visible; border: 0; border-radius: 0; }
+  .ficha-total-pair > div { align-items: center; flex-direction: row; width: 100%; min-height: 46px; padding: 9px 14px; border: 1px solid var(--brand-blue); border-radius: var(--radius-field); font-size: var(--text-sm); }
+  .ficha-total-pair > div + div { border-left: 1px solid var(--brand-blue); }
   .ficha-total-pair strong { font-size: var(--text-sm); }
   .ficha-detail-page .summary-linked-order-head { grid-template-columns: minmax(0, 1fr) auto; }
   .ficha-detail-page .summary-linked-order-status { grid-column: 1 / 2; grid-row: 2; justify-content: flex-start; }
