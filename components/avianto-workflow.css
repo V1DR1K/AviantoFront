@@ -141,9 +141,9 @@
   box-shadow: none;
   animation: none;
 }
-.ficha-detail-page .detail-work-item:not(.can-mark) { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "content delete"; }
-.ficha-detail-page .detail-work-item:not(.can-delete) { grid-template-columns: var(--size-touch-target) minmax(0, 1fr); grid-template-areas: "check content"; }
-.ficha-detail-page .detail-work-item:not(.can-mark):not(.can-delete) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "content"; }
+.ficha-detail-page .detail-work-item:not(.can-mark) { grid-template-columns: minmax(0, 1fr) 100px 116px 44px; grid-template-areas: "description status price actions" "observation observation observation actions"; }
+.ficha-detail-page .detail-work-item:not(.can-delete) { grid-template-columns: var(--size-touch-target) minmax(0, 1fr) 100px 116px; grid-template-areas: "check description status price" "check observation observation observation"; }
+.ficha-detail-page .detail-work-item:not(.can-mark):not(.can-delete) { grid-template-columns: minmax(0, 1fr) 100px 116px; grid-template-areas: "description status price" "observation observation observation"; }
 .ficha-detail-page .detail-work-copy > strong,
 .ficha-detail-page .revision-control-copy > strong { color: var(--brand-blue); font-size: var(--text-md); line-height: var(--leading-body); overflow-wrap: anywhere; }
 .ficha-detail-page .detail-work-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); min-width: 0; margin-top: var(--space-2); color: var(--color-text-muted); font-size: var(--text-sm); }
@@ -197,9 +197,9 @@
   .ficha-detail-page .ficha-actions > .button { white-space: normal; }
   .ficha-detail-page .avianto-task-list > .line-item,
   .ficha-detail-page .detail-work-list > .detail-work-item { grid-template-columns: var(--size-touch-target) minmax(0, 1fr); grid-template-areas: "check content" ". delete"; gap: var(--space-2); padding: var(--space-3); }
-  .ficha-detail-page .detail-work-item:not(.can-mark) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "content" "delete"; }
-  .ficha-detail-page .detail-work-item:not(.can-delete) { grid-template-columns: var(--size-touch-target) minmax(0, 1fr); grid-template-areas: "check content"; }
-  .ficha-detail-page .detail-work-item:not(.can-mark):not(.can-delete) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "content"; }
+  .ficha-detail-page .detail-work-item:not(.can-mark) { grid-template-columns: minmax(0, 1fr) minmax(68px, max-content) minmax(72px, max-content) var(--size-touch-target); grid-template-areas: "description status price actions" "observation observation observation actions"; }
+  .ficha-detail-page .detail-work-item:not(.can-delete) { grid-template-columns: var(--size-touch-target) minmax(0, 1fr) minmax(68px, max-content) minmax(72px, max-content); grid-template-areas: "check description status price" "check observation observation observation"; }
+  .ficha-detail-page .detail-work-item:not(.can-mark):not(.can-delete) { grid-template-columns: minmax(0, 1fr) minmax(68px, max-content) minmax(72px, max-content); grid-template-areas: "description status price" "observation observation observation"; }
   .ficha-detail-page .detail-work-item .danger-action { justify-self: end; }
   .ficha-detail-page .revision-control-list > .revision-control { grid-template-areas: "check content" ". note"; }
   .ficha-detail-page .revision-note-trigger { justify-self: stretch; }
