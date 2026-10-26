@@ -9,7 +9,7 @@ La API del backend Avianto está bajo `/api`. Las respuestas usan DTOs; no expon
 - `POST /api/auth/logout` recibe `{ "refreshToken": "..." }` y responde `204`.
 - `GET /api/auth/me` devuelve el usuario de la sesión actual.
 - Los roles son `ADMINISTRACION` y `OPERARIO`. La API aplica sus permisos aunque la interfaz no muestre una acción.
-- Los health checks `/actuator/health`, `/actuator/health/liveness` y `/actuator/health/readiness` son públicos. `/actuator/info`, Swagger y OpenAPI requieren autenticación; Swagger/OpenAPI requiere Administración. `/swagger-ui.html` redirige a `/swagger-ui/index.html`, pero el inicializador Swagger no toma aún el JWT de `sessionStorage` para cargar la definición protegida; ver `AviantoBack/bugs.md`.
+- Los health checks `/actuator/health`, `/actuator/health/liveness` y `/actuator/health/readiness` son públicos. `/actuator/info` y la definición OpenAPI requieren Administración. El armazón y los recursos estáticos de Swagger UI son públicos; el inicializador obtiene el JWT de la sesión `avianto.session`, lo envía solo al mismo origen y renueva la sesión próxima a vencer. Administración puede cargar la definición y usar “Try it out”; anónimos y Operario reciben `403` para OpenAPI.
 
 ## Respuestas y errores
 
