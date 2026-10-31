@@ -406,21 +406,8 @@ function ItemRow({
   );
 }
 
-function FichaTotalPair({
-  firstLabel,
-  firstValue,
-  totalLabel,
-  totalValue,
-}: {
-  firstLabel: string;
-  firstValue: string;
-  totalLabel: string;
-  totalValue: string;
-}) {
-  return <div className="ficha-total-pair">
-    <div><span>{firstLabel}</span><strong>{firstValue}</strong></div>
-    <div className="is-total"><span>{totalLabel}</span><strong>{totalValue}</strong></div>
-  </div>;
+function FichaTotalBar({ label, value }: { label: string; value: string }) {
+  return <div className="ficha-total-bar"><span>{label}</span><strong>{value}</strong></div>;
 }
 
 function MoreActions({ actions, pending }: { actions: { key: string; label: string; className: string; onClick: () => void }[]; pending: boolean }) {
@@ -713,10 +700,10 @@ export function FichaDetail({
       )}
       <div className="ficha-flow-sections">
         <section className="ficha-design-section" aria-label="Detalle de ficha">
-          <AviantoPanelHeader title="Detalle de ficha" actions={<button type="button" className="button primary ficha-pdf-action" onClick={() => void download(`/fichas/${ficha.id}/pdf`, `${ficha.numero}.pdf`).catch((reason) => notify(errorMessage(reason), "error"))}><FileDown size={17} />PDF</button>} />
+          <AviantoPanelHeader title="Detalle de ficha" />
           <AviantoPanel className="ficha-design-card ficha-repair-panel">
             <div className="ficha-table-heading" role="rowgroup">
-              <span aria-hidden="true"></span><span>Trabajos</span><span>Estado</span><span>Total</span><span aria-hidden="true"></span>
+              <span aria-hidden="true"></span><span>Trabajos</span><span>Estado</span><span>Total</span>
             </div>
             <div className="avianto-panel-body">
               {current !== "En revisión" ? <div className="line-items-list detail-work-list" role="table" aria-label="Trabajos de la ficha">
@@ -732,7 +719,7 @@ export function FichaDetail({
                   />
                 ))}
               </div> : <p className="ficha-table-note">Los trabajos se muestran en el estado registrado al preparar la revisión.</p>}
-              <FichaTotalPair firstLabel="Subtotal trabajos" firstValue={money(subtotalTrabajos)} totalLabel="Total ficha" totalValue={money(ficha.total)} />
+              <FichaTotalBar label="Total" value={money(ficha.total)} />
               <details className="ficha-disclosure">
                 <summary><span>Observaciones</span><ChevronDown size={18} aria-hidden="true" /></summary>
                 <p>{ficha.observaciones?.trim() || "Sin observaciones registradas."}</p>
@@ -768,7 +755,8 @@ export function FichaDetail({
                   {pedido.estado !== "Cancelado" && <div className="summary-payment-amounts"><span>Cobrado <strong>{paymentAmount(pedido.montoCobrado)}</strong></span><span>Saldo <strong>{paymentAmount(pedido.saldoPendiente)}</strong></span></div>}
                 </article>
               ))}</div> : <p className="summary-empty">No hay pedidos vinculados a esta ficha.</p>}
-              <FichaTotalPair firstLabel="Total repuestos vinculados" firstValue={money(totalRepuestos)} totalLabel="Total presupuesto" totalValue={money(totalPresupuesto)} />
+              <FichaTotalBar label="Total" value={money(totalRepuestos)} />
+              <div className="ficha-total-bar is-outline"><span>Total presupuesto</span><strong>{money(totalPresupuesto)}</strong></div>
               <details className="ficha-disclosure ficha-budget-disclosure">
                 <summary><span>Desglose del presupuesto</span><ChevronDown size={18} aria-hidden="true" /></summary>
                 <BudgetBreakdown
@@ -802,7 +790,7 @@ export function FichaDetail({
           <section className="ficha-design-section" aria-label="Revisión de la ficha">
             <AviantoPanelHeader title="Revisión" description={revision.estado === "APROBADA" ? `Aprobada${revision.forzada ? " (forzada)" : ""}${revision.aprobadoAt ? ` · ${date(revision.aprobadoAt)}` : ""}` : "Controles pendientes"} />
             <AviantoPanel className="ficha-design-card revision-panel">
-              <div className="ficha-table-heading ficha-review-table-heading"><span>Trabajos</span><span>Control</span><span>Estado</span></div>
+              <div className="ficha-table-heading ficha-review-table-heading"><span>Controles</span></div>
               {revision.estado !== "APROBADA" && (
                 <div className="avianto-panel-body"><div className="line-items-list revision-control-list">
                   {revision.controles.map((control) => (
@@ -823,6 +811,11 @@ export function FichaDetail({
             </AviantoPanel>
           </section>
         )}
+
+        <div className="ficha-footer-actions">
+          {bottomActions.filter((action) => action.className === "primary").map((action) => <button key={action.key} className="button large primary" disabled={Boolean(pending) || (action.key === "aprobar" && (!revision || pendingControls.length > 0))} onClick={action.onClick}>{action.label}</button>)}
+          <button type="button" className="button large secondary" onClick={() => void download(`/fichas/${ficha.id}/pdf`, `${ficha.numero}.pdf`).catch((reason) => notify(errorMessage(reason), "error"))}><FileDown size={18} aria-hidden="true" />Descargar PDF</button>
+        </div>
       </div>
       <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)} className="ficha-service-modal">
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveService(); }}>

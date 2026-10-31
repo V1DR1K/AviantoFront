@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CircleDollarSign } from "lucide-react";
+import { CircleDollarSign, Plus, X } from "lucide-react";
 import { api } from "../lib/api";
 import { parsePrice, paymentAmount, priceInput } from "../lib/format";
-import { formatDateInAr, formatDateTimeInAr, todayInAr } from "../lib/dates";
+import { formatDateInAr, formatDateShortInAr, formatDateTimeInAr, todayInAr } from "../lib/dates";
 import type { PagoResponse, PaymentMethod } from "../lib/types";
 import { ConfirmModal, Dialog, SelectField, StatusBadge, type Notify } from "./ui";
 import { AviantoPanel, AviantoPanelHeader } from "./avianto-layout";
@@ -44,12 +44,15 @@ export function PaymentLedger({
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [paymentToAnnul, setPaymentToAnnul] = useState<PagoResponse | null>(null);
+  const [annulPickerOpen, setAnnulPickerOpen] = useState(false);
   const endpoint = `/${resource}/${documentId}/pagos`;
   const cancelled = documentState === "Cancelada" || documentState === "Cancelado";
   const settled = !cancelled && saldoPendiente <= 0;
   const canRegister = !cancelled && !settled;
   const registerLabel = cancelled ? "Documento cancelado" : settled ? "Saldo cubierto" : "Registrar pago";
-  const registerAction = <button type="button" className="button primary payment-register" disabled={!canRegister} onClick={() => { setIdempotencyKey(crypto.randomUUID()); setFormOpen(true); }}><CircleDollarSign size={18} />{registerLabel}</button>;
+  const activePayments = (payments ?? []).filter((payment) => !payment.anulado);
+  const registerAction = <button type="button" className="button primary payment-register" disabled={!canRegister} onClick={() => { setIdempotencyKey(crypto.randomUUID()); setFormOpen(true); }}>{presentation === "ficha" ? <Plus size={18} aria-hidden="true" /> : <CircleDollarSign size={18} />}{registerLabel}</button>;
+  const annulAction = <button type="button" className="button secondary payment-annul-open" disabled={!activePayments.length} onClick={() => setAnnulPickerOpen(true)}><X size={18} aria-hidden="true" />Anular pago</button>;
 
   const loadPayments = async () => {
     try {
@@ -120,9 +123,9 @@ export function PaymentLedger({
 
   return (
     <AviantoPanel variant="section" className={`payment-ledger${presentation === "ficha" ? " ficha-payment-ledger" : ""}`} aria-labelledby={`${resource}-${documentId}-payments`}>
-      <AviantoPanelHeader headingId={`${resource}-${documentId}-payments`} title={<>Pagos<StatusBadge status={estadoPago} /></>} actions={presentation === "ficha" ? undefined : registerAction} />
+      <AviantoPanelHeader headingId={`${resource}-${documentId}-payments`} title={presentation === "ficha" ? <>Pagos<span className="payment-state-note">Estado: <StatusBadge status={estadoPago} /></span></> : <>Pagos<StatusBadge status={estadoPago} /></>} actions={presentation === "ficha" ? undefined : registerAction} />
       <div className="avianto-panel-body">
-      <div className="payment-balance" aria-label="Balance de pagos del documento">
+      <div className={`payment-balance${saldoPendiente <= 0 ? " is-settled" : ""}`} aria-label="Balance de pagos del documento">
         <div><span>{presentation === "ficha" ? "Presupuesto total" : "Total"}</span><strong>{paymentAmount(total)}</strong></div>
         <div><span>{presentation === "ficha" ? "Pagado" : "Cobrado"}</span><strong>{paymentAmount(montoCobrado)}</strong></div>
         <div><span>{presentation === "ficha" ? "Pendiente" : "Saldo pendiente"}</span><strong>{paymentAmount(saldoPendiente)}</strong></div>
@@ -135,15 +138,27 @@ export function PaymentLedger({
             <li key={payment.id} className={payment.anulado ? "is-annulled" : ""}>
               <div className="payment-history-copy">
                 <strong>{paymentAmount(payment.monto)}</strong>
-                <span>{formatDateInAr(payment.fecha)} · {payment.medioPago ?? "Medio no informado"}</span>
+                <span>{presentation === "ficha" ? `${formatDateShortInAr(payment.fecha)} · ${payment.medioPago ?? "Sin medio"}` : `${formatDateInAr(payment.fecha)} · ${payment.medioPago ?? "Medio no informado"}`}</span>
                 {payment.anulado && <small>Anulado{payment.anuladoAt ? ` el ${formatDateTimeInAr(payment.anuladoAt)}` : ""}</small>}
               </div>
-              {payment.anulado ? <span className="payment-annulled">Anulado</span> : <button type="button" className="button danger-outline payment-annul" onClick={() => setPaymentToAnnul(payment)}>Anular</button>}
+              {payment.anulado ? <span className="payment-annulled">Anulado</span> : presentation !== "ficha" && <button type="button" className="button danger-outline payment-annul" onClick={() => setPaymentToAnnul(payment)}>Anular</button>}
             </li>
           ))}
         </ol>
       ) : <p className="payment-history-empty">Todavía no hay pagos registrados.</p>}
-      {presentation === "ficha" && <div className="ficha-payment-actions">{registerAction}</div>}
+      {presentation === "ficha" && <div className="ficha-payment-actions">{registerAction}{annulAction}</div>}
+      <Dialog open={annulPickerOpen} title="Anular pago" onClose={() => setAnnulPickerOpen(false)} className="payment-ledger-modal">
+        <div className="payment-annul-picker">
+          <p>Elegí el pago que querés anular. Seguirá visible en el historial y se recalculará el saldo.</p>
+          <ul>
+            {activePayments.map((payment) => <li key={payment.id}>
+              <span>{formatDateShortInAr(payment.fecha)} · {payment.medioPago ?? "Sin medio"}<strong>{paymentAmount(payment.monto)}</strong></span>
+              <button type="button" className="button danger-outline" onClick={() => { setAnnulPickerOpen(false); setPaymentToAnnul(payment); }}>Anular</button>
+            </li>)}
+          </ul>
+          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setAnnulPickerOpen(false)}>Cancelar</button></div>
+        </div>
+      </Dialog>
       <Dialog open={formOpen && !cancelled} title="Registrar pago" onClose={closeForm} dirty={Boolean(amount || paymentDate !== todayInAr() || paymentMethod)} className="payment-ledger-modal">
         <form className="record-form payment-form" onSubmit={(event) => { event.preventDefault(); void registerPayment(); }}>
           <p>El importe se agregará al historial de este documento.</p>

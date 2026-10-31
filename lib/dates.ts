@@ -21,7 +21,14 @@ export const formatDateInAr = (value?: string | null): string => {
   return new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(source));
 };
 
-export const formatDateTimeInAr = (value?: string | null): string => {
+// Compact dd/mm/yy used by record cards and payment history, as drawn in the Ficha designs.
+export const formatDateShortInAr = (value?: string | null): string => {
+  if (!value) return "—";
+  const source = value.includes("T") ? value : `${value}T12:00:00`;
+  return new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" }).format(new Date(source));
+};
+
+export const formatDateTimeInAr =(value?: string | null): string => {
   if (!value) return "—";
   return new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
 };

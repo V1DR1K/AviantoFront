@@ -31,13 +31,13 @@
   background: var(--brand-blue);
   color: var(--brand-white);
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   box-shadow: 0 8px 18px rgb(48 52 139 / .22);
 }
 .avianto-red-heading { width: 100%; margin: 0; padding: 8px 18px; border-radius: var(--radius-field); background: var(--brand-red); color: var(--brand-white); font-size: 1.35rem; line-height: 1.1; text-align: center; text-transform: uppercase; }
 .avianto-segmented { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: hidden; border: 2px solid var(--brand-blue); border-radius: var(--radius-control); background: var(--brand-white); box-shadow: 0 6px 14px rgb(48 52 139 / .14); }
-.avianto-segmented button { min-height: 48px; border: 0; background: var(--brand-white); color: var(--brand-blue); font-size: .95rem; font-weight: 800; text-transform: uppercase; }
+.avianto-segmented button { min-height: 48px; border: 0; background: var(--brand-white); color: var(--brand-blue); font-size: .95rem; font-weight: 700; text-transform: uppercase; }
 .avianto-segmented button + button { border-left: 1px solid var(--brand-blue); }
 .avianto-segmented button.active { background: var(--brand-blue); color: var(--brand-white); }
 .avianto-metric-grid { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); }
@@ -116,10 +116,11 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
 .moto-profile-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 8px 14px; border: 1px solid var(--brand-white); border-radius: var(--radius-control); background: transparent; color: var(--brand-white); font-size: 1rem; font-weight: 700; box-shadow: 0 7px 13px rgb(0 0 0 / .18); }
 .moto-profile-action:hover { background: rgb(255 255 255 / .1); }
 .moto-profile-note { display: grid; place-items: center; min-height: 48px; color: var(--brand-white); }
-.moto-profile-state { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; min-height: 56px; padding: 8px 14px; border-radius: var(--radius-field); background: var(--brand-white); color: var(--brand-blue); }
-.moto-profile-state .status { padding: 0; background: transparent; color: var(--brand-red); font-size: 1.05rem; }
+.moto-profile-state { grid-column: 1 / -1; display: grid; justify-self: center; align-content: center; gap: 1px; width: min(190px, 100%); min-height: 56px; padding: 6px 12px; border-radius: var(--radius-field); background: var(--brand-white); color: var(--brand-blue); }
+.moto-profile-state > span { font-size: var(--text-sm); }
+.moto-profile-state .status { justify-self: start; padding: 0; background: transparent; color: var(--brand-red); font-size: 1.05rem; font-weight: 700; }
 .avianto-tabs { display: flex; width: 100%; overflow-x: auto; background: var(--brand-white); scrollbar-width: none; }
-.avianto-tabs button { flex: 1 0 132px; min-height: 64px; padding: 10px 18px; border: 0; border-right: 1px solid var(--brand-blue); background: var(--brand-white); color: var(--brand-blue); font-size: 1rem; font-weight: 800; text-transform: uppercase; }
+.avianto-tabs button { flex: 1 0 132px; min-height: 64px; padding: 10px 18px; border: 0; border-right: 1px solid var(--brand-blue); background: var(--brand-white); color: var(--brand-blue); font-size: 1rem; font-weight: 700; text-transform: uppercase; }
 .avianto-tabs button.active { border-radius: 0 0 var(--radius-field) var(--radius-field); background: var(--brand-blue); color: var(--brand-white); }
 .moto-profile-content { position: relative; min-height: 430px; padding: 34px; border-radius: 0 0 24px 24px; background: var(--brand-white); box-shadow: var(--shadow-document); }
 .moto-profile-panel { position: relative; z-index: 1; width: min(1120px, 100%); margin: 0 auto; }
@@ -158,7 +159,7 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
 .moto-service-history { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .avianto-service-card { overflow: hidden; border: 1px solid var(--brand-blue); border-radius: var(--radius-surface); background: var(--brand-white); }
 .avianto-service-card details { padding: 12px 16px; background: var(--color-surface-subtle); color: var(--brand-blue); }
-.avianto-service-card summary { cursor: pointer; font-weight: 800; text-align: center; }
+.avianto-service-card summary { cursor: pointer; font-weight: 700; text-align: center; }
 .avianto-service-card details p { margin: 10px 0 0; color: var(--color-text-muted); }
 .moto-profile-table { min-height: 320px; padding: 4px; box-shadow: none; }
 .moto-profile-table > .panel-head { margin-bottom: 20px; }
@@ -201,7 +202,7 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
   .avianto-mobile-logo { background: transparent; color: var(--brand-blue); }
   .avianto-mobile-logo { justify-self: center; min-width: 0; padding: 0 5px; }
   .avianto-mobile-logo .brand-logo img { width: min(174px, 42vw); }
-  .avianto-intake-button { padding: 0 12px; border-radius: var(--radius-field); background: var(--brand-blue); color: var(--brand-white); font-size: .8rem; font-weight: 800; text-transform: uppercase; white-space: nowrap; }
+  .avianto-intake-button { padding: 0 12px; border-radius: var(--radius-field); background: var(--brand-blue); color: var(--brand-white); font-size: .8rem; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
   .avianto-intake-button span { font-size: 1.25rem; }
   .avianto-bottom-navigation { position: fixed; right: 0; bottom: 0; left: 0; z-index: 40; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); min-height: var(--mobile-nav-height); padding: 9px 3px calc(8px + env(safe-area-inset-bottom)); background: var(--brand-blue); box-shadow: 0 -5px 18px rgb(0 0 0 / .18); }
   .avianto-bottom-navigation button { display: grid; grid-template-rows: 48px auto; place-items: center; align-content: center; min-width: 44px; min-height: 72px; padding: 2px; border: 0; background: transparent; color: var(--brand-white); }
@@ -209,7 +210,7 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
   .avianto-bottom-navigation button.active::after { position: absolute; inset: auto auto 3px; width: 30px; height: 3px; border-radius: 2px; background: var(--brand-red); content: ""; }
   .avianto-bottom-navigation button { position: relative; }
   .avianto-bottom-art { display: block; width: 44px; height: 44px; background: currentColor; -webkit-mask-image: var(--avianto-nav-art); mask-image: var(--avianto-nav-art); -webkit-mask-position: center; mask-position: center; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-size: contain; mask-size: contain; }
-  .avianto-bottom-label { font-size: .93rem; font-weight: 800; line-height: 1.1; }
+  .avianto-bottom-label { font-size: .93rem; font-weight: 700; line-height: 1.1; }
   .page:has(> .avianto-mobile-screen),
   .page.avianto-detail-page { max-width: none; padding: 0; }
   .avianto-dashboard-screen,
@@ -231,7 +232,7 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
   .avianto-profile-filters { padding: 0 12px; }
   .avianto-vehicle-card { margin-inline: 2px; padding: 14px 18px 0; }
   body main.login-page { padding: 24px 18px; }
-  body main.login-page::before { background-position: center 42%; background-size: 182vw auto; }
+  body main.login-page::before { background-position: center 78%; background-size: 182vw auto; }
   body main.login-page .login-card { width: min(100%, 360px); padding: 40px 24px 28px; border-radius: 18px; }
 
   .moto-profile-hero { border-radius: 0; }

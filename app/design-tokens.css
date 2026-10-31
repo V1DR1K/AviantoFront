@@ -1,3 +1,20 @@
+/* Arboria (Type-O-Tones): Medium and Bold supplied; Book/Light/Thin can be added as further faces. Regular requests resolve to Medium. */
+@font-face {
+  font-family: "Arboria";
+  src: url("/fonts/arboria-medium.woff2") format("woff2");
+  font-weight: 400 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Arboria";
+  src: url("/fonts/arboria-bold.woff2") format("woff2");
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* Brand primitives from the Avianto Motos manual. */
   --brand-blue: #30348b;

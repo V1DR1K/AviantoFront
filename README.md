@@ -28,4 +28,4 @@ Para una instalación local reproducible, usar el `docker-compose.full.yml` del 
 
 ## Marca
 
-`app/design-tokens.css` define la paleta oficial, tipografía, espaciado, radios y recursos gráficos. `components/avianto-layout.css` contiene el sistema compartido de páginas, tablas, estados, formularios y navegación. `DESIGN.md` documenta su aplicación a cada módulo. Los archivos de Arboria no están incluidos: el sistema usa Arboria si está instalada y conserva una alternativa legible del sistema.
+`app/design-tokens.css` define la paleta oficial, tipografía, espaciado, radios y recursos gráficos. `components/avianto-layout.css` contiene el sistema compartido de páginas, tablas, estados, formularios y navegación. `DESIGN.md` documenta su aplicación a cada módulo. Arboria Medium y Bold se sirven desde `public/fonts/` (Book, Light y Thin no están incluidas todavía) y se conserva una alternativa legible del sistema.

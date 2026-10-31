@@ -1,5 +1,6 @@
 export const money = (value: number) => new Intl.NumberFormat("es-AR", { style:"currency", currency:"ARS", maximumFractionDigits:0 }).format(value);
-export const paymentAmount = (value: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+// Cents are shown only when the amount has them, matching the designer's "$ 70.000" amounts.
+export const paymentAmount = (value: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: Math.round(value * 100) % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 }).format(value);
 export const priceInput = (value: number | string | boolean | null | undefined) => {
   if (typeof value === "string") return value;
   const parsed = typeof value === "number" ? value : parsePrice(String(value ?? ""));

@@ -103,7 +103,7 @@ body {
 .page-heading h1 {
   color: var(--brand-blue);
   font-size: 2rem;
-  font-weight: 750;
+  font-weight: 700;
   letter-spacing: -0.025em;
 }
 
@@ -257,7 +257,7 @@ body {
   border: 0;
   background: transparent;
   color: var(--brand-white);
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .avianto-record-hero-main {
@@ -274,7 +274,7 @@ body {
   margin-bottom: 4px;
   color: var(--brand-white);
   font-size: var(--text-xs);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.1em;
   opacity: 0.78;
   text-transform: uppercase;
@@ -722,7 +722,7 @@ body {
 
   .avianto-bottom-label {
     font-size: 0.98rem;
-    font-weight: 850;
+    font-weight: 700;
     line-height: 1.05;
   }
 
@@ -755,7 +755,7 @@ body {
     border-radius: var(--radius-control);
     background: var(--brand-white);
     color: var(--brand-blue);
-    font-weight: 750;
+    font-weight: 700;
     text-align: left;
   }
 
@@ -791,7 +791,7 @@ body {
     border: 0;
     background: transparent;
     color: var(--color-text-muted);
-    font-weight: 800;
+    font-weight: 700;
   }
 
   .mobile-nav-group-items {
@@ -934,7 +934,7 @@ body {
     color: var(--brand-blue);
     content: attr(data-label);
     font-size: 0.75rem;
-    font-weight: 750;
+    font-weight: 700;
     text-align: left;
   }
 
@@ -1243,7 +1243,7 @@ body {
   background: transparent;
   color: rgb(255 255 255 / 0.82);
   font: inherit;
-  font-weight: 750;
+  font-weight: 700;
   text-align: left;
 }
 
@@ -1277,7 +1277,7 @@ body {
   min-height: 38px;
   color: rgb(255 255 255 / 0.62);
   font-size: var(--text-xs);
-  font-weight: 850;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1436,10 +1436,10 @@ a { text-underline-offset: 3px; }
 .avianto-skeleton-list > div:nth-child(3) span:nth-child(2) { width: 60%; }
 
 .avianto-metrics { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
-.avianto-metrics .metric { min-height: 132px; padding: 20px 24px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-surface); background: var(--brand-white); box-shadow: none; color: var(--brand-blue); }
-.avianto-metrics .metric > span { color: var(--brand-blue); font-size: .875rem; font-weight: 650; }
-.avianto-metrics .metric > strong { display: block; margin-top: 8px; font-size: 2rem; line-height: 1.15; }
-.avianto-metrics .metric > small { display: block; margin-top: 6px; color: var(--color-text-muted); font-size: .8125rem; }
+.avianto-metrics .metric { display: grid; align-content: center; justify-items: center; min-height: 132px; padding: 20px 24px; border: 2px solid var(--brand-blue); border-radius: var(--radius-surface); background: var(--brand-white); box-shadow: none; color: var(--brand-blue); text-align: center; }
+.avianto-metrics .metric > span { color: var(--brand-red); font-size: var(--text-sm); font-weight: 700; text-transform: uppercase; }
+.avianto-metrics .metric > strong { display: block; margin-top: 6px; font-size: 2.25rem; line-height: 1.1; }
+.avianto-metrics .metric > small { display: block; margin-top: 6px; color: var(--brand-blue); font-size: var(--text-xs); }
 .avianto-metrics .metric.danger > strong { color: var(--color-danger); }
 .avianto-metrics .metric.green > strong { color: var(--color-success); }
 .avianto-metric-grid { gap: 14px; }
@@ -1542,11 +1542,9 @@ a { text-underline-offset: 3px; }
   .app-shell .empty { min-height: 260px; border: 1px solid var(--color-border); border-radius: var(--radius-surface); }
   .avianto-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .avianto-metrics .metric { min-height: 135px; padding: 16px; }
-  .avianto-metrics .metric > strong { font-size: 1.875rem; }
+  .avianto-metrics .metric > strong { font-size: 2rem; }
   .avianto-metrics .metric > small { font-size: .75rem; }
-  .avianto-metrics > .metric:last-child:nth-child(odd) { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-column: 1 / -1; gap: 5px 16px; min-height: 96px; }
-  .avianto-metrics > .metric:last-child:nth-child(odd) > strong { grid-column: 2; grid-row: 1 / span 2; align-self: center; margin: 0; }
-  .avianto-metrics > .metric:last-child:nth-child(odd) > small { grid-column: 1; margin: 0; }
+  .avianto-metrics > .metric:last-child:nth-child(odd) { grid-column: 1 / -1; min-height: 112px; }
   .avianto-metric-grid { gap: 10px; }
   .avianto-dashboard-screen { gap: 20px; }
   .avianto-dashboard-hero { min-height: 190px; padding: 18px 24px 22px; }
@@ -1695,7 +1693,7 @@ a { text-underline-offset: 3px; }
     background: transparent;
     color: rgb(255 255 255 / 0.76);
     font: inherit;
-    font-weight: 800;
+    font-weight: 700;
     text-align: left;
   }
 

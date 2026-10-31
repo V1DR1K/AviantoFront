@@ -108,8 +108,8 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /saldoPendientePresupuesto > 0/);
   assert.match(views, /La moto se entregará con un saldo pendiente de/);
   assert.doesNotMatch(stylesheet, /\.ficha-summary\s*\{[^}]*max-height/);
-  assert.match(views, /firstLabel="Subtotal trabajos" firstValue=\{money\(subtotalTrabajos\)\} totalLabel="Total ficha"/);
-  assert.match(views, /firstLabel="Total repuestos vinculados" firstValue=\{money\(totalRepuestos\)\} totalLabel="Total presupuesto"/);
+  assert.match(views, /<FichaTotalBar label="Total" value=\{money\(ficha\.total\)\} \/>/);
+  assert.match(views, /<FichaTotalBar label="Total" value=\{money\(totalRepuestos\)\} \/>/);
   assert.match(stylesheet, /\.summary-economic-status \{[\s\S]*?border-top: 1px solid var\(--line\);[\s\S]*?border-bottom: 1px solid var\(--line\);/);
   assert.match(fichaForm, /<h2 className="form-section-title">Presupuesto<\/h2>/);
   assert.match(fichaForm, /const \[priceDrafts, setPriceDrafts\] = useState<Record<string, string>>\(\{\}\);/);
@@ -127,11 +127,12 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /\/fichas\/\$\{fichaKey\}\/repuestos/);
   assert.match(views, /title="Detalle de pedidos"/);
   assert.match(views, /className="ficha-design-card ficha-orders-panel"/);
-  assert.match(views, /firstLabel="Total repuestos vinculados"/);
+  assert.match(views, /Desglose del presupuesto/);
   assert.match(views, /className="ficha-disclosure"[\s\S]*?Observaciones[\s\S]*?ficha\.observaciones\?\.trim\(\)/);
   assert.doesNotMatch(views, /className="summary-work-list"|className="summary-economic-status"/);
   assert.match(views, /className="ficha-record-hero"/);
-  assert.match(views, /className="ficha-total-pair"/);
+  assert.match(views, /className="ficha-total-bar"/);
+  assert.match(views, /className="ficha-footer-actions"[\s\S]*?Descargar PDF/);
   assert.match(motoDetail, /<h2>Historial de fichas<\/h2>/);
   assert.match(views, /Enviar a revisión/);
   assert.match(views, /className="ficha-design-card ficha-repair-panel"/);

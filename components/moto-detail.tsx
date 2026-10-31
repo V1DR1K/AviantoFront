@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowDownUp, ArrowRightLeft, Eye, FileText, Filter, LogIn, Plus, Settings2 } from "lucide-react";
 import { api } from "../lib/api";
 import { integerInput, money, parseIntegerInput } from "../lib/format";
-import { formatDateInAr, todayInAr } from "../lib/dates";
+import { formatDateInAr, formatDateShortInAr, todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
   FichaResponse,
@@ -300,7 +300,7 @@ export function MotoDetail({
            {openFicha && <article className="ficha-profile-current" aria-label={`Ficha activa ${openFicha.numero}`}>
              <h2>{openFicha.numero}</h2>
              <div className="ficha-profile-current-fields">
-               <VehicleField label="Fecha de ingreso" value={date(openFicha.fechaIngreso)} />
+               <VehicleField label="Fecha de ingreso" value={formatDateShortInAr(openFicha.fechaIngreso)} />
                <VehicleField label="Total" value={money(openFicha.total)} />
                <VehicleField label="Estado" value={<StatusBadge status={openFicha.estado} />} />
                <VehicleField label="Pago" value={<StatusBadge status={openFicha.estadoPago} />} />
@@ -320,7 +320,7 @@ export function MotoDetail({
            {panelErrors.fichas ? <EmptyState title="No se pudieron cargar las fichas" body={panelErrors.fichas} action={<button className="button secondary" onClick={() => loadFichas()}>Reintentar</button>} /> : !fichas ? <LoadingState label="Cargando fichas..." /> : fichaHistory.length ? (
             <AviantoRecordList label="Fichas anteriores de la moto" records={fichaHistory.map((ficha) => ({
               id: ficha.id, title: ficha.numero, label: "Ficha", fields: [
-                { label: "Fecha de ingreso", value: date(ficha.fechaIngreso) },
+                { label: "Fecha de ingreso", value: formatDateShortInAr(ficha.fechaIngreso) },
                 { label: "Total", value: money(ficha.total) },
                 { label: "Estado", value: <StatusBadge status={ficha.estado} /> },
                 { label: "Pago", value: <StatusBadge status={ficha.estadoPago} /> },
