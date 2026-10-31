@@ -62,14 +62,15 @@
 .avianto-vehicle-card > header { padding: 10px 16px; border-radius: 12px 12px 0 0; background: var(--brand-blue); color: var(--brand-white); text-align: center; }
 .avianto-vehicle-card > header strong { font-size: 1.45rem; letter-spacing: .03em; }
 .avianto-vehicle-card-fields { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); background: var(--color-surface-subtle); }
-.avianto-vehicle-card-profile .avianto-vehicle-field:nth-child(-n + 3),
-.avianto-vehicle-card-profile .avianto-vehicle-field:nth-child(n + 6),
-.avianto-vehicle-card-dossier .avianto-vehicle-field:nth-child(-n + 3),
-.avianto-vehicle-card-dossier .avianto-vehicle-field:nth-child(n + 6) { grid-column: span 2; }
+/* Perfiles/Inicio cards share the two-column record layout: long model/client values take the full row and short values pair up. */
+.avianto-vehicle-card-profile .avianto-vehicle-card-fields,
+.avianto-vehicle-card-dossier .avianto-vehicle-card-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; gap: 8px; padding-top: 8px; }
+.avianto-vehicle-card-profile .avianto-vehicle-field:nth-child(2),
 .avianto-vehicle-card-profile .avianto-vehicle-field:nth-child(4),
-.avianto-vehicle-card-profile .avianto-vehicle-field:nth-child(5),
-.avianto-vehicle-card-dossier .avianto-vehicle-field:nth-child(4),
-.avianto-vehicle-card-dossier .avianto-vehicle-field:nth-child(5) { grid-column: span 3; }
+.avianto-vehicle-card-dossier .avianto-vehicle-field:nth-child(2),
+.avianto-vehicle-card-dossier .avianto-vehicle-field:nth-child(4) { grid-column: 1 / -1; }
+.avianto-vehicle-card-profile .avianto-vehicle-field,
+.avianto-vehicle-card-dossier .avianto-vehicle-field { border-radius: 4px; }
 .avianto-vehicle-card-dashboard .avianto-vehicle-card-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .avianto-vehicle-card-ficha .avianto-vehicle-card-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .avianto-vehicle-field { display: grid; align-content: center; min-width: 0; min-height: 58px; margin: 0; padding: 7px 9px; border: 1px solid var(--brand-blue); background: var(--brand-white); }
