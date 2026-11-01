@@ -345,7 +345,8 @@ export function MotoDetail({
             <AviantoRecordList label="Pedidos de la moto" records={repuestos.content.map((repuesto) => ({
               id: repuesto.id, title: repuesto.numero, label: "Pedido", fields: [
                 { label: "Fecha", value: date(repuesto.fecha) },
-                { label: "Total", value: money(repuesto.total) },
+                { label: "Costo", value: money(repuesto.totalCosto) },
+                { label: "Total final", value: money(repuesto.totalVenta) },
                 { label: "Estado", value: <StatusBadge status={repuesto.estado} /> },
                 { label: "Pago", value: <StatusBadge status={repuesto.estadoPago} /> },
               ], actions: <button type="button" className="text-button" onClick={() => onOpenRepuesto(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} />Abrir pedido</button>,

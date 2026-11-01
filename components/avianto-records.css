@@ -84,6 +84,28 @@
 .avianto-vehicle-actions > .select-control { width: 100%; }
 .moto-profile-table.record-list-panel { padding: 0; }
 
+/* Reportes: casillas para elegir qué desgloses ver; usan los mismos tokens que los controles. */
+.report-toggles { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 20px; padding: 0; border: 0; }
+.report-toggles legend { float: left; width: 100%; margin-bottom: 8px; padding: 0; color: var(--color-label); font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.report-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 9px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-field);
+  background: var(--brand-white);
+  color: var(--color-text);
+  font-size: .875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.report-toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--brand-blue); }
+.report-toggle:has(input:checked) { border-color: var(--brand-blue); background: var(--brand-blue-soft); color: var(--brand-blue); }
+.report-toggle:focus-within { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.repuesto-final { display: block; color: var(--color-text-muted); font-size: .8125rem; }
+
 @media (max-width: 767px) {
   .record-list-panel > .filter-bar,
   .record-list-panel > .panel-head { padding: 14px; }

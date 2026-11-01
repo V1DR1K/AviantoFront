@@ -220,7 +220,7 @@ export function FichaForm({
   const taxableSubtotal = Math.max(0, subtotal - descuentoGlobal);
   const ivaVal = iva ? taxableSubtotal * 0.21 : 0;
   const total = taxableSubtotal + ivaVal;
-  const repuestosTotal = (linkedRepuestos ?? []).filter((pedido) => pedido.estado !== "Cancelado").reduce((sum, pedido) => sum + pedido.total, 0);
+  const repuestosTotal = (linkedRepuestos ?? []).filter((pedido) => pedido.estado !== "Cancelado").reduce((sum, pedido) => sum + pedido.totalVenta, 0);
   const totalPresupuesto = total + repuestosTotal;
   const hasDraftContent =
     trabajos.length > 0 ||
@@ -611,9 +611,9 @@ export function FichaForm({
               <article key={pedido.id} className={`summary-linked-order${pedido.estado === "Cancelado" ? " cancelled" : ""}`}>
                 <div className="summary-linked-order-head"><strong>{pedido.numero}</strong><StatusBadge status={pedido.estado} /></div>
                 <small>{pedido.proveedor ? `Proveedor: ${pedido.proveedor}` : "Sin proveedor"}</small>
-                <div className="summary-order-items">{pedido.items.map((item) => <div key={item.id} className={item.estado === "Cancelado" ? "cancelled" : ""}><span>{item.descripcion} · {item.tipo} · {Number(item.cantidad)} u. · {item.estado}</span><strong>{money(item.subtotal)}</strong></div>)}</div>
+                <div className="summary-order-items">{pedido.items.map((item) => <div key={item.id} className={item.estado === "Cancelado" ? "cancelled" : ""}><span>{item.descripcion} · {item.tipo} · {Number(item.cantidad)} u. · {item.estado}</span><strong>{money(item.subtotalVenta)}</strong></div>)}</div>
                 {pedido.observaciones && <small>{pedido.observaciones}</small>}
-                <div className="summary-work-total"><span>Total pedido</span><strong>{pedido.estado === "Cancelado" ? "—" : money(pedido.total)}</strong></div>
+                <div className="summary-work-total"><span>Total pedido</span><strong>{pedido.estado === "Cancelado" ? "—" : money(pedido.totalVenta)}</strong></div>
               </article>
             ))}</div> : <p className="summary-empty">Los pedidos de repuestos aparecerán aquí cuando se vinculen a esta ficha.</p>}
           </section>

@@ -30,3 +30,6 @@ export const parseIntegerInput = (value: string) => {
   return normalized ? Number(normalized) : 0;
 };
 export const initials = (value: string) => value.split(" ").map(part=>part[0]).join("").slice(0,2);
+// Ganancia sobre el precio de costo de los repuestos; el backend es quien fija el valor guardado.
+export const GANANCIA_REPUESTOS_PCT = 20;
+export const precioFinal = (costo: number) => Math.round(costo * (100 + GANANCIA_REPUESTOS_PCT)) / 100;

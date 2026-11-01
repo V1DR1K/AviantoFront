@@ -30,8 +30,8 @@ export interface PageResponse<T> {
 
 export interface ClienteRequest {
   nombre: string;
-  documento?: string;
-  telefono: string;
+  documento: string;
+  telefono?: string;
   email?: string;
   direccion?: string;
   observaciones?: string;
@@ -97,6 +97,7 @@ export interface PerfilRequest {
   observaciones?: string;
   clienteId?: string;
   clienteNombre?: string;
+  clienteDocumento?: string;
   clienteTelefono?: string;
 }
 export type PerfilResponse = MotovehiculoResponse;
@@ -315,8 +316,11 @@ export interface RepuestoItemResponse {
   descripcion: string;
   tipo: RepuestoItemType;
   cantidad: number;
-  precio: number;
-  subtotal: number;
+  precioCosto: number;
+  precioVenta: number;
+  porcentajeGanancia: number;
+  subtotalCosto: number;
+  subtotalVenta: number;
   estado: RepuestoItemState;
   observaciones?: string | null;
 }
@@ -340,7 +344,8 @@ export interface RepuestoResponse {
   fecha: string;
   estado: RepuestoState;
   estadoPago: PagoStatus;
-  total: number;
+  totalCosto: number;
+  totalVenta: number;
   montoCobrado: number;
   saldoPendiente: number;
   proveedor?: string | null;
@@ -414,6 +419,18 @@ export interface AuditoriaResponse {
   correlationId?: string | null;
 }
 export interface ReporteResponse { etiqueta: string; valor: number; }
+export interface BillingMonthResponse {
+  mes: string;
+  fichasTotal: number;
+  repuestosCosto: number;
+  repuestosVenta: number;
+  repuestosGanancia: number;
+  accesoriosCosto: number;
+  accesoriosVenta: number;
+  accesoriosGanancia: number;
+  pedidosSinFichaVenta: number;
+  pedidosSinFichaCosto: number;
+}
 export interface DashboardOrderResponse { id: string; numero: string; cliente: string; moto: string; estado: FichaStatus; total: number; createdAt: string; }
 export interface DashboardResponse {
   fechaDesde: string;

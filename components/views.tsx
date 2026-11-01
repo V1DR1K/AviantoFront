@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowDownUp, ArrowLeft, Check, ChevronDown, Download, Edit3, Eye, FileDown, FileText, Filter, Plus, Trash2, X } from "lucide-react";
 import { api, download, objectUrl } from "../lib/api";
-import { integerInput, money, parseIntegerInput, paymentAmount } from "../lib/format";
+import { GANANCIA_REPUESTOS_PCT, integerInput, money, parseIntegerInput, paymentAmount } from "../lib/format";
 import { daysAgoInAr, formatDateInAr, todayInAr } from "../lib/dates";
 import type {
-  ClienteResponse,
+  BillingMonthResponse,
   DashboardFichasResponse,
   FichaResponse,
   FichaStatus,
@@ -603,7 +603,7 @@ export function FichaDetail({
   const subtotalDespuesDescuento = Math.max(0, subtotalTrabajos - ficha.descuentoGlobal);
   const ivaValor = ficha.iva ? ficha.total - subtotalDespuesDescuento : 0;
   const repuestosActivos = linkedRepuestos.filter((pedido) => pedido.estado !== "Cancelado");
-  const totalRepuestos = repuestosActivos.reduce((sum, pedido) => sum + pedido.total, 0);
+  const totalRepuestos = repuestosActivos.reduce((sum, pedido) => sum + pedido.totalVenta, 0);
   const totalPresupuesto = ficha.total + totalRepuestos;
   const saldoPendientePresupuesto = ficha.saldoPendiente + repuestosActivos.reduce((sum, pedido) => sum + pedido.saldoPendiente, 0);
   const trabajosPendientes = ficha.trabajos.some((item) => item.estadoTrabajo !== "Realizado" && item.estadoTrabajo !== "Cancelado");
@@ -748,10 +748,10 @@ export function FichaDetail({
                   </div>
                   <small>{pedido.proveedor ? `Proveedor: ${pedido.proveedor}` : "Sin proveedor"}</small>
                   <div className="summary-order-items" role="table" aria-label={`Artículos del pedido ${pedido.numero}`}>
-                    {pedido.items.map((item) => <div key={item.id} className={item.estado === "Cancelado" ? "cancelled" : ""} role="row"><span role="cell">{item.descripcion} · {Number(item.cantidad)} u.</span><span role="cell"><StatusBadge status={item.estado} /></span><strong role="cell">{money(item.subtotal)}</strong></div>)}
+                    {pedido.items.map((item) => <div key={item.id} className={item.estado === "Cancelado" ? "cancelled" : ""} role="row"><span role="cell">{item.descripcion} · {Number(item.cantidad)} u.</span><span role="cell"><StatusBadge status={item.estado} /></span><strong role="cell">{money(item.subtotalVenta)}</strong></div>)}
                   </div>
                   {pedido.observaciones && <small>{pedido.observaciones}</small>}
-                  <div className="summary-work-total"><span>Total pedido</span><strong>{pedido.estado === "Cancelado" ? "—" : money(pedido.total)}</strong></div>
+                  <div className="summary-work-total"><span>Total pedido</span><strong>{pedido.estado === "Cancelado" ? "—" : money(pedido.totalVenta)}</strong></div>
                   {pedido.estado !== "Cancelado" && <div className="summary-payment-amounts"><span>Cobrado <strong>{paymentAmount(pedido.montoCobrado)}</strong></span><span>Saldo <strong>{paymentAmount(pedido.saldoPendiente)}</strong></span></div>}
                 </article>
               ))}</div> : <p className="summary-empty">No hay pedidos vinculados a esta ficha.</p>}
@@ -846,29 +846,72 @@ export function FichaDetail({
   );
 }
 
+const REPORT_BLOCKS = [
+  { key: "fichas", label: "Fichas (trabajos e IVA)" },
+  { key: "repuestos", label: "Repuestos" },
+  { key: "accesorios", label: "Accesorios" },
+  { key: "sinFicha", label: "Pedidos sin ficha" },
+] as const;
+type ReportBlock = (typeof REPORT_BLOCKS)[number]["key"];
+const monthLabel = (mes: string) => {
+  const [year, month] = mes.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+};
+const monthSales = (month: BillingMonthResponse) => month.fichasTotal + month.repuestosVenta + month.accesoriosVenta + month.pedidosSinFichaVenta;
+
 export function ReportsView({ notify }: { notify: Notify }) {
-  const [data, setData] = useState<{ summary: { etiqueta: string; valor: number }[]; clients: PageResponse<ClienteResponse> } | null>(null);
+  const [months, setMonths] = useState<BillingMonthResponse[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [page, setPage] = useState(1);
+  const [visible, setVisible] = useState<Record<ReportBlock, boolean>>({ fichas: true, repuestos: true, accesorios: true, sinFicha: true });
   useEffect(() => {
     const controller = new AbortController();
-    void Promise.all([
-      api<{ etiqueta: string; valor: number }[]>("/reportes/resumen", { signal: controller.signal }),
-      api<PageResponse<ClienteResponse>>("/clientes", { signal: controller.signal }, { size: 20, page: page - 1 }),
-    ]).then(([summary, clients]) => { setData({ summary, clients }); setLoadError(null); })
+    void api<BillingMonthResponse[]>("/reportes/facturacion", { signal: controller.signal })
+      .then((rows) => { setMonths(rows); setLoadError(null); })
       .catch((reason) => { if (!controller.signal.aborted) { setLoadError(errorMessage(reason)); notify(errorMessage(reason), "error"); } });
     return () => controller.abort();
-  }, [notify, reloadKey, page]);
-  const metricDetails: Record<string, string> = { "Fichas último mes": "Ingresadas en los últimos 30 días", "Motos con service": "Con un service de referencia", "En proceso": "Pendientes, en proceso y revisión" };
+  }, [notify, reloadKey]);
+  const totals = (months ?? []).reduce((sum, month) => ({
+    facturacion: sum.facturacion + monthSales(month),
+    costo: sum.costo + month.repuestosCosto + month.accesoriosCosto + month.pedidosSinFichaCosto,
+    ganancia: sum.ganancia + month.repuestosGanancia + month.accesoriosGanancia + month.pedidosSinFichaVenta - month.pedidosSinFichaCosto,
+  }), { facturacion: 0, costo: 0, ganancia: 0 });
+  const fieldsFor = (month: BillingMonthResponse) => [
+    ...(visible.fichas ? [{ label: "Fichas", value: money(month.fichasTotal) }] : []),
+    ...(visible.repuestos ? [
+      { label: "Repuestos · costo", value: money(month.repuestosCosto) },
+      { label: "Repuestos · precio final", value: money(month.repuestosVenta) },
+      { label: "Repuestos · ganancia", value: money(month.repuestosGanancia) },
+    ] : []),
+    ...(visible.accesorios ? [
+      { label: "Accesorios · costo", value: money(month.accesoriosCosto) },
+      { label: "Accesorios · precio final", value: money(month.accesoriosVenta) },
+      { label: "Accesorios · ganancia", value: money(month.accesoriosGanancia) },
+    ] : []),
+    ...(visible.sinFicha ? [
+      { label: "Sin ficha · costo", value: money(month.pedidosSinFichaCosto) },
+      { label: "Sin ficha · precio final", value: money(month.pedidosSinFichaVenta) },
+    ] : []),
+    { label: "Facturación del mes", value: money(monthSales(month)), wide: true },
+  ];
   return <AviantoPage className="reports-page">
-    <AviantoPageHeader title="Reportes" description="Indicadores del taller y actividad registrada por cliente." />
-    {loadError ? <EmptyState title="No se pudieron cargar los reportes" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : !data ? <LoadingState label="Cargando indicadores..." /> : <>
-      <div className="metrics avianto-metrics">{data.summary.map((item) => <Metric key={item.etiqueta} label={item.etiqueta} value={Number(item.valor).toLocaleString("es-AR")} tone="blue" detail={metricDetails[item.etiqueta] ?? "Registros del taller"} />)}</div>
-      <AviantoPanel className="record-list-panel reports-clients-panel">
-        <div className="panel-head"><div><h2>Fichas por cliente</h2><p>Cantidad de fichas asociadas a cada cliente del padrón.</p></div><span className="muted">{data.clients.totalElements} clientes</span></div>
-        {data.clients.content.length ? <AviantoRecordList label="Fichas por cliente" records={data.clients.content.map((client) => ({ id: client.id, title: client.nombre, fields: [{ label: "Fichas registradas", value: client.fichas ?? 0, wide: true }] }))} /> : <EmptyState title="Todavía no hay clientes" body="La actividad se mostrará cuando haya clientes registrados en el taller." />}
-        <Pagination page={page} total={data.clients.totalPages || 1} onPage={setPage} />
+    <AviantoPageHeader title="Reportes" description="Facturación por mes, gasto y ganancia en repuestos, con total general." />
+    {loadError ? <EmptyState title="No se pudieron cargar los reportes" body={loadError} action={<button className="button secondary" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>} /> : !months ? <LoadingState label="Cargando reportes..." /> : <>
+      <div className="metrics avianto-metrics">
+        <Metric label="Facturación total" value={money(totals.facturacion)} tone="blue" detail="Fichas, repuestos y accesorios a precio final" />
+        <Metric label="Gasto en repuestos" value={money(totals.costo)} tone="blue" detail="Precio de costo de todos los pedidos" />
+        <Metric label="Ganancia en repuestos" value={money(totals.ganancia)} tone="green" detail={`Recargo del ${GANANCIA_REPUESTOS_PCT}% sobre el costo`} />
+      </div>
+      <fieldset className="report-toggles">
+        <legend>Mostrar desglose</legend>
+        {REPORT_BLOCKS.map((block) => <label key={block.key} className="report-toggle">
+          <input type="checkbox" checked={visible[block.key]} onChange={(event) => setVisible((all) => ({ ...all, [block.key]: event.target.checked }))} />
+          <span>{block.label}</span>
+        </label>)}
+      </fieldset>
+      <AviantoPanel className="record-list-panel reports-panel">
+        <div className="panel-head"><div><h2>Facturación por mes</h2><p>Las fichas se agrupan por fecha de ingreso; los pedidos sin ficha, por fecha del pedido.</p></div></div>
+        {months.length ? <AviantoRecordList label="Facturación por mes" records={months.map((month) => ({ id: month.mes, title: monthLabel(month.mes), fields: fieldsFor(month) }))} /> : <EmptyState title="Todavía no hay facturación" body="Los reportes se completan cuando haya fichas o pedidos de repuestos registrados." />}
       </AviantoPanel>
     </>}
   </AviantoPage>;

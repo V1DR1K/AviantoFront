@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowDownUp, Download, Edit3, Eye, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download } from "../lib/api";
-import { integerInput, money, parseIntegerInput, parsePrice, priceInput } from "../lib/format";
+import { GANANCIA_REPUESTOS_PCT, integerInput, money, parseIntegerInput, parsePrice, precioFinal, priceInput } from "../lib/format";
 import { daysAgoInAr, formatDateInAr, todayInAr } from "../lib/dates";
 import type {
   ClienteResponse,
@@ -91,7 +91,8 @@ export function RepuestosView({
               { label: "Cliente", value: repuesto.cliente, wide: true },
               { label: "Estado", value: <StatusBadge status={repuesto.estado} /> },
               { label: "Pago", value: <StatusBadge status={repuesto.estadoPago} /> },
-              { label: "Total", value: money(repuesto.total), wide: true },
+              { label: "Costo", value: money(repuesto.totalCosto) },
+              { label: "Precio final", value: money(repuesto.totalVenta), wide: true },
             ], actions: <>
               <button type="button" className="text-button" onClick={() => onOpen(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} />Abrir pedido</button>
               {editable && <><button type="button" className="text-button secondary" onClick={() => { setEditing(repuesto); loadClients(); }} aria-label={`Editar pedido ${repuesto.numero}`}><Edit3 size={17} />Editar</button><button type="button" className="text-button danger-action" onClick={() => setDeleting(repuesto)} aria-label={`Eliminar pedido ${repuesto.numero}`}><Trash2 size={17} />Eliminar</button></>}
@@ -152,7 +153,7 @@ export function CreateRepuestoDialog({
   const [fichas, setFichas] = useState<FichaResponse[]>([]);
   const [fichaId, setFichaId] = useState(initial?.fichaId ?? prefill?.fichaId ?? "");
   const [rows, setRows] = useState<{ key: string; descripcion: string; tipo: string; cantidad: string; precio: string; estado?: string; fichaTrabajoId?: string }[]>(initial?.items.length
-    ? initial.items.map((item) => ({ key: crypto.randomUUID(), descripcion: item.descripcion, tipo: item.tipo === "ACCESORIO" ? "Accesorio" : "Repuesto", cantidad: String(item.cantidad), precio: String(item.precio), estado: item.estado, fichaTrabajoId: item.fichaTrabajoId ?? undefined }))
+    ? initial.items.map((item) => ({ key: crypto.randomUUID(), descripcion: item.descripcion, tipo: item.tipo === "ACCESORIO" ? "Accesorio" : "Repuesto", cantidad: String(item.cantidad), precio: String(item.precioCosto), estado: item.estado, fichaTrabajoId: item.fichaTrabajoId ?? undefined }))
     : [{ key: crypto.randomUUID(), descripcion: "", tipo: "Repuesto", cantidad: "1", precio: "" }]);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
@@ -202,7 +203,8 @@ export function CreateRepuestoDialog({
     }));
   };
   const fichaTrabajos = fichas.find((ficha) => ficha.id === fichaId)?.trabajos ?? [];
-  const subtotal = rows.reduce((sum, row) => sum + Number(row.cantidad) * parsePrice(row.precio), 0);
+  const subtotalCosto = rows.reduce((sum, row) => sum + Number(row.cantidad) * parsePrice(row.precio), 0);
+  const subtotalVenta = rows.reduce((sum, row) => sum + Number(row.cantidad) * precioFinal(parsePrice(row.precio)), 0);
   const save = async () => {
     const items = rows.filter((row) => row.descripcion.trim() && Number(row.cantidad) > 0);
     if (!clientId || !motoId || !items.length) return onError("Seleccioná cliente, moto y al menos un ítem.");
@@ -240,13 +242,14 @@ export function CreateRepuestoDialog({
               <SelectField value={row.fichaTrabajoId ?? ""} onChange={(value) => setRow(row.key, { fichaTrabajoId: value || undefined })} ariaLabel="Trabajo" disabled={!fichaId} placeholder="Sin trabajo" options={fichaTrabajos.map((trabajo) => ({ value: trabajo.id, label: trabajo.descripcion }))} />
               <input type="text" inputMode="numeric" min="1" value={integerInput(row.cantidad)} onChange={(event) => setRow(row.key, { cantidad: event.target.value })} onBlur={() => setRow(row.key, { cantidad: String(parseIntegerInput(row.cantidad)) })} aria-label="Cantidad" />
               <input inputMode="decimal" value={priceInput(row.precio)} onChange={(event) => setRow(row.key, { precio: event.target.value })} placeholder="Precio" aria-label="Precio" />
-              <strong>{money(Number(row.cantidad) * parsePrice(row.precio))}</strong>
+              <strong>{money(Number(row.cantidad) * parsePrice(row.precio))}<small> costo</small></strong>
+              <small className="repuesto-final">{money(Number(row.cantidad) * precioFinal(parsePrice(row.precio)))} final</small>
               <button type="button" className="remove-item" aria-label="Quitar ítem" onClick={() => setRows((all) => all.filter((r) => r.key !== row.key))}>×</button>
             </div>
           ))}
           <button type="button" className="text-button" onClick={() => setRows((all) => [...all, { key: crypto.randomUUID(), descripcion: "", tipo: "Repuesto", cantidad: "1", precio: "" }])}><Plus size={17} />Agregar ítem</button>
         </div>
-        <div className="repuesto-total"><span>Total del pedido</span><strong>{money(subtotal)}</strong></div>
+        <div className="repuesto-total"><span>Costo del pedido</span><strong>{money(subtotalCosto)}</strong><span>Precio final (+{GANANCIA_REPUESTOS_PCT}%)</span><strong>{money(subtotalVenta)}</strong></div>
         <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Cancelar</button><button className="button primary" disabled={saving}>{saving ? "Guardando..." : initial ? "Guardar cambios" : "Guardar pedido"}</button></div>
       </form>
     </Dialog>
@@ -304,8 +307,8 @@ export function RepuestoDetail({
   const patch = async (path: string, body: Record<string, string>) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(path, { method: "PATCH", body: JSON.stringify(body) }); setRepuesto(next); return next; } catch (reason) { notify(errorMessage(reason), "error"); throw reason; } finally { setPending(false); } };
   return (
     <AviantoPage>
-      <AviantoRecordHero eyebrow={repuesto.numero} title={repuesto.patente} subtitle={`${repuesto.cliente} · ${date(repuesto.fecha)}`} status={<><StatusBadge status={repuesto.estado} /><StatusBadge status={repuesto.estadoPago} /></>} actions={<><strong className="avianto-record-total">{money(repuesto.total)}</strong>{!locked && <button className="button secondary" onClick={() => setEditOpen(true)}><Edit3 size={17} />Editar pedido</button>}</>} onBack={onBack} backLabel="Volver a repuestos" />
-      <PaymentLedger resource="repuestos" documentId={repuesto.id} documentState={repuesto.estado} estadoPago={repuesto.estadoPago} total={repuesto.total} montoCobrado={repuesto.montoCobrado} saldoPendiente={repuesto.saldoPendiente} onDocumentChange={load} notify={notify} />
+      <AviantoRecordHero eyebrow={repuesto.numero} title={repuesto.patente} subtitle={`${repuesto.cliente} · ${date(repuesto.fecha)}`} status={<><StatusBadge status={repuesto.estado} /><StatusBadge status={repuesto.estadoPago} /></>} actions={<><strong className="avianto-record-total">{money(repuesto.totalVenta)}</strong>{!locked && <button className="button secondary" onClick={() => setEditOpen(true)}><Edit3 size={17} />Editar pedido</button>}</>} onBack={onBack} backLabel="Volver a repuestos" />
+      <PaymentLedger resource="repuestos" documentId={repuesto.id} documentState={repuesto.estado} estadoPago={repuesto.estadoPago} total={repuesto.totalVenta} montoCobrado={repuesto.montoCobrado} saldoPendiente={repuesto.saldoPendiente} onDocumentChange={load} notify={notify} />
       <section className="detail-grid">
         <div className="form-stack">
           <section className="panel">
@@ -314,8 +317,10 @@ export function RepuestoDetail({
               id: item.id, title: item.descripcion, fields: [
                 { label: "Tipo", value: item.tipo },
                 { label: "Cantidad", value: Number(item.cantidad) },
-                { label: "Precio", value: money(item.precio) },
-                { label: "Subtotal", value: money(item.subtotal) },
+                { label: "Costo", value: money(item.precioCosto) },
+                { label: "Precio final", value: money(item.precioVenta) },
+                { label: "Subtotal costo", value: money(item.subtotalCosto) },
+                { label: "Subtotal final", value: money(item.subtotalVenta) },
                 { label: "Estado", value: <StatusBadge status={item.estado} />, wide: true },
               ], actions: !locked && <SelectField value="" disabled={pending} onChange={(value) => value && void setItemState(item.id, value as RepuestoItemState)} ariaLabel={`Cambiar estado de ${item.descripcion}`} placeholder="Cambiar estado…" options={nextItemStates(item.estado).map((option) => ({ value: option, label: option }))} />,
             }))} />
@@ -329,7 +334,8 @@ export function RepuestoDetail({
             <div><dt>Cliente</dt><dd>{repuesto.cliente}</dd></div>
             <div><dt>Proveedor</dt><dd>{repuesto.proveedor || "—"}</dd></div>
           </dl>
-          <div className="total"><span>Total</span><strong>{money(repuesto.total)}</strong></div>
+          <div className="total"><span>Costo</span><strong>{money(repuesto.totalCosto)}</strong></div>
+          <div className="total"><span>Total final</span><strong>{money(repuesto.totalVenta)}</strong></div>
           <div className="summary-group">
             <h4>Estado del pedido</h4>
             <div className="summary-actions">
