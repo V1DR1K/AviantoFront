@@ -11,7 +11,10 @@
   color: var(--muted);
 }
 
+/* La imagen ocupa el marco completo; si el marco no tiene la misma proporción, la foto no se estira. */
 .vehicle-image img {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
@@ -49,10 +52,15 @@
 }
 
 /* Tarjeta de perfil: la miniatura ocupa el ancho de la tarjeta. */
+/* La foto entra completa (sin recortar) en un marco horizontal 4:3, que es la proporción habitual de las fotos del celular. */
 .avianto-profile-thumb {
   grid-column: 1 / -1;
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 4 / 3;
+}
+
+.avianto-profile-thumb img {
+  object-fit: contain;
 }
 
 /* Selector de foto dentro de formularios. */
