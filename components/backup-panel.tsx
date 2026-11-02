@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, Cloud, Copy, HardDrive, Loader2, Link2Off, ShieldCheck } from "lucide-react";
-import { api } from "../lib/api";
+import { AlertTriangle, CheckCircle2, Cloud, Copy, HardDrive, Link2Off, Loader2, ShieldCheck } from "lucide-react";
+import { api, apiUrl } from "../lib/api";
+import { authenticatedFetch } from "../lib/auth";
 import { ConfirmModal, type Notify } from "./ui";
 
 type Run = { id: string; startedAt: string; finishedAt: string | null; trigger: "MANUAL" | "AUTO"; status: "RUNNING" | "OK" | "PARCIAL" | "ERROR"; fileName: string | null; sizeBytes: number | null; localResult: string | null; driveResult: string | null; message: string | null };
 type BackupStatus = {
   running: boolean; destinoLocal: boolean; destinoDrive: boolean; autoEnabled: boolean; autoHour: number; subcarpeta: string; retentionDays: number;
   local: { hostDir: string; containerDir: string; effectiveDir: string; writable: boolean };
-  drive: { hasCredentials: boolean; clientId: string | null; connected: boolean; account: string | null; folderName: string | null; redirectUri: string };
+  drive: { connected: boolean; account: string | null; folderName: string | null };
   history: Run[];
 };
 type Draft = { destinoLocal: boolean; destinoDrive: boolean; autoEnabled: boolean; autoHour: number; subcarpeta: string; retentionDays: number };
@@ -28,8 +29,11 @@ export function BackupSection({ notify }: { notify: Notify }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [starting, setStarting] = useState(false);
-  const [credentials, setCredentials] = useState({ clientId: "", clientSecret: "" });
-  const [editingCredentials, setEditingCredentials] = useState(false);
+  const [scriptUrl, setScriptUrl] = useState("");
+  const [editingLink, setEditingLink] = useState(false);
+  const [linking, setLinking] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [copying, setCopying] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const wasRunning = useRef(false);
   const draftTouched = useRef(false);
@@ -60,16 +64,6 @@ export function BackupSection({ notify }: { notify: Notify }) {
     return () => window.clearInterval(timer);
   }, [status?.running, status?.history, load, notify]);
 
-  // Retorno desde Google después de vincular la cuenta.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const result = params.get("drive");
-    if (!result) return;
-    if (result === "ok") notify("Google Drive quedó vinculado.");
-    else notify(params.get("detalle") ?? "No se pudo vincular Google Drive.", "error");
-    window.history.replaceState(null, "", window.location.pathname);
-  }, [notify]);
-
   if (loadError) return <section className="panel backup-section"><BackupHead /><p className="bk-alert bk-alert-error" role="alert">{loadError} <button type="button" className="button secondary" onClick={() => void load()}>Reintentar</button></p></section>;
   if (!status || !draft) return <section className="panel backup-section"><BackupHead /><div className="table-loading" role="status">Cargando copias de seguridad...</div></section>;
 
@@ -94,18 +88,25 @@ export function BackupSection({ notify }: { notify: Notify }) {
     catch (reason) { notify(requestError(reason), "error"); await load(); } finally { setStarting(false); }
   };
 
-  const saveCredentials = async () => {
+  const copyScript = async () => {
+    setCopying(true);
     try {
-      const next = await api<BackupStatus>("/configuracion/backups/drive/credentials", { method: "PUT", body: JSON.stringify(credentials) });
-      setStatus(next); setEditingCredentials(false); setCredentials({ clientId: "", clientSecret: "" });
-      draftTouched.current = false; setDraft(draftOf(next));
-      notify("Datos de Google guardados. Ahora conectá tu cuenta.");
-    } catch (reason) { notify(requestError(reason), "error"); }
+      const response = await authenticatedFetch(apiUrl("/configuracion/backups/drive/script"));
+      if (!response.ok) throw new Error("No se pudo preparar el script. Probá de nuevo.");
+      const code = await response.text();
+      if (!navigator.clipboard) throw new Error("Este navegador no permite copiar. Probá con otro navegador.");
+      await navigator.clipboard.writeText(code);
+      notify("Script copiado. Pegalo en script.google.com.");
+    } catch (reason) { notify(requestError(reason), "error"); } finally { setCopying(false); }
   };
 
-  const connect = async () => {
-    try { const { url } = await api<{ url: string }>("/configuracion/backups/drive/connect", { method: "POST" }); window.location.assign(url); }
-    catch (reason) { notify(requestError(reason), "error"); }
+  const link = async () => {
+    setLinking(true); setLinkError(null);
+    try {
+      const next = await api<BackupStatus>("/configuracion/backups/drive/link", { method: "PUT", body: JSON.stringify({ scriptUrl: scriptUrl.trim() }) });
+      setStatus(next); setScriptUrl(""); setEditingLink(false); draftTouched.current = false; setDraft(draftOf(next));
+      notify(`Google Drive quedó vinculado como ${next.drive.account ?? "tu cuenta"}.`);
+    } catch (reason) { setLinkError(requestError(reason)); } finally { setLinking(false); }
   };
 
   const disconnect = async () => {
@@ -115,8 +116,7 @@ export function BackupSection({ notify }: { notify: Notify }) {
     } catch (reason) { notify(requestError(reason), "error"); throw reason; }
   };
 
-  const copyRedirect = () => { void navigator.clipboard?.writeText(status.drive.redirectUri).then(() => notify("Dirección copiada."), () => notify("No se pudo copiar. Seleccionala y copiala a mano.", "warning")); };
-  const showCredentialForm = !status.drive.hasCredentials || editingCredentials;
+  const showLinkForm = !status.drive.connected || editingLink;
 
   return (
     <section className="panel backup-section" aria-labelledby="backup-title">
@@ -156,42 +156,37 @@ export function BackupSection({ notify }: { notify: Notify }) {
 
           <div className="bk-card">
             <h3><Cloud size={18} aria-hidden="true" />Google Drive</h3>
-            {status.drive.connected && !editingCredentials ? <>
+            {!showLinkForm ? <>
               <p className="bk-state ok"><CheckCircle2 size={16} aria-hidden="true" />Conectado como <strong>{status.drive.account}</strong>. Las copias se suben a la carpeta «{status.drive.folderName}» de tu Drive.</p>
               <div className="bk-actions">
                 <button type="button" className="button secondary" onClick={() => setConfirmDisconnect(true)}><Link2Off size={16} aria-hidden="true" />Desvincular cuenta</button>
-                <button type="button" className="button tertiary" onClick={() => { setCredentials({ clientId: status.drive.clientId ?? "", clientSecret: "" }); setEditingCredentials(true); }}>Cambiar datos de Google</button>
+                <button type="button" className="button tertiary" onClick={() => { setScriptUrl(""); setLinkError(null); setEditingLink(true); }}>Cambiar script</button>
               </div>
             </> : <>
-              {showCredentialForm ? <>
-                <p>Para que Avianto pueda guardar archivos en <em>tu</em> Google Drive, Google pide crear una «llave» gratuita a nombre de tu cuenta. Se hace una sola vez y lleva unos 10 minutos.</p>
-                <details className="bk-help">
-                  <summary>¿Cómo la creo? Ver los pasos</summary>
-                  <ol>
-                    <li>Entrá a <strong>console.cloud.google.com</strong> con la cuenta de Google donde querés guardar las copias y creá un proyecto nuevo (por ejemplo «Avianto»).</li>
-                    <li>En el buscador escribí <strong>Google Drive API</strong>, abrila y tocá <strong>Habilitar</strong>.</li>
-                    <li>Abrí el menú <strong>Google Auth Platform</strong> (antes «Pantalla de consentimiento de OAuth») y tocá <strong>Comenzar</strong>. Nombre de la app: «Avianto»; email de asistencia: el tuyo; <strong>Público: Externo</strong>.</li>
-                    <li>En <strong>Público</strong> (Audience) tocá <strong>Publicar la app</strong> / <strong>En producción</strong>. Si queda en «Prueba», Google corta la conexión cada 7 días.</li>
-                    <li>En <strong>Clientes</strong> tocá <strong>Crear cliente</strong>. Tipo de aplicación: <strong>Aplicación web</strong>.</li>
-                    <li>En <strong>URIs de redireccionamiento autorizados</strong> pegá exactamente esta dirección: <code className="bk-path inline">{status.drive.redirectUri}</code> <button type="button" className="button tertiary bk-inline-button" onClick={copyRedirect}><Copy size={14} aria-hidden="true" />Copiar</button></li>
-                    <li>Google muestra el <strong>ID de cliente</strong> y el <strong>Secreto de cliente</strong>. Copiá el secreto en ese momento (después no se vuelve a mostrar) y pegá los dos en los campos de abajo.</li>
-                  </ol>
-                </details>
-                <label className="bk-field"><span>ID de cliente</span><input value={credentials.clientId} autoComplete="off" spellCheck={false} placeholder="123456789-abc.apps.googleusercontent.com" onChange={(event) => setCredentials({ ...credentials, clientId: event.target.value })} /></label>
-                <label className="bk-field"><span>Secreto de cliente</span><input type="password" value={credentials.clientSecret} autoComplete="new-password" spellCheck={false} placeholder={status.drive.hasCredentials ? "Dejalo vacío para conservar el actual" : "GOCSPX-..."} onChange={(event) => setCredentials({ ...credentials, clientSecret: event.target.value })} /></label>
-                <div className="bk-actions">
-                  <button type="button" className="button primary" disabled={!credentials.clientId.trim() || (!credentials.clientSecret.trim() && !status.drive.hasCredentials)} onClick={() => void saveCredentials()}>Guardar datos de Google</button>
-                  {editingCredentials && <button type="button" className="button tertiary" onClick={() => setEditingCredentials(false)}>Cancelar</button>}
-                </div>
-              </> : <>
-                <p className="bk-state warn"><AlertTriangle size={16} aria-hidden="true" />Los datos de Google están guardados, pero falta conectar tu cuenta.</p>
-                <p>Al tocar el botón se abre Google: elegí tu cuenta y aceptá. Avianto solo podrá ver los archivos que ella misma cree (la carpeta «Avianto Backups»), nunca el resto de tu Drive.</p>
-                <div className="bk-actions">
-                  <button type="button" className="button primary" onClick={() => void connect()}><Cloud size={16} aria-hidden="true" />Conectar con Google</button>
-                  <button type="button" className="button tertiary" onClick={() => { setCredentials({ clientId: status.drive.clientId ?? "", clientSecret: "" }); setEditingCredentials(true); }}>Cambiar datos de Google</button>
-                </div>
-              </>}
-              {status.drive.connected && editingCredentials && <p className="bk-note">Al guardar nuevos datos se desvincula la cuenta actual y habrá que conectarla otra vez.</p>}
+              <p>Avianto guarda las copias en tu Google Drive mediante un script que publicás desde tu propia cuenta de Google. No hace falta crear nada en la consola de Google. Se hace una sola vez y lleva unos 5 minutos.</p>
+              <details className="bk-help">
+                <summary>¿Cómo lo vinculo? Ver los pasos</summary>
+                <ol>
+                  <li>Tocá <strong>Copiar script</strong>. Se copia el código de Avianto al portapapeles. Contiene la clave de conexión: no lo compartas.</li>
+                  <li>Entrá a <strong>script.google.com</strong> con la cuenta de Google donde querés guardar las copias. Tocá <strong>Nuevo proyecto</strong>, borrá lo que tenga y pegá el código.</li>
+                  <li>Elegí la función <strong>probar</strong> en la barra de arriba y tocá <strong>Ejecutar</strong>. Google pide permisos para ver y crear archivos en tu Drive: aceptalos. Si aparece una advertencia de que la aplicación no está verificada, tocá <strong>Configuración avanzada</strong> y seguí. Es tu propio script.</li>
+                  <li>Tocá <strong>Implementar</strong> → <strong>Nueva implementación</strong> → tipo <strong>Aplicación web</strong>. En «Ejecutar como» elegí <strong>Yo</strong> y en «Quién tiene acceso» elegí <strong>Cualquier persona</strong>. Tocá <strong>Implementar</strong>.</li>
+                  <li>Copiá la <strong>URL de la aplicación web</strong> (termina en <code>/exec</code>) y pegala abajo.</li>
+                </ol>
+              </details>
+              <div className="bk-actions">
+                <button type="button" className="button primary" disabled={copying} onClick={() => void copyScript()}><Copy size={16} aria-hidden="true" />{copying ? "Copiando..." : "Copiar script"}</button>
+              </div>
+              <label className="bk-field"><span>URL de la aplicación web</span>
+                <input value={scriptUrl} autoComplete="off" spellCheck={false} placeholder="https://script.google.com/macros/s/.../exec" onChange={(event) => { setScriptUrl(event.target.value); setLinkError(null); }} />
+                <small>Tiene que empezar con <code>https://script.google.com/macros/s/</code> y terminar en <code>/exec</code>.</small>
+              </label>
+              {linkError && <p className="bk-alert bk-alert-error" role="alert"><AlertTriangle size={16} aria-hidden="true" />{linkError}</p>}
+              <div className="bk-actions">
+                <button type="button" className="button primary" disabled={!scriptUrl.trim() || linking} aria-busy={linking || undefined} onClick={() => void link()}>{linking ? "Probando conexión..." : "Vincular y probar"}</button>
+                {editingLink && <button type="button" className="button tertiary" onClick={() => setEditingLink(false)}>Cancelar</button>}
+              </div>
+              <p className="bk-note">Si cambiás el código del script, volvé a implementarlo con Implementar → Administrar implementaciones → Editar → Nueva versión. Crear una «Nueva implementación» cambia la URL y hay que pegar la nueva acá.</p>
             </>}
           </div>
         </li>
@@ -208,7 +203,7 @@ export function BackupSection({ notify }: { notify: Notify }) {
           <label className="bk-field inline"><span>¿Cuánto tiempo conservar las copias?</span>
             <select value={String(draft.retentionDays)} onChange={(event) => set({ retentionDays: Number(event.target.value) })}>{retentionOptions.map((days) => <option key={days} value={days}>{days} días</option>)}</select>
           </label>
-          <p className="bk-note">Las copias más viejas se borran solas para no llenar el disco. Siempre se conservan las 3 más recientes.</p>
+          <p className="bk-note">Las copias más viejas se borran solas para no llenar el disco. Siempre se conservan las 3 más recientes. En Google Drive, las copias borradas van a la papelera de Drive.</p>
           <div className="bk-summary" aria-live="polite">
             <ShieldCheck size={18} aria-hidden="true" />
             <span>{noDestination ? "Todavía no elegiste dónde guardar." : draft.autoEnabled ? <>Se hará una copia <strong>todos los días a las {String(draft.autoHour).padStart(2, "0")}:00</strong> y se guardará en <strong>{summary}</strong>.</> : <>La copia automática está <strong>desactivada</strong>. Solo se harán copias cuando vos lo pidas (paso 4).</>}</span>
@@ -240,7 +235,7 @@ export function BackupSection({ notify }: { notify: Notify }) {
         </li>
       </ol>
 
-      <ConfirmModal open={confirmDisconnect} title="Desvincular Google Drive" body="Avianto dejará de subir copias a tu Drive. Las copias que ya están en Drive no se borran. Si la copia automática usaba Drive, pasará a guardarse solo en esta PC." confirmLabel="Desvincular" onClose={() => setConfirmDisconnect(false)} onConfirm={async () => { setConfirmDisconnect(false); await disconnect(); }} />
+      <ConfirmModal open={confirmDisconnect} title="Desvincular Google Drive" body="Avianto dejará de subir copias a tu Drive. Las copias que ya están en Drive no se borran, y el script queda en tu cuenta de Google (podés borrarlo cuando quieras). Si la copia automática usaba Drive, pasará a guardarse solo en esta PC." confirmLabel="Desvincular" onClose={() => setConfirmDisconnect(false)} onConfirm={async () => { setConfirmDisconnect(false); await disconnect(); }} />
     </section>
   );
 }
