@@ -6,6 +6,8 @@ import { api } from "../lib/api";
 import { integerInput, parseIntegerInput, yearInput } from "../lib/format";
 import type { AutocompleteResponse, ClienteResponse, MarcaMotoResponse, PageResponse, PerfilResponse } from "../lib/types";
 import { AbmFormModal } from "./modal/abm-form-modal";
+import { VehiclePhotoField } from "./vehicle-image";
+import { applyVehiclePhoto, discardVehiclePhoto, type VehiclePhotoChange } from "../lib/vehicle-image";
 import { AutocompleteField, Dialog, SelectField, StatusBadge, type Notify } from "./ui";
 
 const loadClientOptions = (query: string) =>
@@ -24,6 +26,7 @@ export function IntakeView({ open, initialPlate, onClose, onOpenProfile, canStar
   const [busy, setBusy] = useState(false);
   const [brandsError, setBrandsError] = useState<string | null>(null);
   const autoSearchedPlate = useRef<string | null>(null);
+  const [photo, setPhoto] = useState<VehiclePhotoChange | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -70,6 +73,12 @@ export function IntakeView({ open, initialPlate, onClose, onOpenProfile, canStar
     try {
       const current = profile ?? await api<PerfilResponse>("/perfiles", { method: "POST", body: JSON.stringify({ ...values, anio: values.anio ? parseIntegerInput(values.anio) : null, kilometraje: values.kilometraje ? parseIntegerInput(values.kilometraje) : null }) });
       const next = await api<PerfilResponse>(`/motovehiculos/${current.id}/ingreso`, { method: "POST", body: JSON.stringify({ seccion: section }) });
+      try {
+        await applyVehiclePhoto(current.id, photo);
+      } catch (reason) {
+        notify(`La moto se ingresó, pero no se pudo guardar la foto: ${reason instanceof Error ? reason.message : "error desconocido"}`, "warning");
+      }
+      discardVehiclePhoto(photo); setPhoto(null);
       notify(section === "TALLER" ? "Moto ingresada en Taller." : "Moto ingresada y disponible en venta.");
       onOpenProfile(next.id);
     } catch (reason) { notify(reason instanceof Error ? reason.message : "No se pudo ingresar la moto.", "error"); }
@@ -79,19 +88,20 @@ export function IntakeView({ open, initialPlate, onClose, onOpenProfile, canStar
   const brandOptions = brands.length
     ? brands.map((brand) => ({ value: brand.id, label: brand.nombre }))
     : [{ value: "__brands-empty", label: loadingBrands ? "Cargando marcas..." : "No hay marcas disponibles", disabled: true }];
-  const dirty = searched || Object.keys(values).length > 0 || section !== "TALLER";
+  const dirty = searched || Object.keys(values).length > 0 || section !== "TALLER" || photo !== null;
   return <Dialog open={open} title="Ingresar una moto" onClose={onClose} wide className="intake-modal" dirty={dirty}>
      <p>Buscá la moto y elegí el destino operativo antes de abrir su perfil.</p>
       <section className="panel intake-card">
         <div className="intake-field">
           <label htmlFor="intake-plate">Dominio</label>
           <div className="plate-search">
-            <input id="intake-plate" value={plate} onChange={(event) => { setPlate(event.target.value); setSearched(false); setProfile(null); setValues({}); setClientQuery(""); setSelectedClient(null); }} placeholder="Ej.: AB 123 CD" autoComplete="off" onKeyDown={(event) => { if (event.key === "Enter") void search(); }} />
+            <input id="intake-plate" value={plate} onChange={(event) => { setPlate(event.target.value); setSearched(false); setProfile(null); setValues({}); setClientQuery(""); setSelectedClient(null); discardVehiclePhoto(photo); setPhoto(null); }} placeholder="Ej.: AB 123 CD" autoComplete="off" onKeyDown={(event) => { if (event.key === "Enter") void search(); }} />
             <button type="button" className="button secondary" disabled={busy} onClick={() => void search()}><Search size={17} />Buscar</button>
           </div>
         </div>
         {searched && profile && <div className="intake-found"><div><strong>{profile.patente}</strong><span>{profile.marca} {profile.modelo} · {profile.propietario ?? "Sin propietario"}</span></div><StatusBadge status={profile.estado} /></div>}
         {searched && !profile && <section className="intake-new-profile"><h3>Perfil nuevo</h3><div className="two-col"><SelectField label="Marca" value={values.marcaId ?? ""} onChange={(value) => set("marcaId", value)} placeholder="Seleccionar" options={brandOptions} required /><label className="intake-field">Modelo<input value={values.modelo ?? ""} onChange={(event) => set("modelo", event.target.value)} placeholder="Ej.: Wave 110, FZ 25..." autoComplete="off" required /></label><label className="intake-field">Año<input type="text" inputMode="numeric" value={yearInput(values.anio)} onChange={(event) => set("anio", event.target.value)} /></label><label className="intake-field">Kilometraje actual<input type="text" inputMode="numeric" value={integerInput(values.kilometraje)} onChange={(event) => set("kilometraje", event.target.value)} /></label><div className="intake-client-picker form-field-wide"><span>Cliente</span><AutocompleteField value={clientQuery} onChange={(value) => { setClientQuery(value); clearClient(); }} onSelect={chooseClient} onClear={clearClient} selected={selectedClient} loadOptions={loadClientOptions} minChars={2} placeholder="Nombre, apellido, DNI o teléfono" ariaLabel="Buscar cliente" emptyText="No encontramos clientes con esta búsqueda." emptyAction={<button type="button" className="autocomplete-empty-action" onClick={() => setNewClientOpen(true)}><Plus size={16} />Agregar cliente</button>} />{selectedClient ? <div className="intake-client-selection"><span>Cliente seleccionado</span><strong>{selectedClient.label}</strong>{selectedClient.secondary && <small>{selectedClient.secondary}</small>}</div> : <small>Escribí al menos dos caracteres y seleccioná un cliente existente.</small>}</div><label className="intake-field form-field-wide">Observaciones<textarea value={values.observaciones ?? ""} onChange={(event) => set("observaciones", event.target.value)} /></label></div></section>}
+     {searched && (!profile || !profile.ingresada) && <VehiclePhotoField current={profile ? { motoId: profile.id, version: profile.imagenActualizadaAt } : null} change={photo} onChange={setPhoto} onError={(message) => notify(message, "error")} />}
      </section>
       {searched && <section className="panel intake-destination"><h2>Destino de ingreso</h2><div className="intake-options"><button type="button" className={section === "TALLER" ? "selected" : ""} onClick={() => setSection("TALLER")}><strong>Taller</strong><span>Fichas de trabajo y pedidos de repuestos.</span></button><button type="button" className={section === "VENTA" ? "selected" : ""} onClick={() => setSection("VENTA")} disabled={!canStartSale} aria-describedby={!canStartSale ? "intake-sales-role-note" : undefined}><strong>Ventas</strong><span>{canStartSale ? "Crea una ficha de venta para comprador y transferencia." : "Disponible solo para Administración."}</span></button></div>{!canStartSale && <p id="intake-sales-role-note" className="intake-role-note">Las motos de venta se ingresan desde Administración.</p>}<button className="button primary large" disabled={busy || Boolean(profile?.ingresada)} onClick={() => void submit()}><ArrowRight size={18} />{busy ? "Ingresando..." : "Ingresar y abrir perfil"}</button></section>}
        <AbmFormModal key={newClientOpen ? "new-client-open" : "new-client-closed"} open={newClientOpen} resource="cliente" mode="agregar" initialValues={{ nombre: clientQuery }} fields={[{ key: "nombre", label: "Nombre y apellido", required: true, wide: true }, { key: "documento", label: "DNI", required: true }, { key: "telefono", label: "Teléfono", type: "tel" }, { key: "direccion", label: "Dirección", wide: true }]} onClose={() => setNewClientOpen(false)} onSubmit={async (clientValues) => { const client = await api<ClienteResponse>("/clientes", { method: "POST", body: JSON.stringify(clientValues) }); chooseClient({ id: client.id, label: client.nombre, secondary: client.documento ?? client.telefono }); setNewClientOpen(false); notify("Cliente creado y seleccionado."); }} onError={(message) => notify(message, "error")} />

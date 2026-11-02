@@ -4,6 +4,7 @@ import "../components/avianto-mobile.css";
 import "../components/avianto-layout.css";
 import "../components/avianto-records.css";
 import "../components/avianto-workflow.css";
+import "../components/vehicle-image.css";
 import "../components/backup-panel.css";
 export const metadata: Metadata = {
   title: "Avianto | Mecánica integral de motos",

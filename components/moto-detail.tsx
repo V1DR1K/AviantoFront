@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { ArrowDownUp, ArrowRightLeft, Eye, FileText, Filter, LogIn, Plus, Settings2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowDownUp, ArrowRightLeft, Camera, Eye, FileText, Filter, LogIn, Plus, Settings2 } from "lucide-react";
 import { api } from "../lib/api";
 import { integerInput, money, parseIntegerInput } from "../lib/format";
 import { formatDateInAr, formatDateShortInAr, todayInAr } from "../lib/dates";
@@ -18,10 +18,12 @@ import type {
   TransferResponse,
   VentaFichaResponse,
 } from "../lib/types";
-import { Dialog, EmptyState, FilterBar, LoadingState, Pagination, SelectField, StatusBadge, type Notify } from "./ui";
+import { ConfirmModal, Dialog, EmptyState, FilterBar, LoadingState, Pagination, SelectField, StatusBadge, type Notify } from "./ui";
 import { AviantoPanel } from "./avianto-layout";
 import { AviantoRecordList } from "./avianto-records";
 import { AviantoTabs, ServiceCard, VehicleField } from "./avianto-mobile";
+import { VehicleImage } from "./vehicle-image";
+import { prepareVehicleImage, removeVehicleImage, saveVehicleImage } from "../lib/vehicle-image";
 
 const date = formatDateInAr;
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
@@ -95,6 +97,9 @@ export function MotoDetail({
   const [circuitTarget, setCircuitTarget] = useState<"TALLER" | "VENTA" | null>(null);
   const [circuitReason, setCircuitReason] = useState("");
   const [circuitSaving, setCircuitSaving] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoRemoving, setPhotoRemoving] = useState(false);
+  const photoInput = useRef<HTMLInputElement>(null);
 
   const load = useCallback((signal?: AbortSignal) =>
     void api<MotovehiculoResponse>(`/motovehiculos/${id}`, { signal })
@@ -121,6 +126,31 @@ export function MotoDetail({
     void api<VentaFichaResponse>(`/motovehiculos/${id}/venta`, { signal: controller.signal }).then(setSaleFicha).catch(() => { if (!controller.signal.aborted) setSaleFicha(null); });
     return () => controller.abort();
   }, [id, moto?.seccion]);
+
+  const uploadPhoto = async (file: File | undefined) => {
+    if (!file || photoBusy) return;
+    setPhotoBusy(true);
+    try {
+      await saveVehicleImage(id, await prepareVehicleImage(file));
+      notify("Foto de la moto guardada.");
+      load();
+    } catch (reason) {
+      notify(errorMessage(reason), "error");
+    } finally {
+      setPhotoBusy(false);
+      if (photoInput.current) photoInput.current.value = "";
+    }
+  };
+  const removePhoto = async () => {
+    setPhotoRemoving(false);
+    try {
+      await removeVehicleImage(id);
+      notify("Foto de la moto quitada.");
+      load();
+    } catch (reason) {
+      notify(errorMessage(reason), "error");
+    }
+  };
 
   const addService = async () => {
     if (!serviceKm) return notify("Ingresá el kilometraje del service.", "error");
@@ -214,6 +244,14 @@ export function MotoDetail({
         <button className="moto-profile-back" onClick={onBack}><span aria-hidden="true">←</span> Volver a perfiles</button>
         <div className="moto-profile-hero-inner">
           <h1>{moto.patente}</h1>
+          <figure className="moto-profile-photo">
+            <VehicleImage motoId={moto.id} version={moto.imagenActualizadaAt} tamano="completa" eager alt={`Foto de la moto ${moto.patente}`} />
+            <figcaption className="moto-profile-photo-actions">
+              <button type="button" className="moto-profile-action" disabled={photoBusy} onClick={() => photoInput.current?.click()}><Camera size={18} aria-hidden="true" />{photoBusy ? "Guardando foto..." : moto.imagenActualizadaAt ? "Cambiar foto" : "Subir foto"}</button>
+              {moto.imagenActualizadaAt && <button type="button" className="moto-profile-action" disabled={photoBusy} onClick={() => setPhotoRemoving(true)}>Quitar foto</button>}
+              <input ref={photoInput} type="file" accept="image/*,.heic,.heif" hidden aria-label="Elegir foto de la moto" onChange={(event) => void uploadPhoto(event.target.files?.[0])} />
+            </figcaption>
+          </figure>
           <div className="moto-profile-summary" aria-label="Resumen de la moto">
             <VehicleField label="Moto" value={moto.marca} />
             <VehicleField label="Modelo" value={moto.modelo} />
@@ -226,6 +264,7 @@ export function MotoDetail({
           <div className="moto-profile-state"><span>Estado</span><StatusBadge status={moto.estado} /></div>
         </div>
       </header>
+      <ConfirmModal open={photoRemoving} title="Quitar foto" body="La foto de la moto se eliminará. Podés subir otra cuando quieras." confirmLabel="Quitar foto" onClose={() => setPhotoRemoving(false)} onConfirm={removePhoto} />
       <AviantoTabs tabs={tabs} active={tab} onChange={(value) => setTab(value as typeof tab)} />
       <div id="moto-tab-panel" className="moto-profile-content" role="tabpanel" tabIndex={0} aria-label={tabs.find((item) => item.id === tab)?.label}>
       {tab === "general" && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { Dialog, SelectField, type SelectOption } from "../ui";
 import { integerInput, parseIntegerInput, priceInput, yearInput } from "../../lib/format";
 import type { ClienteResponse, MarcaMotoResponse } from "../../lib/types";
@@ -26,6 +26,8 @@ export function AbmFormModal({
   onClose,
   onSubmit,
   onError,
+  extra,
+  extraDirty = false,
 }: {
   open: boolean;
   resource: string;
@@ -35,6 +37,8 @@ export function AbmFormModal({
   onClose: () => void;
   onSubmit: (values: Record<string, string>) => void | Promise<unknown>;
   onError?: (message: string) => void;
+  extra?: ReactNode;
+  extraDirty?: boolean;
 }) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -46,7 +50,7 @@ export function AbmFormModal({
     return String(value ?? "");
   };
   const baselineFor = (field: AbmField) => field.type === "number" ? (field.key === "anio" ? yearInput(initial[field.key] as number | string | null | undefined) : integerInput(initial[field.key] as number | string | null | undefined)) : field.type === "currency" ? priceInput(initial[field.key]) : String(initial[field.key] ?? "");
-  const dirty = fields.some((field) => valueFor(field) !== baselineFor(field));
+  const dirty = extraDirty || fields.some((field) => valueFor(field) !== baselineFor(field));
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (saving) return;
@@ -117,6 +121,7 @@ export function AbmFormModal({
             )}
           </label>
         ))}
+        {extra}
         <div className="modal-actions">
           <button type="button" className="button secondary" onClick={onClose} disabled={saving}>
             Cancelar

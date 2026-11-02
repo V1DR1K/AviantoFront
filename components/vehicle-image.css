@@ -1,0 +1,126 @@
+/* Foto de la moto: miniaturas en listas, foto grande en el perfil y selector en formularios. */
+
+.vehicle-image {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  background: var(--color-surface-muted, #efeae2);
+  color: var(--muted);
+}
+
+.vehicle-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vehicle-image-placeholder {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  color: var(--muted);
+}
+
+.vehicle-image-placeholder small {
+  font-size: var(--text-xs);
+}
+
+.vehicle-image-loading {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.06), transparent) 0 0 / 200% 100%;
+  animation: vehicle-image-shimmer 1.2s linear infinite;
+}
+
+@keyframes vehicle-image-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vehicle-image-loading { animation: none; }
+}
+
+/* Tarjeta de perfil: la miniatura ocupa el ancho de la tarjeta. */
+.avianto-profile-thumb {
+  grid-column: 1 / -1;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+}
+
+/* Selector de foto dentro de formularios. */
+.vehicle-photo-field {
+  display: grid;
+  gap: 8px;
+}
+
+.vehicle-photo-title {
+  font-weight: 600;
+}
+
+.vehicle-photo-body {
+  display: grid;
+  grid-template-columns: minmax(160px, 240px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.vehicle-photo-frame {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.vehicle-photo-frame img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.vehicle-photo-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.vehicle-photo-actions small {
+  color: var(--muted);
+}
+
+/* Foto en el encabezado del perfil de la moto. */
+.moto-profile-photo {
+  grid-column: 1 / -1;
+  justify-self: center;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(100%, 360px);
+  margin: 0;
+}
+
+.moto-profile-photo .vehicle-image {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--brand-white);
+}
+
+.moto-profile-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .vehicle-photo-body {
+    grid-template-columns: 1fr;
+  }
+}

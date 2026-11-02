@@ -9,6 +9,8 @@ import { AbmFormModal, type AbmField } from "./modal/abm-form-modal";
 import { ConfirmModal, EmptyState, FilterBar, LoadingState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 import { StatusRail, VehicleCard, VehicleField } from "./avianto-mobile";
 import { AviantoPageHeader } from "./avianto-layout";
+import { VehicleImage, VehiclePhotoField } from "./vehicle-image";
+import { applyVehiclePhoto, discardVehiclePhoto, type VehiclePhotoChange } from "../lib/vehicle-image";
 
 const profileStates = ["Disponible", "Ingresada Taller", "Pendiente", "En proceso", "En revisión", "Terminada", "Entregada", "En venta", "Transferencia en proceso", "Vendida"];
 
@@ -27,6 +29,7 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
   const [editing, setEditing] = useState<PerfilResponse | null>(null);
   const [deleting, setDeleting] = useState<PerfilResponse | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [photo, setPhoto] = useState<VehiclePhotoChange | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -58,9 +61,12 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
     if (!editing) return;
     try {
       await api(`/motovehiculos/${editing.id}`, { method: "PUT", body: JSON.stringify({ ...values, anio: values.anio ? parseIntegerInput(values.anio) : null, kilometraje: values.kilometraje ? parseIntegerInput(values.kilometraje) : null }) });
+      await applyVehiclePhoto(editing.id, photo);
+      discardVehiclePhoto(photo); setPhoto(null);
       setEditing(null); setReloadKey((key) => key + 1); notify("Perfil actualizado.");
     } catch (reason) { notify(reason instanceof Error ? reason.message : "No se pudo actualizar el perfil.", "error"); }
   };
+  const closeEditor = () => { discardVehiclePhoto(photo); setPhoto(null); setEditing(null); };
   const removeProfile = async () => {
     if (!deleting) return;
     const selected = deleting;
@@ -92,6 +98,7 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
             <button type="button" className="text-button" onClick={() => setEditing(profile)}>Editar</button>
             <button type="button" className="text-button danger-action" onClick={() => setDeleting(profile)}>Eliminar</button>
           </div>}>
+            <VehicleImage motoId={profile.id} version={profile.imagenActualizadaAt} tamano="miniatura" className="avianto-profile-thumb" alt={`Foto de ${profile.patente}`} />
             <VehicleField label="Moto" value={profile.marca} />
             <VehicleField label="Modelo" value={profile.modelo} />
             <VehicleField label="Año" value={profile.anio ?? "—"} />
@@ -105,7 +112,7 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
         <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
       </div>
     </div>
-     <AbmFormModal key={String(editing?.id ?? "new")} open={editing !== null} resource="perfil" mode="modificar" initialValues={editing ?? {}} fields={profileFields} onClose={() => setEditing(null)} onSubmit={saveProfile} onError={(message) => notify(message, "error")} />
+     <AbmFormModal key={String(editing?.id ?? "new")} open={editing !== null} resource="perfil" mode="modificar" initialValues={editing ?? {}} fields={profileFields} onClose={closeEditor} onSubmit={saveProfile} onError={(message) => notify(message, "error")} extraDirty={photo !== null} extra={<VehiclePhotoField current={editing ? { motoId: editing.id, version: editing.imagenActualizadaAt } : null} change={photo} onChange={setPhoto} onError={(message) => notify(message, "error")} />} />
      <ConfirmModal open={deleting !== null} title="Eliminar perfil" body={`Vas a dar de baja la moto ${deleting?.patente ?? "seleccionada"}. El historial se conservará y no se eliminará de la base de datos.`} confirmLabel="Eliminar perfil" onClose={() => setDeleting(null)} onConfirm={removeProfile} />
   </div>;
 }
