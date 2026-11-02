@@ -9,6 +9,7 @@ import { ConfirmModal, Dialog, EmptyState, FilterBar, LoadingState, Pagination, 
 import { AbmFormModal, type AbmField, VehicleAbmModal } from "./modal/abm-form-modal";
 import { AviantoRecordList } from "./avianto-records";
 import { AviantoPage, AviantoPageHeader, AviantoPanel } from "./avianto-layout";
+import { BackupSection } from "./backup-panel";
 
 type Resource = "clients" | "vehicles" | "catalog" | "audit";
 type DataRow = Record<string, string | number | boolean | null | undefined>;
@@ -205,7 +206,7 @@ type Setting = { title: string; description: string; endpoint: string; fields: A
 const settings: Setting[] = [{ title: "Marcas de motos", description: "Opciones disponibles en el alta y edición de motos.", endpoint: "/configuracion/marcas-moto", fields: [{ key: "nombre", label: "Marca", required: true, wide: true }], name: (item) => String(item.nombre) }, { title: "Categorías de revisión", description: "Agrupaciones de controles para el checklist de entrega.", endpoint: "/configuracion/categorias", fields: [{ key: "nombre", label: "Categoría", required: true, wide: true }], name: (item) => String(item.nombre) }, { title: "Usuarios del sistema", description: "Usuarios y perfiles de acceso del taller.", endpoint: "/configuracion/usuarios", fields: [{ key: "username", label: "Usuario", required: true }, { key: "nombre", label: "Nombre", required: true }, { key: "email", label: "Email", type: "email" }, { key: "rol", label: "Perfil", type: "select", required: true, options: [{ value: "ADMINISTRACION", label: "Administración" }, { value: "OPERARIO", label: "Operario" }] }, { key: "password", label: "Contraseña", type: "password" }], name: (item) => `${item.nombre} · ${item.rol === "ADMINISTRACION" ? "Administración" : "Operario"}` }];
 
 export function SettingsView({ notify }: { notify: Notify }) {
-  return <AviantoPage className="settings-page"><AviantoPageHeader title="Administración" description="Marcas, categorías, usuarios y la carpeta de transferencia." /><section className="settings-grid avianto-settings-grid">{settings.map((setting) => <ConfigSection key={setting.endpoint} setting={setting} notify={notify} />)}<SaleChecklistSection notify={notify} /></section></AviantoPage>;
+  return <AviantoPage className="settings-page"><AviantoPageHeader title="Administración" description="Marcas, categorías, usuarios, carpeta de transferencia y copias de seguridad." /><section className="settings-grid avianto-settings-grid">{settings.map((setting) => <ConfigSection key={setting.endpoint} setting={setting} notify={notify} />)}<SaleChecklistSection notify={notify} /><BackupSection notify={notify} /></section></AviantoPage>;
 }
 
 function ConfigSection({ setting, notify }: { setting: Setting; notify: Notify }) {

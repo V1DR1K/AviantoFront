@@ -1,0 +1,70 @@
+.avianto-settings-grid > .backup-section { grid-column: 1 / -1; min-width: 0; overflow: hidden; padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius-surface); background: var(--brand-white); box-shadow: var(--shadow-card); }
+.bk-head { padding: 22px; background: var(--brand-blue); color: var(--brand-white); }
+.bk-head h2 { margin: 0 0 6px; font-size: 1.125rem; color: var(--brand-white); }
+.bk-head p { max-width: 74ch; margin: 0; font-size: .9375rem; line-height: 1.5; color: rgb(255 255 255 / .9); }
+.bk-steps { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.bk-step { display: grid; gap: 14px; padding: 22px; border-bottom: 1px solid var(--color-border); }
+.bk-step:last-child { border-bottom: 0; }
+.bk-step-title { display: flex; gap: 14px; align-items: flex-start; }
+.bk-step-title h3 { margin: 0; font-size: 1.0625rem; }
+.bk-step-title p { margin: 4px 0 0; color: var(--color-text-muted); font-size: .9375rem; line-height: 1.45; }
+.bk-number { display: grid; flex: 0 0 32px; width: 32px; height: 32px; place-items: center; border-radius: 50%; background: var(--brand-blue); color: var(--brand-white); font-weight: 700; }
+.bk-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.bk-option { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 12px; align-items: start; padding: 16px; border: 2px solid var(--color-border); border-radius: var(--radius-surface); background: var(--brand-white); cursor: pointer; }
+.bk-option.selected { border-color: var(--brand-blue); background: var(--brand-blue-soft); }
+.bk-option.disabled { cursor: not-allowed; opacity: .78; }
+.bk-option input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--brand-blue); }
+.bk-option strong { display: block; margin-bottom: 4px; }
+.bk-option small { display: block; color: var(--color-text-muted); font-size: .875rem; line-height: 1.45; }
+.bk-card { display: grid; gap: 10px; padding: 16px 18px; border: 1px solid var(--color-border); border-radius: var(--radius-surface); background: var(--color-surface-subtle); }
+.bk-card h3 { display: flex; gap: 8px; align-items: center; margin: 0; font-size: 1rem; }
+.bk-card p, .bk-step p { margin: 0; line-height: 1.5; }
+.bk-path { display: block; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--brand-white); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .875rem; overflow-wrap: anywhere; }
+.bk-path.inline { display: inline-block; margin: 4px 0; }
+.bk-state { display: flex; gap: 8px; align-items: flex-start; font-weight: 600; }
+.bk-state.ok { color: var(--color-success); }
+.bk-state.warn { color: var(--color-warning); }
+.bk-state.bad { color: var(--color-danger); }
+.bk-state svg { flex: 0 0 auto; margin-top: 3px; }
+.bk-note { color: var(--color-text-muted); font-size: .875rem; line-height: 1.5; }
+.bk-note.inline { display: inline-block; }
+.bk-field { display: grid; gap: 6px; font-weight: 600; }
+.bk-field.inline { grid-template-columns: auto minmax(120px, 220px); align-items: center; gap: 12px; }
+.bk-field small { color: var(--color-text-muted); font-weight: 400; font-size: .875rem; line-height: 1.45; }
+.bk-field input, .bk-field select { min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-field); background: var(--brand-white); font: inherit; font-weight: 400; }
+.bk-field input:focus-visible, .bk-field select:focus-visible, .bk-switch input:focus-visible, .bk-option input:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.bk-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.bk-switch { display: flex; gap: 12px; align-items: center; font-weight: 600; cursor: pointer; }
+.bk-switch input { width: 22px; height: 22px; accent-color: var(--brand-blue); }
+.bk-auto { display: grid; gap: 8px; padding-left: 34px; }
+.bk-summary { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; background: var(--color-success-soft); color: var(--color-text); line-height: 1.5; }
+.bk-summary svg { flex: 0 0 auto; margin-top: 2px; color: var(--color-success); }
+.bk-help { padding: 12px 14px; border: 1px dashed var(--color-border-strong); border-radius: 10px; background: var(--brand-white); }
+.bk-help summary { cursor: pointer; font-weight: 700; color: var(--brand-blue); }
+.bk-help ol { display: grid; gap: 10px; margin: 12px 0 0; padding-left: 22px; line-height: 1.5; }
+.bk-inline-button { min-height: 32px; padding: 4px 10px; }
+.bk-alert { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 22px; padding: 12px 14px; border-radius: 10px; }
+.bk-alert-warning { margin: 0; background: var(--color-warning-soft); color: var(--color-warning); }
+.bk-alert-error { background: var(--color-danger-soft); color: var(--color-danger); }
+.bk-result { display: grid; gap: 4px; padding: 14px 16px; border-radius: 10px; border: 1px solid var(--color-border); line-height: 1.45; }
+.bk-result strong { display: flex; gap: 8px; align-items: center; }
+.bk-result.ok { border-color: var(--color-success); background: var(--color-success-soft); }
+.bk-result.parcial { border-color: var(--color-warning); background: var(--color-warning-soft); }
+.bk-result.error { border-color: var(--color-danger-border); background: var(--color-danger-soft); }
+.bk-history summary { cursor: pointer; font-weight: 700; color: var(--brand-blue); }
+.bk-history ul { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.bk-history li { display: flex; gap: 10px; align-items: flex-start; }
+.bk-history small { display: block; color: var(--color-text-muted); overflow-wrap: anywhere; }
+.bk-dot { flex: 0 0 10px; width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; background: var(--color-text-muted); }
+.bk-dot.ok { background: var(--color-success); }
+.bk-dot.parcial { background: var(--color-warning); }
+.bk-dot.error { background: var(--color-danger); }
+.bk-spin { animation: bk-spin 1s linear infinite; }
+@keyframes bk-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .bk-spin { animation: none; } }
+@media (max-width: 760px) {
+  .bk-options { grid-template-columns: 1fr; }
+  .bk-field.inline { grid-template-columns: 1fr; }
+  .bk-auto { padding-left: 0; }
+  .bk-head, .bk-step { padding: 18px 16px; }
+}
