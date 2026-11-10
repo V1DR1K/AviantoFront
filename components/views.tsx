@@ -826,7 +826,7 @@ export function FichaDetail({
           <button type="button" className="button large secondary" onClick={() => void download(`/fichas/${ficha.id}/pdf`, `${ficha.numero}.pdf`).catch((reason) => notify(errorMessage(reason), "error"))}><FileDown size={18} aria-hidden="true" />Descargar PDF</button>
         </div>
       </div>
-      <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)} className="ficha-service-modal">
+      <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveService(); }}>
         <label>Kilometraje<input type="text" inputMode="numeric" value={integerInput(serviceKm)} onChange={(event) => setServiceKm(event.target.value)} required /></label>
           <label>Fecha<input type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
@@ -834,7 +834,7 @@ export function FichaDetail({
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setServiceOpen(false)}>Cancelar</button>{can("services.registrar") && <button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : "Guardar"}</button>}</div>
         </form>
       </Dialog>
-      <Dialog open={closeOpen} title="Aprobar revisión" onClose={() => setCloseOpen(false)} className="delivery-modal" dirty={selectedServiceIds.length > 0}>
+      <Dialog open={closeOpen} title="Aprobar revisión" onClose={() => setCloseOpen(false)} dirty={selectedServiceIds.length > 0}>
          <p>Seleccioná los services previos que quieras asociar a la ficha antes de continuar.</p>
         {priorServices.length > 0 && <section className="ficha-service-options"><h3>Services previos sin ficha</h3>{priorServices.map((service) => <label key={service.id} className="line-check"><input type="checkbox" checked={selectedServiceIds.includes(service.id)} onChange={(event) => setSelectedServiceIds((ids) => event.target.checked ? [...ids, service.id] : ids.filter((id) => id !== service.id))} /><span>{date(service.fecha)} · {service.kilometraje} km{service.observaciones ? ` · ${service.observaciones}` : ""}</span></label>)}</section>}
         {!priorServices.length && <p>No hay services previos para asociar.</p>}

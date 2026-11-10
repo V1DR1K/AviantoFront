@@ -166,22 +166,6 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
 .moto-profile-table > .panel-head { margin-bottom: 20px; }
 .moto-profile-table > .filter-bar { margin-bottom: 20px; }
 
-.service-modal { --modal-width: 650px; overflow: visible; border: 0; border-radius: 24px; background: var(--brand-blue); color: var(--brand-white); }
-.service-modal .modal-header { justify-content: center; padding-bottom: 0; border: 0; }
-.service-modal .modal-header h2 { margin-top: -46px; padding: 13px 34px; border: 1px solid var(--brand-blue); border-radius: var(--radius-control); background: var(--brand-white); color: var(--brand-blue); }
-.service-modal .dialog-close { position: absolute; top: 16px; right: 16px; border-color: transparent; background: transparent; color: var(--brand-white); }
-.service-modal .record-form { gap: 12px; }
-.service-modal .record-form label { color: var(--brand-white); }
-.service-modal .record-form input,
-.service-modal .record-form textarea { width: 100%; min-width: 0; border: 0; background: var(--brand-white); color: var(--brand-blue); }
-.service-modal .modal-content,
-.service-modal .record-form { min-width: 0; overflow-x: hidden; }
-.service-modal-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-column: 1 / -1; }
-.service-modal-notes { grid-column: 1 / -1; }
-.service-modal-notes textarea { min-height: 140px; border-radius: 18px; }
-.service-modal .modal-actions { justify-content: center; margin-top: 8px; padding-top: 0; border: 0; }
-.service-modal .modal-actions .button.primary { width: min(320px, 100%); background: var(--brand-red); color: var(--brand-white); }
-.service-modal .modal-actions .button.secondary { border-color: var(--brand-white); background: transparent; color: var(--brand-white); }
 .empty { background-image: var(--asset-trama-2); background-position: center; background-size: 520px auto; }
 
 @media (max-width: 1199px) and (min-width: 768px) {
@@ -216,7 +200,7 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
   .page.avianto-detail-page { max-width: none; padding: 0; }
   .avianto-dashboard-screen,
   .avianto-profile-screen { gap: 12px; }
-  .avianto-screen-body { gap: 14px; padding: 0 12px 18px; }
+  .avianto-screen-body { gap: 14px; padding: 0 0 18px; }
   .avianto-dashboard-hero { grid-template-columns: .82fr 1.18fr; min-height: 0; padding: 16px 28px 18px; border-radius: 0; box-shadow: none; }
   .avianto-dashboard-hero .brand-logo-mark img { width: 185px; height: 138px; }
   .avianto-dashboard-hero h1 { font-size: .98rem; }
@@ -230,8 +214,8 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
   .avianto-metric-card b { font-size: .9rem; }
   .avianto-mobile-list { grid-template-columns: 1fr; gap: 18px; }
   .avianto-profile-intro { display: none; }
-  .avianto-profile-filters { padding: 0 12px; }
-  .avianto-vehicle-card { margin-inline: 2px; padding: 14px 18px 0; }
+  .avianto-profile-filters { padding: 0; }
+  .avianto-vehicle-card { margin-inline: 0; padding: 14px 18px 0; }
   body main.login-page { padding: 24px 18px; }
   body main.login-page::before { background-position: center 78%; background-size: 182vw auto; }
   body main.login-page .login-card { width: min(100%, 360px); padding: 40px 24px 28px; border-radius: 18px; }
@@ -270,9 +254,9 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
   .moto-profile-table { padding-inline: 12px; }
   .moto-profile-table > .panel-head { display: grid; }
   .moto-profile-table > .panel-head .button { width: 100%; }
-  .service-modal { width: min(100%, 580px); }
-  .service-modal .modal-content { padding: 14px 22px 22px; }
-  .service-modal .record-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  
+  
+  
 }
 
 @media (max-width: 420px) {

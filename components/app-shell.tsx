@@ -5,6 +5,7 @@ import { AviantoHeader, BottomNavigation } from "./avianto-mobile";
 import { aviantoHome, aviantoNavigationGroups, aviantoPrimaryNavigation, normalizeBottomNavigationPage } from "./avianto-navigation";
 import { AviantoSidebarNavigation } from "./avianto-sidebar-navigation";
 import { usePermission } from "./permissions-context";
+import { lockDocumentScroll, unlockDocumentScroll } from "../lib/scroll-lock";
 import { Plus, UserRound } from "lucide-react";
 export function AppShell({
   children,
@@ -35,8 +36,7 @@ export function AppShell({
   useEffect(() => {
     if (!menuOpen) return;
     previousFocus.current = document.activeElement as HTMLElement;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    lockDocumentScroll();
     const focusFirst = window.requestAnimationFrame(() => drawerRef.current?.querySelector<HTMLElement>("button, [href], input")?.focus());
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") { event.preventDefault(); setMenuOpen(false); return; }
@@ -49,7 +49,7 @@ export function AppShell({
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
     document.addEventListener("keydown", onKeyDown);
-    return () => { window.cancelAnimationFrame(focusFirst); document.removeEventListener("keydown", onKeyDown); document.body.style.overflow = previousOverflow; previousFocus.current?.focus(); };
+    return () => { window.cancelAnimationFrame(focusFirst); document.removeEventListener("keydown", onKeyDown); unlockDocumentScroll(); previousFocus.current?.focus(); };
   }, [menuOpen]);
   return (
     <div className={`app-shell${collapsed ? " sidebar-is-collapsed" : ""}`}>

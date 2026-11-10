@@ -7,6 +7,7 @@ import "../components/avianto-workflow.css";
 import "../components/vehicle-image.css";
 import "../components/backup-panel.css";
 import "../components/roles-view.css";
+import "../components/modal.css";
 export const metadata: Metadata = {
   title: "Avianto | Mecánica integral de motos",
   description: "Órdenes de trabajo, presupuestos e historial para talleres de motos.",

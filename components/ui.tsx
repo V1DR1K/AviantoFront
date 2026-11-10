@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type CSS
 import { AlertTriangle, Check, CheckCircle2, ChevronDown, Clock3, FileSearch, Info, Search, SlidersHorizontal, X, type LucideIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { AutocompleteResponse } from "../lib/types";
+import { lockDocumentScroll, unlockDocumentScroll } from "../lib/scroll-lock";
 
 export type ToastTone = "success" | "error" | "warning" | "info";
 export type ToastState = { message: string; tone: ToastTone };
@@ -53,18 +54,13 @@ function StatusIcon({ status }: { status: string }) {
   return <Clock3 size={14} />;
 }
 
-let openModalCount = 0;
-let priorBodyOverflow = "";
-
 function useModalFocus(open: boolean, onClose: () => void) {
   const ref = useRef<HTMLElement>(null);
   const prior = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!open) return;
     prior.current = document.activeElement as HTMLElement;
-    if (openModalCount === 0) priorBodyOverflow = document.body.style.overflow;
-    openModalCount += 1;
-    document.body.style.overflow = "hidden";
+    lockDocumentScroll();
     const frame = requestAnimationFrame(() =>
       ref.current
         ?.querySelector<HTMLElement>(
@@ -74,8 +70,7 @@ function useModalFocus(open: boolean, onClose: () => void) {
     );
     return () => {
       cancelAnimationFrame(frame);
-      openModalCount -= 1;
-      if (openModalCount === 0) document.body.style.overflow = priorBodyOverflow;
+      unlockDocumentScroll();
       prior.current?.focus();
     };
   }, [open]);
@@ -525,25 +520,29 @@ export function ConfirmModal({
       <section
         ref={modalRef}
         onKeyDownCapture={onModalKeyDown}
-        className={`modal confirm-modal ${className}`}
+        className={`modal confirm-modal${className ? ` ${className}` : ""}`}
+        data-size="sm"
+        data-tone={variant === "success" ? "success" : "danger"}
         role="dialog"
         tabIndex={-1}
         aria-modal="true"
         aria-labelledby={titleId}
       >
         <header className="modal-header">
-          <h2 id={titleId}>{title}</h2>
-          <button className="dialog-close" onClick={onClose} aria-label="Cerrar" disabled={pending}>
-            <X size={19} />
+          <div className="modal-heading">
+            <h2 id={titleId}>{title}</h2>
+          </div>
+          <button type="button" className="dialog-close" onClick={onClose} aria-label="Cerrar" disabled={pending}>
+            <X size={19} aria-hidden="true" />
           </button>
         </header>
         <div className="modal-content">
           <p>{body}</p>
           <div className="modal-actions">
-            <button className="button secondary" onClick={onClose} disabled={pending}>
+            <button type="button" className="button secondary" onClick={onClose} disabled={pending}>
               Cancelar
             </button>
-            <button className={`button ${variant}`} onClick={run} disabled={pending}>
+            <button type="button" className={`button ${variant}`} onClick={run} disabled={pending}>
               {pending ? "Esperando..." : confirmLabel}
             </button>
           </div>
@@ -552,20 +551,29 @@ export function ConfirmModal({
     </div>, document.body
   );
 }
+export type DialogSize = "sm" | "md" | "lg" | "xl";
+export type DialogTone = "brand" | "danger" | "success";
+
+// Modal estándar de la app. Estilos en components/modal.css:
+// size = ancho (sm 440px, md 560px, lg 780px, xl 980px); tone = color de la cabecera.
 export function Dialog({
   open,
   title,
+  description,
   children,
   onClose,
-  wide = false,
+  size = "md",
+  tone = "brand",
   className = "",
   dirty = false,
 }: {
   open: boolean;
   title: string;
+  description?: ReactNode;
   children: ReactNode;
   onClose: () => void;
-  wide?: boolean;
+  size?: DialogSize;
+  tone?: DialogTone;
   className?: string;
   dirty?: boolean;
 }) {
@@ -591,16 +599,21 @@ export function Dialog({
           }
           onModalKeyDown(event);
         }}
-        className={`modal form-modal${wide ? " wide" : ""} ${className}`}
+        className={`modal${className ? ` ${className}` : ""}`}
+        data-size={size}
+        data-tone={tone}
         role="dialog"
         tabIndex={-1}
         aria-modal="true"
         aria-labelledby={titleId}
       >
         <header className="modal-header">
-          <h2 id={titleId}>{title}</h2>
-          <button className="dialog-close" onClick={requestClose} aria-label="Cerrar">
-            <X size={19} />
+          <div className="modal-heading">
+            <h2 id={titleId}>{title}</h2>
+            {description && <p>{description}</p>}
+          </div>
+          <button type="button" className="dialog-close" onClick={requestClose} aria-label="Cerrar">
+            <X size={19} aria-hidden="true" />
           </button>
         </header>
         <div className="modal-content">{children}</div>

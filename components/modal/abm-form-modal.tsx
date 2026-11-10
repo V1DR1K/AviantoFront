@@ -69,11 +69,11 @@ export function AbmFormModal({
       open={open}
       title={`${mode === "agregar" ? "Agregar" : "Modificar"} ${resource}`}
       onClose={onClose}
-      wide
+      size="lg"
       dirty={dirty}
     >
       <form
-        className="record-form"
+        className="record-form modal-grid"
         onSubmit={(event) => void submit(event)}
       >
         {fields.map((field) => (
@@ -121,7 +121,7 @@ export function AbmFormModal({
             )}
           </label>
         ))}
-        {extra}
+        {extra && <div className="modal-span-2">{extra}</div>}
         <div className="modal-actions">
           <button type="button" className="button secondary" onClick={onClose} disabled={saving}>
             Cancelar

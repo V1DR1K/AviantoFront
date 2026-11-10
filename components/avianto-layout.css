@@ -356,19 +356,6 @@ html {
   display: none;
 }
 
-.modal-backdrop {
-  z-index: 80;
-  padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
-  backdrop-filter: blur(5px);
-}
-
-.modal,
-.confirm-modal,
-.intake-modal {
-  max-width: calc(100vw - 36px);
-  max-height: calc(100dvh - 36px);
-}
-
 .toast {
   z-index: 120;
 }
@@ -973,9 +960,8 @@ html {
   }
 
   .intake-new-profile .two-col,
-  .ficha-moto-fields,
-  .repuesto-pick,
-  .payment-form-grid {
+.ficha-moto-fields,
+.payment-form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -984,8 +970,7 @@ html {
     flex-direction: column;
   }
 
-  .section-add-desktop,
-  .repuesto-items-head {
+  .section-add-desktop {
     display: none;
   }
 
@@ -1006,19 +991,13 @@ html {
   }
 
   .order-form .line-item input,
-  .order-form .line-item label,
-  .repuesto-item input,
-  .repuesto-item label {
+.order-form .line-item label {
     min-width: 0;
   }
 
-  .repuesto-item {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  
 
-  .repuesto-item input:first-child {
-    grid-column: 1 / -1;
-  }
+  
 
   .sale-checklist-item,
   .revision-control-list > .revision-control {
@@ -1114,21 +1093,9 @@ html {
     max-width: none;
   }
 
-  .modal-backdrop {
-    align-items: flex-end;
-    padding: max(10px, env(safe-area-inset-top)) 0 0;
-  }
+  
 
-  .modal,
-  .confirm-modal,
-  .intake-modal {
-    width: 100%;
-    max-width: none;
-    max-height: calc(100dvh - max(10px, env(safe-area-inset-top)));
-    margin: 0;
-    border-radius: var(--radius-surface) var(--radius-surface) 0 0;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
+  
 
   .autocomplete-menu,
   .select-menu {
@@ -1162,20 +1129,6 @@ html {
 
   .avianto-record-summary {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 767px) {
-  .modal-backdrop:has(.service-modal) {
-    align-items: center;
-    padding: max(16px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
-  }
-
-  .modal-backdrop:has(.service-modal) .service-modal {
-    width: min(100%, 580px);
-    max-height: calc(100dvh - max(32px, env(safe-area-inset-top)) - max(32px, env(safe-area-inset-bottom)));
-    margin: auto;
-    border-radius: var(--radius-surface);
   }
 }
 
@@ -1428,7 +1381,7 @@ a { text-underline-offset: 3px; }
 .pagination button { min-height: 40px; padding: 8px 14px; border-radius: var(--radius-field); color: var(--brand-blue); }
 .pagination button:disabled { background: var(--color-surface-subtle); color: var(--color-text-muted); opacity: .65; }
 
-.app-shell .empty, .modal .empty { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 260px; gap: 0; padding: 36px 24px; overflow: hidden; background: var(--brand-white); text-align: center; }
+.app-shell .empty { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 260px; gap: 0; padding: 36px 24px; overflow: hidden; background: var(--brand-white); text-align: center; }
 .empty::before { position: absolute; inset: 0; z-index: -1; background: var(--asset-trama-2) center / 560px auto; content: ""; opacity: .035; pointer-events: none; }
 .empty .empty-mark { display: grid; place-items: center; width: 58px; height: 58px; margin: 0 0 16px; border-radius: var(--radius-surface); background: var(--brand-blue-soft); color: var(--brand-blue); }
 .empty h3 { margin: 0; color: var(--brand-blue); font-size: 1.125rem; font-weight: 700; }
@@ -1489,10 +1442,6 @@ a { text-underline-offset: 3px; }
 .wiki-payment-note { line-height: 1.65; }
 .wiki-section:target { outline: 2px solid var(--color-border-strong); outline-offset: 3px; }
 
-.modal-header { background: var(--brand-blue); color: var(--brand-white); }
-.modal-header h2 { color: var(--brand-white); font-size: 1.25rem; }
-.modal-header .dialog-close { border-color: rgb(255 255 255 / .45); background: transparent; color: var(--brand-white); }
-.modal-header :focus-visible { outline-color: var(--brand-white); }
 .record-form label { color: var(--brand-blue); font-weight: 650; }
 .record-form input, .record-form textarea { border-color: var(--color-border-strong); }
 .record-detail { overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-field); }
@@ -1558,7 +1507,7 @@ a { text-underline-offset: 3px; }
   .avianto-dashboard-hero h1 { font-size: 1.0625rem; }
   .avianto-profile-screen .avianto-page-heading { margin: 0; padding: 24px 20px; }
   .avianto-profile-screen .avianto-page-heading .avianto-mobile-cta { width: 100%; }
-  .avianto-profile-filters { padding-inline: 14px; }
+  .avianto-profile-filters { padding-inline: 0; }
   .avianto-settings-grid { grid-template-columns: 1fr; gap: 20px; }
   .avianto-settings-grid .config-head { min-height: auto; padding: 20px; }
   .avianto-settings-grid .config-list { max-height: 420px; padding-inline: 16px; }
@@ -1576,7 +1525,7 @@ a { text-underline-offset: 3px; }
   .wiki-definitions { grid-template-columns: 1fr; }
   .wiki-definitions > div { border-right: 0; }
   .wiki-callout { grid-template-columns: 1fr; padding: 16px; }
-  .modal-header { padding: 20px; }
+  
   .record-detail > div { padding: 12px; }
   .record-detail dt { width: 100%; }
   .moto-profile-state .status { color: var(--brand-blue); }

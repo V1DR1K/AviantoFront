@@ -492,7 +492,6 @@
 .ficha-detail-page .detail-work-item .status { display: inline-flex; font-size: var(--text-sm); }
 .ficha-table-note { margin: 0; padding: var(--space-4); color: var(--color-text-muted); text-align: center; }
 
-
 .ficha-disclosure { overflow: hidden; border: 1px solid var(--brand-blue); border-radius: var(--radius-control); background: var(--color-surface); }
 .ficha-disclosure > summary { display: flex; align-items: center; justify-content: space-between; min-height: var(--size-touch-target); gap: var(--space-2); padding: 8px 14px; color: var(--brand-blue); font-weight: 700; list-style: none; cursor: pointer; }
 .ficha-disclosure > summary::-webkit-details-marker { display: none; }
@@ -679,29 +678,6 @@
   .ficha-record-vehicle strong { min-height: 32px; padding-block: 4px; }
   .ficha-record-actions > strong,
   .ficha-record-actions > button { min-height: var(--size-touch-target); }
-}
-
-@media (max-width: 767px) {
-  .modal-backdrop:has(.payment-ledger-modal) {
-    align-items: center;
-    padding: max(12px, env(safe-area-inset-top)) 12px calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 12px);
-  }
-
-  .modal-backdrop:has(.payment-ledger-modal) .payment-ledger-modal {
-    width: 100%;
-    max-width: 540px;
-    max-height: calc(100dvh - max(12px, env(safe-area-inset-top)) - var(--mobile-nav-height) - env(safe-area-inset-bottom) - 12px);
-    margin: auto;
-    padding-bottom: 0;
-    border-radius: var(--radius-surface);
-  }
-
-  .payment-ledger-modal .dialog-close {
-    width: var(--size-touch-target);
-    height: var(--size-touch-target);
-  }
-
-  .payment-ledger-modal .modal-actions .button { min-height: var(--size-touch-target); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -460,22 +460,22 @@ export function MotoDetail({
         </AviantoPanel>
       )}
       </div>
-      <Dialog open={serviceOpen} title={serviceEditing ? "Editar service" : "Registrar Service"} className="service-modal" onClose={closeService} dirty={serviceDirty}>
+      <Dialog open={serviceOpen} title={serviceEditing ? "Editar service" : "Registrar Service"} onClose={closeService} dirty={serviceDirty}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveService(); }}>
           <label>Fecha<input type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
           <label>Kilometraje<input type="text" inputMode="numeric" value={integerInput(serviceKm)} onChange={(event) => setServiceKm(event.target.value)} required /></label>
-          {!serviceEditing && <div className="service-modal-summary"><VehicleField label="Próx. service" value={nextService?.proximaFecha ? date(nextService.proximaFecha) : "Sin referencia"} /><VehicleField label="Próx. km" value={nextService?.proximKm?.toLocaleString("es-AR") ?? "—"} /></div>}
-          <label className="service-modal-notes">Observaciones<textarea value={serviceNotes} onChange={(event) => setServiceNotes(event.target.value)} placeholder="Ej: cambio de aceite y filtros" /></label>
+          {!serviceEditing && <div className="modal-grid"><VehicleField label="Próx. service" value={nextService?.proximaFecha ? date(nextService.proximaFecha) : "Sin referencia"} /><VehicleField label="Próx. km" value={nextService?.proximKm?.toLocaleString("es-AR") ?? "—"} /></div>}
+          <label className="modal-span-2">Observaciones<textarea value={serviceNotes} onChange={(event) => setServiceNotes(event.target.value)} placeholder="Ej: cambio de aceite y filtros" /></label>
           <div className="modal-actions"><button type="button" className="button secondary" onClick={closeService}>Cancelar</button><button className="button primary" disabled={serviceSaving || !can(serviceEditing ? "services.editar" : "services.registrar")}>{serviceSaving ? "Guardando..." : serviceEditing ? "Guardar cambios" : "Guardar"}</button></div>
         </form>
       </Dialog>
-      <Dialog open={configOpen} title="Configurar service" className="service-modal" onClose={() => setConfigOpen(false)} dirty={configDirty}>
+      <Dialog open={configOpen} title="Configurar service" onClose={() => setConfigOpen(false)} dirty={configDirty}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveConfig(); }}>
           <label>Periodo en km<input type="text" inputMode="numeric" value={integerInput(configKm)} onChange={(event) => setConfigKm(event.target.value)} placeholder="Ej: 5.000" /></label>
           <label>Periodo en meses<input type="text" inputMode="numeric" value={integerInput(configMonths)} onChange={(event) => setConfigMonths(event.target.value)} placeholder="Ej: 6" /></label>
           <label>Próximo service (fecha)<input type="date" value={configProximaFecha} onChange={(event) => setConfigProximaFecha(event.target.value)} /></label>
-          <div className="service-modal-summary"><VehicleField label="Próx. service" value={nextService?.proximaFecha ? date(nextService.proximaFecha) : "Sin referencia"} /><VehicleField label="Próx. km" value={nextService?.proximKm?.toLocaleString("es-AR") ?? "—"} /></div>
-          <label className="service-modal-notes">Observaciones<textarea value={configNotes} onChange={(event) => setConfigNotes(event.target.value)} placeholder="Ej: cambio de aceite y filtros" /></label>
+          <div className="modal-grid"><VehicleField label="Próx. service" value={nextService?.proximaFecha ? date(nextService.proximaFecha) : "Sin referencia"} /><VehicleField label="Próx. km" value={nextService?.proximKm?.toLocaleString("es-AR") ?? "—"} /></div>
+          <label className="modal-span-2">Observaciones<textarea value={configNotes} onChange={(event) => setConfigNotes(event.target.value)} placeholder="Ej: cambio de aceite y filtros" /></label>
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setConfigOpen(false)}>Cancelar</button><button className="button primary" disabled={configSaving || !can("motos.editar")}>{configSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>
       </Dialog>

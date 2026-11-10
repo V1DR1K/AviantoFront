@@ -1,0 +1,310 @@
+/* Sistema único de modales (diálogos).
+   Todos los modales usan <Dialog> / <ConfirmModal> de components/ui.tsx, que renderizan esta estructura:
+     .modal-backdrop > .modal[data-size][data-tone] > .modal-header + .modal-content
+   Parámetros:
+     data-size: sm | md | lg | xl   (ancho del modal)
+     data-tone: brand (por defecto) | danger | success   (color de la cabecera)
+   Mobile (< 768px): hoja inferior a ancho completo; las acciones quedan fijas abajo. */
+
+:root {
+  --modal-gutter: 24px;
+  --modal-radius: 18px;
+  --modal-pad-x: 28px;
+  --modal-pad-y: 22px;
+}
+
+/* Bloqueo de scroll del documento mientras hay un modal abierto.
+   Se aplica al <html> (viewport): el body no alcanza porque html tiene overflow-x. */
+html.modal-open,
+html.modal-open body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: max(var(--modal-gutter), env(safe-area-inset-top)) max(var(--modal-gutter), env(safe-area-inset-right)) max(var(--modal-gutter), env(safe-area-inset-bottom)) max(var(--modal-gutter), env(safe-area-inset-left));
+  background: rgb(9 28 51 / 0.62);
+  backdrop-filter: blur(4px);
+  overscroll-behavior: contain;
+  animation: modal-backdrop-in 180ms ease-out both;
+}
+
+.modal {
+  --modal-width: 560px;
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(var(--modal-width), 100%);
+  max-height: calc(100dvh - 2 * var(--modal-gutter));
+  border: 1px solid rgb(48 52 139 / 0.14);
+  border-radius: var(--modal-radius);
+  background: var(--brand-white);
+  color: var(--brand-blue);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+  animation: modal-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.modal[data-size="sm"] { --modal-width: 440px; }
+.modal[data-size="md"] { --modal-width: 560px; }
+.modal[data-size="lg"] { --modal-width: 780px; }
+.modal[data-size="xl"] { --modal-width: 980px; }
+
+/* Cabecera */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: var(--modal-pad-y) var(--modal-pad-x);
+  background: var(--brand-blue);
+  color: var(--brand-white);
+}
+
+.modal[data-tone="danger"] .modal-header { background: var(--brand-red); }
+.modal[data-tone="success"] .modal-header { background: var(--color-success); }
+
+.modal-header h2 {
+  margin: 0;
+  color: inherit;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.modal-header .dialog-close {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.45);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--brand-white);
+  cursor: pointer;
+}
+
+.modal-header .dialog-close:hover { background: rgb(255 255 255 / 0.12); }
+.modal-header :focus-visible { outline-color: var(--brand-white); }
+
+/* Contenido: el scroll interno no se propaga al fondo */
+.modal-content {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--modal-pad-y) var(--modal-pad-x) var(--modal-pad-y);
+}
+
+.modal-content > p:first-child { margin-top: 0; }
+.modal p { margin: 0; color: var(--color-text-muted); }
+
+/* Pie de acciones: siempre a la derecha; en mobile queda fijo abajo */
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-border);
+}
+
+.modal-actions .button {
+  min-width: 140px;
+  min-height: 44px;
+}
+
+/* Bloques internos de formularios dentro de un modal */
+.modal-section {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface-subtle);
+}
+
+.modal-notice {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--color-surface-subtle);
+  color: var(--brand-blue);
+}
+
+/* Subtítulo opcional de la cabecera */
+.modal-heading { min-width: 0; }
+.modal-header p {
+  margin: 4px 0 0;
+  color: inherit;
+  font-size: 0.9375rem;
+  opacity: 0.85;
+}
+
+/* Grilla de campos dentro de un modal: 2 columnas; modal-span-2 ocupa las dos */
+.modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.modal-span-2 { grid-column: 1 / -1; }
+
+.record-form .modal-actions { grid-column: 1 / -1; }
+
+@media (max-width: 560px) {
+  .modal-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Mobile: hoja inferior */
+@media (max-width: 767px) {
+  .modal-backdrop {
+    place-items: end center;
+    padding: 0;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92dvh;
+    border-radius: 22px 22px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .modal-header { padding: 16px 18px; }
+  .modal-content { padding: 18px 18px 22px; }
+
+  .modal-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin: 16px -18px -22px;
+    padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
+    background: var(--brand-white);
+    box-shadow: 0 -10px 18px rgb(19 20 43 / 0.08);
+  }
+
+  .modal-actions .button {
+    flex: 1 1 140px;
+  }
+}
+
+@keyframes modal-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop,
+  .modal { animation: none; }
+}
+
+/* Pedido de repuestos (formulario xl): datos del pedido y líneas de ítems */
+.repuesto-pick {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px 14px;
+  align-items: end;
+}
+
+.repuesto-items {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--brand-white);
+}
+
+.repuesto-items-head,
+.repuesto-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) 120px minmax(0, 1.2fr) 84px 120px minmax(0, 1fr) 40px;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+}
+
+.repuesto-items-head {
+  background: var(--color-surface-subtle);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.repuesto-item { border-top: 1px solid var(--color-border); }
+
+.repuesto-item input,
+.repuesto-item select {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+}
+
+.repuesto-money {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.repuesto-money strong { font-size: 0.9375rem; }
+.repuesto-money small { color: var(--color-text-muted); font-size: 0.8125rem; }
+
+.repuesto-item .remove-item {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--brand-white);
+  color: var(--brand-red);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.repuesto-items > .text-button { margin: 12px 14px; }
+
+.repuesto-total {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 8px 14px;
+  align-items: center;
+  padding-top: 14px;
+  border-top: 2px solid var(--brand-blue);
+  font-weight: 700;
+}
+
+.repuesto-total strong {
+  justify-self: end;
+  font-size: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .repuesto-pick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .repuesto-items-head { display: none; }
+  .repuesto-item { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .repuesto-item > input:first-child { grid-column: 1 / -1; }
+  .repuesto-money { justify-items: start; }
+  .repuesto-total { grid-template-columns: 1fr auto; }
+}
+
+@media (max-width: 560px) {
+  .repuesto-pick { grid-template-columns: minmax(0, 1fr); }
+}

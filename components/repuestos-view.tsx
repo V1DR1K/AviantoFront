@@ -228,7 +228,7 @@ export function CreateRepuestoDialog({
   };
   const setRow = (key: string, changes: Partial<typeof rows[number]>) => setRows((all) => all.map((row) => row.key === key ? { ...row, ...changes } : row));
   return (
-    <Dialog open={open} title={initial ? "Editar pedido de repuesto" : "Nuevo pedido de repuesto"} onClose={onClose} wide dirty={Boolean(clientId || motoId || proveedor || rows.some((row) => row.descripcion || row.precio !== ""))}>
+    <Dialog open={open} title={initial ? "Editar pedido de repuesto" : "Nuevo pedido de repuesto"} onClose={onClose} size="xl" dirty={Boolean(clientId || motoId || proveedor || rows.some((row) => row.descripcion || row.precio !== ""))}>
       <form className="record-form repuesto-form" onSubmit={(event) => { event.preventDefault(); void save(); }}>
         <div className="repuesto-pick">
           <SelectField label="Cliente" value={clientId} onChange={changeClient} required placeholder="Seleccionar" options={clients.map((client) => ({ value: client.id, label: client.nombre }))} />
@@ -245,8 +245,7 @@ export function CreateRepuestoDialog({
               <SelectField value={row.fichaTrabajoId ?? ""} onChange={(value) => setRow(row.key, { fichaTrabajoId: value || undefined })} ariaLabel="Trabajo" disabled={!fichaId} placeholder="Sin trabajo" options={fichaTrabajos.map((trabajo) => ({ value: trabajo.id, label: trabajo.descripcion }))} />
               <input type="text" inputMode="numeric" min="1" value={integerInput(row.cantidad)} onChange={(event) => setRow(row.key, { cantidad: event.target.value })} onBlur={() => setRow(row.key, { cantidad: String(parseIntegerInput(row.cantidad)) })} aria-label="Cantidad" />
               <input inputMode="decimal" value={priceInput(row.precio)} onChange={(event) => setRow(row.key, { precio: event.target.value })} placeholder="Precio" aria-label="Precio" />
-              <strong>{money(Number(row.cantidad) * parsePrice(row.precio))}<small> costo</small></strong>
-              <small className="repuesto-final">{money(Number(row.cantidad) * precioFinal(parsePrice(row.precio)))} final</small>
+              <span className="repuesto-money"><strong>{money(Number(row.cantidad) * parsePrice(row.precio))}</strong><small>{money(Number(row.cantidad) * precioFinal(parsePrice(row.precio)))} final</small></span>
               <button type="button" className="remove-item" aria-label="Quitar ítem" onClick={() => setRows((all) => all.filter((r) => r.key !== row.key))}>×</button>
             </div>
           ))}

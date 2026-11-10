@@ -217,8 +217,8 @@ export function RolesView({ notify }: { notify: Notify }) {
         open={editor !== null}
         title={editor === null ? "" : editor.id ? (editor.readOnly ? "Permisos del rol" : "Editar rol") : "Nuevo rol"}
         onClose={closeEditor}
-        wide
-        className="roles-modal"
+        size="xl"
+       
         dirty={dirty}
       >
         {editor && catalog && (
