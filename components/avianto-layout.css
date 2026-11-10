@@ -7,6 +7,13 @@ body {
   overflow-x: clip;
 }
 
+/* Al abrir un modal se bloquea el scroll de la página. Sin esta regla, la barra de desplazamiento
+   desaparece y todo el layout (incluido el sidebar) se corre al ancho de la barra. Reservar el espacio
+   de la barra en forma estable evita ese salto. */
+html {
+  scrollbar-gutter: stable;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: var(--shell-sidebar-wide) minmax(0, 1fr);

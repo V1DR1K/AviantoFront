@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowDownUp, ArrowRightLeft, Camera, Eye, FileText, Filter, LogIn, Plus, Settings2 } from "lucide-react";
+import { ArrowDownUp, ArrowRightLeft, Camera, Eye, FileText, Filter, LogIn, Pencil, Plus, Settings2 } from "lucide-react";
 import { api } from "../lib/api";
 import { integerInput, money, parseIntegerInput } from "../lib/format";
 import { formatDateInAr, formatDateShortInAr, todayInAr } from "../lib/dates";
@@ -85,6 +85,7 @@ export function MotoDetail({
   const [repuestoPage, setRepuestoPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [serviceOpen, setServiceOpen] = useState(false);
+  const [serviceEditing, setServiceEditing] = useState<ServiceResponse | null>(null);
   const [serviceKm, setServiceKm] = useState("");
   const [serviceDate, setServiceDate] = useState("");
   const [serviceNotes, setServiceNotes] = useState("");
@@ -152,23 +153,47 @@ export function MotoDetail({
     }
   };
 
-  const addService = async () => {
+  const openNewService = () => {
+    setServiceEditing(null);
+    setServiceKm(moto?.kilometraje != null ? String(moto.kilometraje) : "");
+    setServiceDate(todayInAr());
+    setServiceNotes("");
+    setServiceOpen(true);
+  };
+  const openEditService = (service: ServiceResponse) => {
+    setServiceEditing(service);
+    setServiceKm(String(service.kilometraje));
+    setServiceDate(service.fecha);
+    setServiceNotes(service.observaciones ?? "");
+    setServiceOpen(true);
+  };
+  const closeService = () => {
+    setServiceOpen(false);
+    setServiceEditing(null);
+  };
+  const serviceDirty = serviceEditing
+    ? serviceKm !== String(serviceEditing.kilometraje) || serviceDate !== serviceEditing.fecha || serviceNotes !== (serviceEditing.observaciones ?? "")
+    : Boolean(serviceNotes);
+
+  const saveService = async () => {
     if (!serviceKm) return notify("Ingresá el kilometraje del service.", "error");
     if (serviceSaving) return;
     setServiceSaving(true);
+    const body = JSON.stringify({ kilometraje: parseIntegerInput(serviceKm), fecha: serviceDate || null, observaciones: serviceNotes || null });
     try {
-      await api<ServiceResponse>(`/motovehiculos/${id}/services`, {
-        method: "POST",
-        body: JSON.stringify({ kilometraje: parseIntegerInput(serviceKm), fecha: serviceDate || null, observaciones: serviceNotes || null }),
-      });
+      if (serviceEditing) {
+        await api<ServiceResponse>(`/motovehiculos/${id}/services/${serviceEditing.id}`, { method: "PUT", body });
+      } else {
+        await api<ServiceResponse>(`/motovehiculos/${id}/services`, { method: "POST", body });
+      }
       loadServices();
       void api<MotovehiculoResponse>(`/motovehiculos/${id}`).then(setMoto);
       loadNext();
-      setServiceOpen(false);
+      closeService();
       setServiceKm("");
       setServiceDate("");
       setServiceNotes("");
-      notify("Service registrado.");
+      notify(serviceEditing ? "Service actualizado." : "Service registrado.");
     } catch (reason) { notify(errorMessage(reason), "error"); } finally { setServiceSaving(false); }
   };
 
@@ -317,7 +342,7 @@ export function MotoDetail({
       )}
       {tab === "services" && (
         <section className="moto-profile-panel moto-profile-services">
-          <div className="moto-service-head"><h2 className="moto-section-title">Último service</h2><button className="button secondary moto-service-config" onClick={openConfig}><Settings2 size={18} />Configurar periodos</button></div>
+          <div className="moto-service-head"><h2 className="moto-section-title">Último service</h2><div className="moto-service-actions">{latestService && <button className="button secondary moto-service-config" onClick={() => openEditService(latestService)} aria-label="Editar último service"><Pencil size={18} />Editar último service</button>}<button className="button secondary moto-service-config" onClick={openConfig}><Settings2 size={18} />Configurar periodos</button></div></div>
           <div className="moto-service-feature">
             <div className="moto-service-feature-grid">
               <VehicleField label="Fecha" value={date(latestService?.fecha ?? moto.fechaUltimoService)} />
@@ -327,7 +352,7 @@ export function MotoDetail({
             </div>
             <div className="moto-service-notes"><strong>Observaciones ↓</strong><p>{latestService?.observaciones || moto.serviceObservaciones || "Sin observaciones."}</p></div>
           </div>
-          <button className="moto-service-new" disabled={serviceSaving} onClick={() => { setServiceKm(moto.kilometraje != null ? String(moto.kilometraje) : ""); setServiceDate(todayInAr()); setServiceOpen(true); }}><Plus size={19} />Nuevo service</button>
+          <button className="moto-service-new" disabled={serviceSaving} onClick={openNewService}><Plus size={19} />Nuevo service</button>
           <h3 className="moto-section-title moto-history-title">Historial</h3>
           <div className="moto-service-filters"><FilterBar activeCount={(serviceDesde ? 1 : 0) + (serviceHasta ? 1 : 0) + (serviceSort !== "fecha" ? 1 : 0)}>
              <label><span className="date-label">Desde</span><input type="date" value={serviceDesde} onChange={(event) => { setServiceDesde(event.target.value); setServicePage(1); }} /></label>
@@ -335,7 +360,7 @@ export function MotoDetail({
               <SelectField value={serviceSort} onChange={(value) => { setServiceSort(value); setServicePage(1); }} options={[{ value: "fecha", label: "Fecha" }, { value: "kilometraje", label: "Kilometraje" }]} icon={Filter} ariaLabel="Ordenar services por" />
              <button className="button secondary" onClick={() => { setServiceDirection((value) => value === "ASC" ? "DESC" : "ASC"); setServicePage(1); }} aria-label="Cambiar orden de services"><ArrowDownUp size={16} />{serviceDirection === "DESC" ? "Más recientes" : "Más antiguos"}</button>
            </FilterBar></div>
-           {panelErrors.services ? <EmptyState title="No se pudo cargar el historial" body={panelErrors.services} action={<button className="button secondary" onClick={() => loadServices()}>Reintentar</button>} /> : !services ? <LoadingState label="Cargando historial..." /> : serviceHistory.length ? <div className="moto-service-history">{serviceHistory.map((service) => <ServiceCard key={service.id} date={date(service.fecha)} km={service.kilometraje.toLocaleString("es-AR")} next={serviceInterval ? `+${serviceInterval.toLocaleString("es-AR")} km` : "—"} nextKm={serviceInterval ? (service.kilometraje + serviceInterval).toLocaleString("es-AR") : "—"} notes={service.observaciones} />)}</div> : <EmptyState title="Sin historial anterior" body={latestService ? "El último service registrado se muestra arriba." : "Registrá el primer service para comenzar el historial de mantenimiento."} />}
+           {panelErrors.services ? <EmptyState title="No se pudo cargar el historial" body={panelErrors.services} action={<button className="button secondary" onClick={() => loadServices()}>Reintentar</button>} /> : !services ? <LoadingState label="Cargando historial..." /> : serviceHistory.length ? <div className="moto-service-history">{serviceHistory.map((service) => <ServiceCard key={service.id} date={date(service.fecha)} km={service.kilometraje.toLocaleString("es-AR")} next={serviceInterval ? `+${serviceInterval.toLocaleString("es-AR")} km` : "—"} nextKm={serviceInterval ? (service.kilometraje + serviceInterval).toLocaleString("es-AR") : "—"} notes={service.observaciones} onEdit={() => openEditService(service)} />)}</div> : <EmptyState title="Sin historial anterior" body={latestService ? "El último service registrado se muestra arriba." : "Registrá el primer service para comenzar el historial de mantenimiento."} />}
           <Pagination page={servicePage} total={services?.totalPages || 1} onPage={setServicePage} />
         </section>
       )}
@@ -400,13 +425,13 @@ export function MotoDetail({
         </AviantoPanel>
       )}
       </div>
-      <Dialog open={serviceOpen} title="Registrar Service" className="service-modal" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)}>
-        <form className="record-form" onSubmit={(event) => { event.preventDefault(); void addService(); }}>
+      <Dialog open={serviceOpen} title={serviceEditing ? "Editar service" : "Registrar Service"} className="service-modal" onClose={closeService} dirty={serviceDirty}>
+        <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveService(); }}>
           <label>Fecha<input type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
           <label>Kilometraje<input type="text" inputMode="numeric" value={integerInput(serviceKm)} onChange={(event) => setServiceKm(event.target.value)} required /></label>
-          <div className="service-modal-summary"><VehicleField label="Próx. service" value={nextService?.proximaFecha ? date(nextService.proximaFecha) : "Sin referencia"} /><VehicleField label="Próx. km" value={nextService?.proximKm?.toLocaleString("es-AR") ?? "—"} /></div>
+          {!serviceEditing && <div className="service-modal-summary"><VehicleField label="Próx. service" value={nextService?.proximaFecha ? date(nextService.proximaFecha) : "Sin referencia"} /><VehicleField label="Próx. km" value={nextService?.proximKm?.toLocaleString("es-AR") ?? "—"} /></div>}
           <label className="service-modal-notes">Observaciones<textarea value={serviceNotes} onChange={(event) => setServiceNotes(event.target.value)} placeholder="Ej: cambio de aceite y filtros" /></label>
-          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setServiceOpen(false)}>Cancelar</button><button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : "Guardar"}</button></div>
+          <div className="modal-actions"><button type="button" className="button secondary" onClick={closeService}>Cancelar</button><button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : serviceEditing ? "Guardar cambios" : "Guardar"}</button></div>
         </form>
       </Dialog>
       <Dialog open={configOpen} title="Configurar service" onClose={() => setConfigOpen(false)} dirty={Boolean(configNotes || configKm !== String(moto.kmServicePeriodo ?? "") || configMonths !== String(moto.mesesServicePeriodo ?? ""))}>

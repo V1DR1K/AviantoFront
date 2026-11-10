@@ -152,6 +152,8 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
 .avianto-service-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .moto-service-notes { min-height: 128px; padding: 18px; border: 1px solid var(--brand-blue); border-radius: var(--radius-surface); color: var(--brand-blue); text-align: center; }
 .moto-service-notes p { margin: 12px 0 0; color: var(--color-text-muted); text-align: left; }
+.moto-service-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.avianto-service-card-actions { display: flex; justify-content: center; padding: 10px 16px; border-top: 1px solid var(--brand-blue); background: var(--brand-white); }
 .moto-service-new { display: flex; align-items: center; justify-content: center; gap: 8px; width: min(340px, 100%); margin: 24px auto 28px; text-transform: none; }
 .moto-history-title { margin-bottom: 18px; text-transform: none; }
 .moto-service-filters { margin-bottom: 20px; }

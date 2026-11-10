@@ -1,5 +1,5 @@
 import { useEffect, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
-import { Menu } from "lucide-react";
+import { Menu, Pencil } from "lucide-react";
 import { BrandLogo } from "./brand-logo";
 
 export type AviantoTab = { id: string; label: string };
@@ -72,6 +72,6 @@ export function VehicleCard({ plate, label, children, action, variant = "dashboa
   return <article className={`avianto-vehicle-card avianto-vehicle-card-${variant}`}><header><strong>{label && <span>{label} </span>}{plate}</strong></header><div className="avianto-vehicle-card-fields">{children}</div>{action && <footer>{action}</footer>}</article>;
 }
 
-export function ServiceCard({ date, km, next, nextKm, notes }: { date: string; km: string; next?: string; nextKm?: string; notes?: string | null }) {
-  return <article className="avianto-service-card"><div className="avianto-service-card-grid"><VehicleField label="Fecha" value={date} /><VehicleField label="Km" value={km} /><VehicleField label="Próx. service" value={next ?? "—"} /><VehicleField label="Próx. km" value={nextKm ?? "—"} /></div><details><summary>Observaciones <span aria-hidden="true">↓</span></summary><p>{notes || "Sin observaciones."}</p></details></article>;
+export function ServiceCard({ date, km, next, nextKm, notes, onEdit }: { date: string; km: string; next?: string; nextKm?: string; notes?: string | null; onEdit?: () => void }) {
+  return <article className="avianto-service-card"><div className="avianto-service-card-grid"><VehicleField label="Fecha" value={date} /><VehicleField label="Km" value={km} /><VehicleField label="Próx. service" value={next ?? "—"} /><VehicleField label="Próx. km" value={nextKm ?? "—"} /></div><details><summary>Observaciones <span aria-hidden="true">↓</span></summary><p>{notes || "Sin observaciones."}</p></details>{onEdit && <footer className="avianto-service-card-actions"><button type="button" className="text-button" onClick={onEdit}><Pencil size={16} aria-hidden="true" />Editar service</button></footer>}</article>;
 }

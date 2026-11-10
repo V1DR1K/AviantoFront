@@ -44,7 +44,7 @@ Todos los paths siguientes incluyen el prefijo `/api`.
 ### POST (31)
 
 - Autenticación: `/auth/login`, `/auth/refresh`, `/auth/logout`.
-- Clientes y motos: `/clientes`, `/motovehiculos`, `/motovehiculos/{id}/ingreso`, `/motovehiculos/{id}/venta/completar`, `/perfiles`, `/motovehiculos/{id}/services`.
+- Clientes y motos: `/clientes`, `/motovehiculos`, `/motovehiculos/{id}/ingreso`, `/motovehiculos/{id}/venta/completar`, `/perfiles`, `/motovehiculos/{id}/services`, `PUT /motovehiculos/{id}/services/{serviceId}` (edita kilometraje, fecha y observaciones de un service y recalcula el último service de la moto).
 - Ventas: `/ventas/{id}/checklist/sincronizar`, `/ventas/{id}/transferencia`, `/ventas/{id}/transferencia/cancelar`, `/ventas/{id}/transferencia/asistencia`, `/ventas/{id}/completar`.
 - Fichas: `/fichas`, `/fichas/{id}/entregar`, `/fichas/{id}/pagos`, `/fichas/{id}/pagos/{pagoId}/anular`, `/fichas/{id}/trabajos`, `/fichas/{id}/fotos`, `/fichas/{id}/revision/preparar`, `/fichas/{id}/revision/aprobar`.
 - Repuestos: `/repuestos`, `/repuestos/{id}/pagos`, `/repuestos/{id}/pagos/{pagoId}/anular`.
