@@ -23,7 +23,7 @@ import { AviantoPanel } from "./avianto-layout";
 import { AviantoRecordList } from "./avianto-records";
 import { AviantoTabs, ServiceCard, VehicleField } from "./avianto-mobile";
 import { VehicleImage } from "./vehicle-image";
-import { prepareVehicleImage, removeVehicleImage, saveVehicleImage } from "../lib/vehicle-image";
+import { prepareVehicleImage, removeVehicleImage, saveVehicleImage, vehicleImageUrl } from "../lib/vehicle-image";
 
 const date = formatDateInAr;
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar la información.";
@@ -99,6 +99,9 @@ export function MotoDetail({
   const [circuitReason, setCircuitReason] = useState("");
   const [circuitSaving, setCircuitSaving] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
+  // Subida optimista: mientras se procesa y se guarda la foto se muestra la vista previa local.
+  // Si el guardado falla, el estado se descarta y vuelve a verse la foto anterior (rollback).
+  const [photoPending, setPhotoPending] = useState<{ stage: "procesando" | "subiendo"; previewUrl: string | null } | null>(null);
   const [photoRemoving, setPhotoRemoving] = useState(false);
   const photoInput = useRef<HTMLInputElement>(null);
 
@@ -131,13 +134,23 @@ export function MotoDetail({
   const uploadPhoto = async (file: File | undefined) => {
     if (!file || photoBusy) return;
     setPhotoBusy(true);
+    setPhotoPending({ stage: "procesando", previewUrl: null });
+    let previewUrl: string | null = null;
     try {
-      await saveVehicleImage(id, await prepareVehicleImage(file));
+      const image = await prepareVehicleImage(file);
+      previewUrl = URL.createObjectURL(image.completaBlob);
+      setPhotoPending({ stage: "subiendo", previewUrl });
+      await saveVehicleImage(id, image);
+      const updated = await api<MotovehiculoResponse>(`/motovehiculos/${id}`);
+      setMoto(updated);
+      // Se descarga la foto nueva antes de quitar la vista previa, para que no parpadee la anterior.
+      if (updated.imagenActualizadaAt) await vehicleImageUrl(id, "completa", updated.imagenActualizadaAt).catch(() => undefined);
       notify("Foto de la moto guardada.");
-      load();
     } catch (reason) {
       notify(errorMessage(reason), "error");
     } finally {
+      setPhotoPending(null);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPhotoBusy(false);
       if (photoInput.current) photoInput.current.value = "";
     }
@@ -290,7 +303,19 @@ export function MotoDetail({
           <h2 className="moto-section-title">Datos del vehículo</h2>
           <div className="moto-vehicle-layout">
             <figure className="moto-vehicle-photo">
-              <VehicleImage motoId={moto.id} version={moto.imagenActualizadaAt} tamano="completa" eager alt={`Foto de la moto ${moto.patente}`} />
+              <div className="moto-vehicle-photo-stage" aria-busy={Boolean(photoPending)}>
+                {photoPending?.previewUrl ? (
+                  <div className="vehicle-image moto-vehicle-photo-preview"><img src={photoPending.previewUrl} alt={`Vista previa de la foto de ${moto.patente}`} /></div>
+                ) : (
+                  <VehicleImage motoId={moto.id} version={moto.imagenActualizadaAt} tamano="completa" eager alt={`Foto de la moto ${moto.patente}`} />
+                )}
+                {photoPending && (
+                  <div className="moto-vehicle-photo-status" role="status">
+                    <span className="moto-vehicle-photo-spinner" aria-hidden="true" />
+                    {photoPending.stage === "procesando" ? "Procesando foto..." : "Subiendo foto..."}
+                  </div>
+                )}
+              </div>
               <figcaption className="moto-vehicle-photo-actions">
                 <button type="button" className="moto-photo-action" disabled={photoBusy} onClick={() => photoInput.current?.click()}><Camera size={18} aria-hidden="true" />{photoBusy ? "Guardando foto..." : moto.imagenActualizadaAt ? "Cambiar foto" : "Subir foto"}</button>
                 {moto.imagenActualizadaAt && <button type="button" className="moto-photo-action" disabled={photoBusy} onClick={() => setPhotoRemoving(true)}>Quitar foto</button>}
