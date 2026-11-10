@@ -1,0 +1,25 @@
+/* Gestión > Roles y permisos */
+.roles-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.roles-card { display: grid; align-content: start; gap: 10px; padding: 18px; border: 1px solid var(--brand-blue); border-radius: 18px; background: var(--brand-white); color: var(--brand-blue); min-width: 0; }
+.roles-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.roles-card h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
+.roles-card p { margin: 0; color: var(--color-text-muted); }
+.roles-card-meta { font-size: 0.9rem; }
+.roles-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.roles-card-actions .text-button { min-height: 40px; }
+.roles-badge { padding: 2px 10px; border: 1px solid var(--brand-blue); border-radius: 999px; font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
+.roles-form { display: grid; gap: 18px; }
+.roles-form-fields { display: grid; gap: 12px; }
+.roles-summary { margin: 0; color: var(--color-text-muted); }
+.roles-readonly-notice { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--color-surface-subtle); color: var(--brand-blue); }
+.roles-module { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--color-border); border-radius: 14px; min-width: 0; }
+.roles-module-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.roles-module-head h3 { margin: 0; font-size: 1rem; color: var(--brand-blue); }
+.roles-toggle { min-height: 40px; padding: 4px 10px; border: 0; background: transparent; color: var(--brand-blue); font-weight: 700; text-decoration: underline; cursor: pointer; }
+.roles-permissions { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.roles-permission { display: flex; align-items: center; gap: 8px; min-height: 40px; cursor: pointer; }
+.roles-permission input { flex-shrink: 0; width: 18px; height: 18px; accent-color: var(--brand-blue); }
+.roles-permission:has(input:disabled) { cursor: not-allowed; opacity: 0.7; }
+@media (max-width: 640px) {
+  .roles-permissions { grid-template-columns: 1fr; }
+}

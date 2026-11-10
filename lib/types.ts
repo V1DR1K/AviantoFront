@@ -50,7 +50,10 @@ export interface UsuarioResponse {
   id: string;
   nombre: string;
   email: string;
-  rol: "ADMINISTRACION" | "OPERARIO";
+  rol: string;
+  rolId: string;
+  rolNombre: string;
+  permisos: string[];
   activo: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -479,3 +482,18 @@ export interface VentaMotoResponse { motoId: string; patente: string; moto: stri
 export interface VentaEstadoResponse { estado: MotoStatus; motos: VentaMotoResponse[]; }
 export interface VentaResponse { estados: VentaEstadoResponse[]; }
 export interface AutocompleteResponse { id: string; label: string; secondary?: string; }
+
+export interface PermisoItemResponse { codigo: string; etiqueta: string; }
+export interface PermisoModuloResponse { id: string; nombre: string; permisos: PermisoItemResponse[]; }
+export interface RolResponse {
+  id: string;
+  codigo: string;
+  nombre: string;
+  descripcion?: string | null;
+  sistema: boolean;
+  editable: boolean;
+  usuarios: number;
+  permisos: string[];
+  updatedAt?: string;
+}
+export interface RolRequest { nombre: string; descripcion?: string | null; permisos: string[]; }

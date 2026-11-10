@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePermission } from "./permissions-context";
 import { ArrowDownUp, ArrowLeft, Check, ChevronDown, Download, Edit3, Eye, FileDown, FileText, Filter, Plus, Trash2, X } from "lucide-react";
 import { api, download, objectUrl } from "../lib/api";
 import { GANANCIA_REPUESTOS_PCT, integerInput, money, parseIntegerInput, paymentAmount } from "../lib/format";
@@ -105,6 +106,7 @@ export function Dashboard({
   initialSection?: "taller" | "ventas";
   notify: Notify;
 }) {
+  const can = usePermission();
   const [taller, setTaller] = useState<TallerResponse | null>(null);
   const [fichasAgrupadas, setFichasAgrupadas] = useState<DashboardFichasResponse | null>(null);
   const [ventas, setVentas] = useState<VentaResponse | null>(null);
@@ -139,7 +141,7 @@ export function Dashboard({
           <BrandLogo variant="color" markOnly size="lg" />
           <h1>Estado actual del taller</h1>
           <p>{userName ? `Hola, ${userName}` : "Resumen operativo"}</p>
-          <button type="button" className="avianto-mobile-cta" onClick={onIntake}>+&nbsp; Ingresar moto</button>
+          {can("motos.ingresar_taller") && <button type="button" className="avianto-mobile-cta" onClick={onIntake}>+&nbsp; Ingresar moto</button>}
         </section>
         <h2 className="avianto-red-heading">Resumen</h2>
         <div className="avianto-screen-body">
@@ -191,6 +193,7 @@ export function VentasView({
   onOpenSale: (sale: VentaFichaResponse) => void;
   notify: Notify;
 }) {
+  const can = usePermission();
   const [result, setResult] = useState<PageResponse<VentaFichaResponse> | null>(null);
   const [status, setStatus] = useState<"Todos" | VentaFichaStatus>("Todos");
   const [query, setQuery] = useState("");
@@ -213,7 +216,7 @@ export function VentasView({
   }, [query, status, sortBy, direction, page, notify, reloadKey]);
   const emptyLabel = status === "Todos" ? "para mostrar" : status.toLowerCase();
   return <AviantoPage>
-    <AviantoPageHeader title="Ventas" description="Fichas persistentes para seguir comprador, requisitos y transferencia." actions={<button className="button secondary" onClick={onIntake}><Plus size={18} />Ingresar moto</button>} />
+    <AviantoPageHeader title="Ventas" description="Fichas persistentes para seguir comprador, requisitos y transferencia." actions={(can("motos.ingresar_venta") ? <button className="button secondary" onClick={onIntake}><Plus size={18} />Ingresar moto</button> : null)} />
        <AviantoPanel className="record-list-panel">
        <FilterBar
           primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Ficha, patente o comprador" />}
@@ -256,6 +259,7 @@ export function FichasView({
   onDelete: (ficha: FichaResponse) => void;
   notify: Notify;
 }) {
+  const can = usePermission();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"Todos" | (typeof fichaFilterStatuses)[number]>("Todos");
   const [paymentStatus, setPaymentStatus] = useState<"Todos" | PagoStatus>("Todos");
@@ -315,7 +319,7 @@ export function FichasView({
   const toggleDirection = () => setDirection((d) => (d === "ASC" ? "DESC" : "ASC"));
   return (
     <AviantoPage>
-      <AviantoPageHeader title="Fichas de trabajo" description="Consultá y administrá las órdenes de trabajo del taller." actions={<button className="button primary" onClick={onNewOrder}><Plus size={19} />Nueva ficha</button>} />
+      <AviantoPageHeader title="Fichas de trabajo" description="Consultá y administrá las órdenes de trabajo del taller." actions={(can("fichas.crear") ? <button className="button primary" onClick={onNewOrder}><Plus size={19} />Nueva ficha</button> : null)} />
        <AviantoPanel className="record-list-panel">
          <FilterBar
             primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder={pendingIntake ? "Patente o moto" : "Número o cliente"} />}
@@ -361,7 +365,7 @@ export function FichasView({
               { label: "Total", value: money(ficha.total) },
             ], actions: <>
               <button type="button" className="text-button" onClick={() => onSelect(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} />Abrir ficha</button>
-              {editable && <><button type="button" className="text-button secondary" onClick={() => onEdit(ficha)} aria-label={`Editar ficha ${ficha.numero}`}><Edit3 size={17} />Editar</button><button type="button" className="text-button danger-action" onClick={() => onDelete(ficha)} aria-label={`Eliminar ficha ${ficha.numero}`}><Trash2 size={17} />Eliminar</button></>}
+              {editable && <>{can("fichas.editar") && <button type="button" className="text-button secondary" onClick={() => onEdit(ficha)} aria-label={`Editar ficha ${ficha.numero}`}><Edit3 size={17} />Editar</button>}{can("fichas.eliminar") && <button type="button" className="text-button danger-action" onClick={() => onDelete(ficha)} aria-label={`Eliminar ficha ${ficha.numero}`}><Trash2 size={17} />Eliminar</button>}</>}
             </> };
           })} />
         ) : (
@@ -388,6 +392,7 @@ function ItemRow({
   canDelete: boolean;
   onStartWork: () => void;
 }) {
+  const can = usePermission();
   return (
     <div className={`line-item detail-work-item${workStateClass(item.estadoTrabajo)}${!locked ? " can-mark" : ""}${canDelete ? " can-delete" : ""}${item.estadoTrabajo === "Cancelado" ? " muted" : ""}`} role="row">
       <div className="detail-work-check" role="cell">
@@ -402,7 +407,7 @@ function ItemRow({
         <StatusBadge status={item.estadoTrabajo} />
         <span className="detail-work-price">{money(Number(item.precioUnitario))}{item.descuento > 0 && ` · desc. ${money(Number(item.descuento))}`}</span>
       </div>
-      <div className="detail-work-actions" role="cell">{canDelete && <button type="button" className="danger-action" onClick={onDelete} aria-label={`Eliminar trabajo ${item.descripcion}`}><Trash2 size={17} /><span>Eliminar</span></button>}</div>
+      <div className="detail-work-actions" role="cell">{canDelete && (can("fichas.editar") ? <button type="button" className="danger-action" onClick={onDelete} aria-label={`Eliminar trabajo ${item.descripcion}`}><Trash2 size={17} /><span>Eliminar</span></button> : null)}</div>
     </div>
   );
 }
@@ -450,6 +455,7 @@ export function FichaDetail({
   onNewRepuesto: (prefill: { motoId: string; clienteId?: string | null; fichaId: string }) => void;
   notify: Notify;
 }) {
+  const can = usePermission();
   const [ficha, setFicha] = useState<FichaResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
@@ -640,20 +646,22 @@ export function FichaDetail({
   const flowSteps: FichaStatus[] = ["Pendiente", "En proceso", "En revisión", "Terminada", "Entregada"];
   const currentStep = flowSteps.indexOf(current);
   const bottomActions: { key: string; label: string; className: string; onClick: () => void }[] = [];
+  const actionPermission: Record<string, string> = { iniciar: "fichas.estado", revision: "fichas.estado", retroceder: "fichas.estado", cancelar: "fichas.estado", aprobar: "revision.aprobar", entregar: "fichas.entregar", service: "services.registrar" };
+  const pushAction = (action: { key: string; label: string; className: string; onClick: () => void }) => { if (can(actionPermission[action.key] ?? "fichas.ver")) bottomActions.push(action); };
    if (current === "Pendiente")
-     bottomActions.push({ key: "iniciar", label: "Comenzar trabajo", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "En proceso" }, "estado-en-proceso", "Ficha marcada en proceso.") });
+     pushAction({ key: "iniciar", label: "Comenzar trabajo", className: "primary", onClick: () => void update(`/fichas/${ficha.id}/estado`, { estado: "En proceso" }, "estado-en-proceso", "Ficha marcada en proceso.") });
    else if (current === "En proceso")
-     bottomActions.push({ key: "revision", label: "Enviar a revisión", className: "primary", onClick: () => trabajosPendientes ? notify("Completá todos los trabajos pendientes antes de enviar la ficha a revisión.", "warning") : void update(`/fichas/${ficha.id}/estado`, { estado: "En revisión" }, "estado-revision", "Ficha enviada a revisión.") });
+     pushAction({ key: "revision", label: "Enviar a revisión", className: "primary", onClick: () => trabajosPendientes ? notify("Completá todos los trabajos pendientes antes de enviar la ficha a revisión.", "warning") : void update(`/fichas/${ficha.id}/estado`, { estado: "En revisión" }, "estado-revision", "Ficha enviada a revisión.") });
   else if (current === "En revisión")
-    bottomActions.push({ key: "aprobar", label: "Aprobar revisión", className: "primary", onClick: openDelivery });
+    pushAction({ key: "aprobar", label: "Aprobar revisión", className: "primary", onClick: openDelivery });
   else if (current === "Terminada")
-    bottomActions.push({ key: "entregar", label: "Entregar moto", className: "primary", onClick: () => onConfirm({ title: entregaConSaldoPendiente ? "Entregar moto con saldo pendiente" : "Entregar moto", body: entregaConSaldoPendiente ? `La moto se entregará con un saldo pendiente de ${paymentAmount(saldoPendientePresupuesto)} entre la ficha y los repuestos activos. Podés registrar pagos después de la entrega.` : "La moto quedará entregada al cliente y se cerrará el circuito de Taller.", confirmLabel: entregaConSaldoPendiente ? "Entregar con saldo pendiente" : "Entregar moto", successMessage: entregaConSaldoPendiente ? "Moto entregada con saldo pendiente." : "Moto entregada al cliente.", variant: entregaConSaldoPendiente ? "danger" : "success", action: () => api<FichaResponse>(`/fichas/${ficha.id}/entregar`, { method: "POST" }).then(setFicha) }) });
+    pushAction({ key: "entregar", label: "Entregar moto", className: "primary", onClick: () => onConfirm({ title: entregaConSaldoPendiente ? "Entregar moto con saldo pendiente" : "Entregar moto", body: entregaConSaldoPendiente ? `La moto se entregará con un saldo pendiente de ${paymentAmount(saldoPendientePresupuesto)} entre la ficha y los repuestos activos. Podés registrar pagos después de la entrega.` : "La moto quedará entregada al cliente y se cerrará el circuito de Taller.", confirmLabel: entregaConSaldoPendiente ? "Entregar con saldo pendiente" : "Entregar moto", successMessage: entregaConSaldoPendiente ? "Moto entregada con saldo pendiente." : "Moto entregada al cliente.", variant: entregaConSaldoPendiente ? "danger" : "success", action: () => api<FichaResponse>(`/fichas/${ficha.id}/entregar`, { method: "POST" }).then(setFicha) }) });
    else if (current === "Entregada")
-     bottomActions.push({ key: "service", label: "Registrar service", className: "primary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setServiceDate(todayInAr()); setServiceOpen(true); } });
+     pushAction({ key: "service", label: "Registrar service", className: "primary", onClick: () => { setServiceKm(ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : ""); setServiceDate(todayInAr()); setServiceOpen(true); } });
    if (current === "En proceso" || current === "En revisión")
-       bottomActions.push({ key: "retroceder", label: "Volver un paso atrás", className: "secondary", onClick: () => onConfirm({ title: "Volver un paso atrás", body: `La ficha volverá de ${current} a ${current === "En revisión" ? "En proceso" : "Pendiente"}. El cambio quedará registrado en auditoría.`, confirmLabel: "Volver un paso atrás", successMessage: "Ficha retrocedida un paso.", action: () => update(`/fichas/${ficha.id}/estado`, { estado: current === "En revisión" ? "En proceso" : "Pendiente" }, "retroceder", "Ficha retrocedida un paso.") }) });
+       pushAction({ key: "retroceder", label: "Volver un paso atrás", className: "secondary", onClick: () => onConfirm({ title: "Volver un paso atrás", body: `La ficha volverá de ${current} a ${current === "En revisión" ? "En proceso" : "Pendiente"}. El cambio quedará registrado en auditoría.`, confirmLabel: "Volver un paso atrás", successMessage: "Ficha retrocedida un paso.", action: () => update(`/fichas/${ficha.id}/estado`, { estado: current === "En revisión" ? "En proceso" : "Pendiente" }, "retroceder", "Ficha retrocedida un paso.") }) });
   if (current !== "Terminada" && current !== "Entregada" && current !== "Cancelada")
-       bottomActions.push({ key: "cancelar", label: "Cancelar ficha", className: "danger", onClick: () => onConfirm({ title: "Cancelar ficha", body: "La ficha quedará cancelada. El historial conservará el registro para auditoría.", confirmLabel: "Cancelar ficha", successMessage: "Ficha cancelada.", action: () => api<FichaResponse>(`/fichas/${ficha.id}/estado`, { method: "PATCH", body: JSON.stringify({ estado: "Cancelada" }) }).then(setFicha) }) });
+       pushAction({ key: "cancelar", label: "Cancelar ficha", className: "danger", onClick: () => onConfirm({ title: "Cancelar ficha", body: "La ficha quedará cancelada. El historial conservará el registro para auditoría.", confirmLabel: "Cancelar ficha", successMessage: "Ficha cancelada.", action: () => api<FichaResponse>(`/fichas/${ficha.id}/estado`, { method: "PATCH", body: JSON.stringify({ estado: "Cancelada" }) }).then(setFicha) }) });
   return (
     <AviantoPage className="ficha-detail-page">
       <section className="ficha-record-hero" aria-label={`Ficha ${ficha.numero} de ${ficha.patente}`}>
@@ -671,7 +679,7 @@ export function FichaDetail({
         </div>
         <div className="ficha-record-actions">
           <strong>{money(ficha.total)}</strong>
-          {(current === "Pendiente" || current === "En proceso") && <button type="button" onClick={onEdit}><Edit3 size={17} />Editar ficha</button>}
+          {(current === "Pendiente" || current === "En proceso") && (can("fichas.editar") ? <button type="button" onClick={onEdit}><Edit3 size={17} />Editar ficha</button> : null)}
         </div>
       </section>
       <ol className={`flow-steps${current === "Cancelada" ? " canceled" : ""}`} aria-label="Etapas de la ficha">
@@ -733,7 +741,7 @@ export function FichaDetail({
         <section className="ficha-design-section" aria-label="Detalle de pedidos">
           <AviantoPanelHeader
             title="Detalle de pedidos"
-            actions={!locked ? <button type="button" className="button primary ficha-new-order" onClick={() => onNewRepuesto({ motoId: ficha.motoId, clienteId: ficha.clienteId, fichaId: ficha.id })}><Plus size={17} />Nuevo pedido</button> : undefined}
+            actions={!locked ? (can("pedidos.crear") ? <button type="button" className="button primary ficha-new-order" onClick={() => onNewRepuesto({ motoId: ficha.motoId, clienteId: ficha.clienteId, fichaId: ficha.id })}><Plus size={17} />Nuevo pedido</button> : null) : undefined}
           />
           <AviantoPanel className="ficha-design-card ficha-orders-panel">
             <div className="ficha-table-heading ficha-order-table-heading" role="rowgroup">
@@ -823,7 +831,7 @@ export function FichaDetail({
         <label>Kilometraje<input type="text" inputMode="numeric" value={integerInput(serviceKm)} onChange={(event) => setServiceKm(event.target.value)} required /></label>
           <label>Fecha<input type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} /></label>
           <label>Observación<input type="text" value={serviceNotes} onChange={(event) => setServiceNotes(event.target.value)} placeholder="Ej: cambio de aceite y filtros" /></label>
-          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setServiceOpen(false)}>Cancelar</button><button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : "Guardar"}</button></div>
+          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setServiceOpen(false)}>Cancelar</button>{can("services.registrar") && <button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : "Guardar"}</button>}</div>
         </form>
       </Dialog>
       <Dialog open={closeOpen} title="Aprobar revisión" onClose={() => setCloseOpen(false)} className="delivery-modal" dirty={selectedServiceIds.length > 0}>
@@ -832,7 +840,7 @@ export function FichaDetail({
         {!priorServices.length && <p>No hay services previos para asociar.</p>}
         <div className="modal-actions">
           <button type="button" className="button secondary" onClick={() => setCloseOpen(false)}>Cancelar</button>
-          <button type="button" className="button primary" disabled={Boolean(pending)} onClick={confirmDelivery}>Aprobar revisión</button>
+          {can("fichas.entregar") && <button type="button" className="button primary" disabled={Boolean(pending)} onClick={confirmDelivery}>Aprobar revisión</button>}
         </div>
       </Dialog>
       <Dialog open={revisionNoteControl !== null} title="Observación de revisión" onClose={closeRevisionNote} dirty={revisionNote !== (revisionNoteControl?.observacion ?? "")}>

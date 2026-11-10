@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePermission } from "./permissions-context";
 import { Camera, Check, Plus, Save, X } from "lucide-react";
 import { api, objectUrl } from "../lib/api";
 import { integerInput, money, parseIntegerInput, parsePrice, priceDraft, priceInput } from "../lib/format";
@@ -95,6 +96,7 @@ export function FichaForm({
   initialMotoId?: string | null;
   notify: Notify;
 }) {
+  const can = usePermission();
   const editing = Boolean(fichaKey);
   const [persistedFichaId, setPersistedFichaId] = useState<string | null>(fichaKey ?? null);
   const [baseline, setBaseline] = useState<string | null>(null);
@@ -418,7 +420,7 @@ export function FichaForm({
            <section className="form-section">
              <div className="form-section-heading">
                <h2 className="form-section-title">2. Trabajos a realizar</h2>
-                <button className="text-button section-add-button section-add-desktop" type="button" onClick={() => addTrabajo()}><Plus size={17} />Agregar trabajo</button>
+                {can("fichas.editar") && <button className="text-button section-add-button section-add-desktop" type="button" onClick={() => addTrabajo()}><Plus size={17} />Agregar trabajo</button>}
               </div>
               <div className="line-items">
               {trabajos.map((trabajo) => (
@@ -511,7 +513,7 @@ export function FichaForm({
                    <button
                      type="button"
                      className="line-delete"
-                     aria-label="Eliminar trabajo"
+                     aria-label="Eliminar trabajo" disabled={!can("fichas.editar")}
                      title="Eliminar trabajo"
                     onClick={() =>
                       setTrabajos((all) =>
@@ -524,7 +526,7 @@ export function FichaForm({
                 </div>
                ))}
              </div>
-             <button className="text-button section-add-button section-add-mobile" type="button" onClick={() => addTrabajo()}><Plus size={17} />Agregar trabajo</button>
+             {can("fichas.editar") && <button className="text-button section-add-button section-add-mobile" type="button" onClick={() => addTrabajo()}><Plus size={17} />Agregar trabajo</button>}
             </section>
           <section className="form-section">
              <h2 className="form-section-title">3. Fotos y observaciones</h2>
@@ -635,7 +637,7 @@ export function FichaForm({
           />
           <button
             className="button primary large"
-            disabled={saving || !editable}
+            disabled={saving || !editable || !can(fichaKey ? "fichas.editar" : "fichas.crear")}
             onClick={() => void save()}
           >
             <Save size={19} />
@@ -649,7 +651,7 @@ export function FichaForm({
       </div>
       <StickyActionBar className="ficha-mobile-actions">
         <button type="button" className="button secondary" onClick={() => isDirty ? setCloseConfirmation(true) : onClose()}><X size={18} />Cancelar</button>
-        <button type="button" className="button primary" disabled={saving || !editable} onClick={() => void save()}><Save size={18} />{saving ? "Guardando..." : editing ? "Guardar cambios" : "Guardar ficha"}</button>
+        <button type="button" className="button primary" disabled={saving || !editable || !can(fichaKey ? "fichas.editar" : "fichas.crear")} onClick={() => void save()}><Save size={18} />{saving ? "Guardando..." : editing ? "Guardar cambios" : "Guardar ficha"}</button>
       </StickyActionBar>
       <ConfirmModal
         open={duplicateWork !== null}

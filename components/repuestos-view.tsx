@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePermission } from "./permissions-context";
 import { ArrowDownUp, Download, Edit3, Eye, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download } from "../lib/api";
 import { GANANCIA_REPUESTOS_PCT, integerInput, money, parseIntegerInput, parsePrice, precioFinal, priceInput } from "../lib/format";
@@ -37,6 +38,7 @@ export function RepuestosView({
   startCreate?: boolean;
   onPrefillHandled?: () => void;
 }) {
+  const can = usePermission();
   const [query, setQuery] = useState("");
   const [estado, setEstado] = useState<"Todos" | RepuestoState>("Todos");
   const [desde, setDesde] = useState(daysAgoInAr(30));
@@ -60,7 +62,7 @@ export function RepuestosView({
   useEffect(() => { if (createPrefill) loadClients(); }, [createPrefill]);
   return (
     <AviantoPage>
-      <AviantoPageHeader title="Pedidos de repuestos" description="Control de compras, recepción y pago de repuestos y accesorios." actions={<button className="button primary" onClick={() => { setCreateOpen(true); loadClients(); }}><Plus size={19} />Nuevo pedido</button>} />
+      <AviantoPageHeader title="Pedidos de repuestos" description="Control de compras, recepción y pago de repuestos y accesorios." actions={(can("pedidos.crear") ? <button className="button primary" onClick={() => { setCreateOpen(true); loadClients(); }}><Plus size={19} />Nuevo pedido</button> : null)} />
        <AviantoPanel className="record-list-panel">
          <FilterBar
            primary={<SearchBox value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Número, cliente o patente" />}
@@ -95,7 +97,7 @@ export function RepuestosView({
               { label: "Precio final", value: money(repuesto.totalVenta), wide: true },
             ], actions: <>
               <button type="button" className="text-button" onClick={() => onOpen(repuesto)} aria-label={`Ver pedido ${repuesto.numero}`}><Eye size={17} />Abrir pedido</button>
-              {editable && <><button type="button" className="text-button secondary" onClick={() => { setEditing(repuesto); loadClients(); }} aria-label={`Editar pedido ${repuesto.numero}`}><Edit3 size={17} />Editar</button><button type="button" className="text-button danger-action" onClick={() => setDeleting(repuesto)} aria-label={`Eliminar pedido ${repuesto.numero}`}><Trash2 size={17} />Eliminar</button></>}
+              {editable && <>{can("pedidos.editar") && <button type="button" className="text-button secondary" onClick={() => { setEditing(repuesto); loadClients(); }} aria-label={`Editar pedido ${repuesto.numero}`}><Edit3 size={17} />Editar</button>}{can("pedidos.eliminar") && <button type="button" className="text-button danger-action" onClick={() => setDeleting(repuesto)} aria-label={`Eliminar pedido ${repuesto.numero}`}><Trash2 size={17} />Eliminar</button>}</>}
             </> };
           })} />
         ) : <EmptyState title="No hay pedidos con estos filtros" body={desde || hasta ? "No encontramos pedidos en el período seleccionado. Podés consultar todas las fechas." : "Creá un pedido o probá con otra búsqueda."} action={desde || hasta ? <button className="button secondary" onClick={() => { setDesde(""); setHasta(""); setPage(1); }}>Ver todas las fechas</button> : undefined} />}
@@ -146,6 +148,7 @@ export function CreateRepuestoDialog({
   onError: (message: string) => void;
   notify: Notify;
 }) {
+  const can = usePermission();
   const [clientId, setClientId] = useState(initial?.clienteId ?? prefill?.clienteId ?? "");
   const [motoId, setMotoId] = useState(initial?.motoId ?? prefill?.motoId ?? "");
   const [proveedor, setProveedor] = useState(initial?.proveedor ?? "");
@@ -250,7 +253,7 @@ export function CreateRepuestoDialog({
           <button type="button" className="text-button" onClick={() => setRows((all) => [...all, { key: crypto.randomUUID(), descripcion: "", tipo: "Repuesto", cantidad: "1", precio: "" }])}><Plus size={17} />Agregar ítem</button>
         </div>
         <div className="repuesto-total"><span>Costo del pedido</span><strong>{money(subtotalCosto)}</strong><span>Precio final (+{GANANCIA_REPUESTOS_PCT}%)</span><strong>{money(subtotalVenta)}</strong></div>
-        <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Cancelar</button><button className="button primary" disabled={saving}>{saving ? "Guardando..." : initial ? "Guardar cambios" : "Guardar pedido"}</button></div>
+        <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Cancelar</button><button className="button primary" disabled={saving || !can(initial ? "pedidos.editar" : "pedidos.crear")}>{saving ? "Guardando..." : initial ? "Guardar cambios" : "Guardar pedido"}</button></div>
       </form>
     </Dialog>
   );
@@ -265,6 +268,7 @@ export function RepuestoDetail({
   onBack: () => void;
   notify: Notify;
 }) {
+  const can = usePermission();
   const [repuesto, setRepuesto] = useState<RepuestoResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -307,7 +311,7 @@ export function RepuestoDetail({
   const patch = async (path: string, body: Record<string, string>) => { if (pending) return; setPending(true); try { const next = await api<RepuestoResponse>(path, { method: "PATCH", body: JSON.stringify(body) }); setRepuesto(next); return next; } catch (reason) { notify(errorMessage(reason), "error"); throw reason; } finally { setPending(false); } };
   return (
     <AviantoPage>
-      <AviantoRecordHero eyebrow={repuesto.numero} title={repuesto.patente} subtitle={`${repuesto.cliente} · ${date(repuesto.fecha)}`} status={<><StatusBadge status={repuesto.estado} /><StatusBadge status={repuesto.estadoPago} /></>} actions={<><strong className="avianto-record-total">{money(repuesto.totalVenta)}</strong>{!locked && <button className="button secondary" onClick={() => setEditOpen(true)}><Edit3 size={17} />Editar pedido</button>}</>} onBack={onBack} backLabel="Volver a repuestos" />
+      <AviantoRecordHero eyebrow={repuesto.numero} title={repuesto.patente} subtitle={`${repuesto.cliente} · ${date(repuesto.fecha)}`} status={<><StatusBadge status={repuesto.estado} /><StatusBadge status={repuesto.estadoPago} /></>} actions={<><strong className="avianto-record-total">{money(repuesto.totalVenta)}</strong>{!locked && (can("pedidos.editar") ? <button className="button secondary" onClick={() => setEditOpen(true)}><Edit3 size={17} />Editar pedido</button> : null)}</>} onBack={onBack} backLabel="Volver a repuestos" />
       <PaymentLedger resource="repuestos" documentId={repuesto.id} documentState={repuesto.estado} estadoPago={repuesto.estadoPago} total={repuesto.totalVenta} montoCobrado={repuesto.montoCobrado} saldoPendiente={repuesto.saldoPendiente} onDocumentChange={load} notify={notify} />
       <section className="detail-grid">
         <div className="form-stack">
@@ -340,7 +344,7 @@ export function RepuestoDetail({
             <h4>Estado del pedido</h4>
             <div className="summary-actions">
               {repuestoStates.filter((option) => option !== repuesto.estado && !(option === "Cancelado" && repuesto.estado === "Completado") && !(option === "Completado" && repuesto.estado === "Cancelado")).map((option) => (
-                <button key={option} className="button secondary large" disabled={pending} onClick={() => setConfirmation({ title: `Marcar pedido como ${option}`, body: `El pedido ${repuesto.numero} pasará al estado ${option}.`, confirmLabel: `Marcar como ${option}`, successMessage: `Pedido marcado como ${option}.`, action: async () => { const next = await patch(`/repuestos/${repuesto.id}/estado`, { estado: option }); if (!next) throw new Error("No se pudo actualizar el estado del pedido."); } })}>Marcar {option}</button>
+                <button key={option} className="button secondary large" disabled={pending || !can("pedidos.estado")} onClick={() => setConfirmation({ title: `Marcar pedido como ${option}`, body: `El pedido ${repuesto.numero} pasará al estado ${option}.`, confirmLabel: `Marcar como ${option}`, successMessage: `Pedido marcado como ${option}.`, action: async () => { const next = await patch(`/repuestos/${repuesto.id}/estado`, { estado: option }); if (!next) throw new Error("No se pudo actualizar el estado del pedido."); } })}>Marcar {option}</button>
               ))}
             </div>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePermission } from "./permissions-context";
 import { ArrowDownUp, Filter } from "lucide-react";
 import { api } from "../lib/api";
 import { parseIntegerInput } from "../lib/format";
@@ -15,6 +16,7 @@ import { applyVehiclePhoto, discardVehiclePhoto, type VehiclePhotoChange } from 
 const profileStates = ["Disponible", "Ingresada Taller", "Pendiente", "En proceso", "En revisión", "Terminada", "Entregada", "En venta", "Transferencia en proceso", "Vendida"];
 
 export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntake: (plate?: string) => void; onOpen: (id: string) => void; onOpenSale: (id: string) => void; notify: Notify }) {
+  const can = usePermission();
   const [dominio, setDominio] = useState("");
   const [motoQuery, setMotoQuery] = useState("");
   const [clienteQuery, setClienteQuery] = useState("");
@@ -77,7 +79,7 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
   };
   return <div className="page">
     <div className="avianto-mobile-screen avianto-profile-screen">
-      <AviantoPageHeader title="Perfiles" description="Información integral e historial de cada moto." actions={<button type="button" className="avianto-mobile-cta" onClick={() => onIntake()}>+ Ingresar moto</button>} />
+      <AviantoPageHeader title="Perfiles" description="Información integral e historial de cada moto." actions={(can("motos.ingresar_taller") ? <button type="button" className="avianto-mobile-cta" onClick={() => onIntake()}>+ Ingresar moto</button> : null)} />
       <div className="avianto-profile-filters">
         <FilterBar primary={<SearchBox value={dominio} onChange={(value) => { setDominio(value); setPage(1); }} placeholder="Dominio" />} activeCount={(motoQuery ? 1 : 0) + (clienteQuery ? 1 : 0) + (estado ? 1 : 0) + (sortBy !== "updatedAt" ? 1 : 0)}>
           <SearchBox value={motoQuery} onChange={(value) => { setMotoQuery(value); setPage(1); }} placeholder="Marca o modelo" />
@@ -93,10 +95,10 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
         <div className="avianto-mobile-list">
           {result?.content.length ? result.content.map((profile) => <VehicleCard key={profile.id} variant="profile" plate={profile.patente} action={<div className="avianto-vehicle-actions">
             <button type="button" className="text-button" onClick={() => onOpen(profile.id)}>Abrir perfil</button>
-            {!profile.ingresada && <button type="button" className="text-button" onClick={() => onIntake(profile.patente)}>Ingresar moto</button>}
+            {!profile.ingresada && (can("motos.ingresar_taller") ? <button type="button" className="text-button" onClick={() => onIntake(profile.patente)}>Ingresar moto</button> : null)}
             {profile.ingresada && profile.seccion === "Venta" && <button type="button" className="text-button" aria-label={`Abrir ficha de venta ${profile.patente}`} onClick={() => onOpenSale(profile.id)}>Abrir venta</button>}
-            <button type="button" className="text-button" onClick={() => setEditing(profile)}>Editar</button>
-            <button type="button" className="text-button danger-action" onClick={() => setDeleting(profile)}>Eliminar</button>
+            {can("motos.editar") && <button type="button" className="text-button" onClick={() => setEditing(profile)}>Editar</button>}
+            {can("motos.eliminar") && <button type="button" className="text-button danger-action" onClick={() => setDeleting(profile)}>Eliminar</button>}
           </div>}>
             <VehicleImage motoId={profile.id} version={profile.imagenActualizadaAt} tamano="miniatura" className="avianto-profile-thumb" alt={`Foto de ${profile.patente}`} />
             <VehicleField label="Moto" value={profile.marca} />
@@ -107,7 +109,7 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
             <VehicleField label="Km" value={profile.kilometraje?.toLocaleString("es-AR") ?? "—"} />
             <VehicleField label="Fecha ingreso" value={workshopInfo.get(profile.id)?.date ? new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(new Date(`${workshopInfo.get(profile.id)?.date}T00:00:00Z`)) : "—"} />
             <VehicleField label="Ficha" value={workshopInfo.get(profile.id)?.fiche ?? "—"} />
-          </VehicleCard>) : <EmptyState title="No hay perfiles para mostrar" body="Probá con otro dominio o ajustá los filtros. También podés registrar una moto." action={<button className="button primary" onClick={() => onIntake()}>Ingresar moto</button>} />}
+          </VehicleCard>) : <EmptyState title="No hay perfiles para mostrar" body="Probá con otro dominio o ajustá los filtros. También podés registrar una moto." action={(can("motos.ingresar_taller") ? <button className="button primary" onClick={() => onIntake()}>Ingresar moto</button> : null)} />}
         </div>}
         <Pagination page={page} total={result?.totalPages || 1} onPage={setPage} />
       </div>

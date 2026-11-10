@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePermission } from "./permissions-context";
 import { Edit3, Eye, Filter, Plus, Trash2 } from "lucide-react";
 import { api } from "../lib/api";
 import { money, parsePrice } from "../lib/format";
@@ -13,6 +14,7 @@ import { AviantoPage, AviantoPageHeader, AviantoPanel } from "./avianto-layout";
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "No fue posible cargar los trabajos.";
 
 export function TrabajosCatalogoView({ notify }: { notify: Notify }) {
+  const can = usePermission();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("Todos");
   const [rows, setRows] = useState<TrabajoCatalogoResponse[]>([]);
@@ -43,7 +45,7 @@ export function TrabajosCatalogoView({ notify }: { notify: Notify }) {
     } catch (reason) { notify(errorMessage(reason), "error"); }
   };
   return <AviantoPage className="work-catalog-page">
-    <AviantoPageHeader title="Trabajos" description="Precios de referencia para presupuestar las fichas del taller." actions={<button className="button primary" onClick={() => setEditing({ id: "", descripcion: "", precioBase: 0, activo: true })}><Plus size={19} />Nuevo trabajo</button>} />
+    <AviantoPageHeader title="Trabajos" description="Precios de referencia para presupuestar las fichas del taller." actions={(can("trabajos.crear") ? <button className="button primary" onClick={() => setEditing({ id: "", descripcion: "", precioBase: 0, activo: true })}><Plus size={19} />Nuevo trabajo</button> : null)} />
     <AviantoPanel className="record-list-panel work-catalog-record-list-panel">
       <div className="panel-head"><div><h2>Precios de referencia</h2><p>Valores sugeridos para presupuestos de taller.</p></div></div>
        <FilterBar primary={<SearchBox value={query} onChange={setQuery} placeholder="Buscar por descripción" />} activeCount={filter !== "Todos" ? 1 : 0}>
@@ -53,8 +55,8 @@ export function TrabajosCatalogoView({ notify }: { notify: Notify }) {
         id: row.id, title: row.descripcion, fields: [
           { label: "Precio sugerido", value: money(row.precioBase) },
           { label: "Estado", value: <span className={`record-state ${row.activo ? "active" : "inactive"}`}>{row.activo ? "Activo" : "Inactivo"}</span> },
-        ], actions: <><button type="button" className="text-button" onClick={() => setDetail(row)} aria-label={`Ver trabajo ${row.descripcion}`}><Eye size={17} />Ver detalle</button><button type="button" className="text-button secondary" onClick={() => setEditing(row)} aria-label={`Editar trabajo ${row.descripcion}`}><Edit3 size={17} />Editar</button><button type="button" className="text-button danger-action" onClick={() => setDeleting(row)} aria-label={`Eliminar trabajo ${row.descripcion}`}><Trash2 size={17} />Eliminar</button></>,
-      }))} /> : <EmptyState title="No hay trabajos para mostrar" body="Creá un trabajo o ajustá los filtros." action={<button className="button primary" onClick={() => setEditing({ id: "", descripcion: "", precioBase: 0, activo: true })}>Nuevo trabajo</button>} />}
+        ], actions: <><button type="button" className="text-button" onClick={() => setDetail(row)} aria-label={`Ver trabajo ${row.descripcion}`}><Eye size={17} />Ver detalle</button>{can("trabajos.editar") && <button type="button" className="text-button secondary" onClick={() => setEditing(row)} aria-label={`Editar trabajo ${row.descripcion}`}><Edit3 size={17} />Editar</button>}{can("trabajos.eliminar") && <button type="button" className="text-button danger-action" onClick={() => setDeleting(row)} aria-label={`Eliminar trabajo ${row.descripcion}`}><Trash2 size={17} />Eliminar</button>}</>,
+      }))} /> : <EmptyState title="No hay trabajos para mostrar" body="Creá un trabajo o ajustá los filtros." action={(can("trabajos.crear") ? <button className="button primary" onClick={() => setEditing({ id: "", descripcion: "", precioBase: 0, activo: true })}>Nuevo trabajo</button> : null)} />}
     </AviantoPanel>
      <AbmFormModal key={editing?.id || "new"} open={editing !== null} resource="trabajo" mode={editing?.id ? "modificar" : "agregar"} initialValues={editing ?? {}} fields={[{ key: "descripcion", label: "Descripción", required: true, wide: true }, { key: "precioBase", label: "Precio sugerido", type: "currency", required: true }]} onClose={() => setEditing(null)} onSubmit={submit} onError={(message) => notify(message, "error")} />
     <Dialog open={detail !== null} title="Detalle del trabajo" onClose={() => setDetail(null)}><dl className="record-detail"><div><dt>Descripción</dt><dd>{detail?.descripcion}</dd></div><div><dt>Precio sugerido</dt><dd>{detail ? money(detail.precioBase) : "—"}</dd></div><div><dt>Estado</dt><dd>{detail?.activo ? "Activo" : "Inactivo"}</dd></div></dl><div className="modal-actions"><button className="button secondary" onClick={() => setDetail(null)}>Cerrar</button><button className="button primary" onClick={() => { setEditing(detail); setDetail(null); }}>Editar</button></div></Dialog>

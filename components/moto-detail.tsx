@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePermission } from "./permissions-context";
 import { ArrowDownUp, ArrowRightLeft, Camera, Eye, FileText, Filter, LogIn, Pencil, Plus, Settings2 } from "lucide-react";
 import { api } from "../lib/api";
 import { integerInput, money, parseIntegerInput } from "../lib/format";
@@ -54,6 +55,7 @@ export function MotoDetail({
   onIntake: (plate?: string) => void;
   notify: Notify;
 }) {
+  const can = usePermission();
   const [tab, setTab] = useState<"general" | "client" | "services" | "fichas" | "repuestos" | "venta">(initialTab ?? "general");
   const [moto, setMoto] = useState<MotovehiculoResponse | null>(null);
   const [client, setClient] = useState<ClienteResponse | null>(null);
@@ -297,8 +299,8 @@ export function MotoDetail({
             <VehicleField label="Km" value={moto.kilometraje?.toLocaleString("es-AR") ?? "—"} />
           </div>
           <div className="moto-profile-actions">
-            {!moto.ingresada ? <button className="moto-profile-action" onClick={() => onIntake(moto.patente)}><LogIn size={20} />Ingresar moto</button> : moto.seccion === "Venta" ? <button className="moto-profile-action" onClick={() => saleFicha ? onOpenSale(saleFicha.id) : setTab("venta")}><FileText size={20} />Abrir ficha de venta</button> : moto.seccion === "Taller" ? <button className="moto-profile-action" onClick={() => setTab("fichas")}><FileText size={20} />Abrir ficha taller</button> : <span className="moto-profile-note">La entrega se completa desde la ficha terminada</span>}
-            {moto.ingresada && moto.seccion && <button className="moto-profile-action" onClick={openCircuitChange}><ArrowRightLeft size={20} />{moto.seccion === "Venta" ? "Pasar a taller" : "Pasar a ventas"}</button>}
+            {!moto.ingresada ? (can("motos.ingresar_taller") ? <button className="moto-profile-action" onClick={() => onIntake(moto.patente)}><LogIn size={20} />Ingresar moto</button> : null) : moto.seccion === "Venta" ? <button className="moto-profile-action" onClick={() => saleFicha ? onOpenSale(saleFicha.id) : setTab("venta")}><FileText size={20} />Abrir ficha de venta</button> : moto.seccion === "Taller" ? <button className="moto-profile-action" onClick={() => setTab("fichas")}><FileText size={20} />Abrir ficha taller</button> : <span className="moto-profile-note">La entrega se completa desde la ficha terminada</span>}
+            {moto.ingresada && moto.seccion && (can("motos.circuito") ? <button className="moto-profile-action" onClick={openCircuitChange}><ArrowRightLeft size={20} />{moto.seccion === "Venta" ? "Pasar a taller" : "Pasar a ventas"}</button> : null)}
           </div>
           <div className="moto-profile-state"><span>Estado</span><StatusBadge status={moto.estado} /></div>
         </div>
@@ -325,8 +327,8 @@ export function MotoDetail({
                 )}
               </div>
               <figcaption className="moto-vehicle-photo-actions">
-                <button type="button" className="moto-photo-action" disabled={photoBusy} onClick={() => photoInput.current?.click()}><Camera size={18} aria-hidden="true" />{photoBusy ? "Guardando foto..." : moto.imagenActualizadaAt ? "Cambiar foto" : "Subir foto"}</button>
-                {moto.imagenActualizadaAt && <button type="button" className="moto-photo-action" disabled={photoBusy} onClick={() => setPhotoRemoving(true)}>Quitar foto</button>}
+                {can("motos.editar") && <button type="button" className="moto-photo-action" disabled={photoBusy} onClick={() => photoInput.current?.click()}><Camera size={18} aria-hidden="true" />{photoBusy ? "Guardando foto..." : moto.imagenActualizadaAt ? "Cambiar foto" : "Subir foto"}</button>}
+                {moto.imagenActualizadaAt && can("motos.editar") && <button type="button" className="moto-photo-action" disabled={photoBusy} onClick={() => setPhotoRemoving(true)}>Quitar foto</button>}
                 <input ref={photoInput} type="file" accept="image/*,.heic,.heif" hidden aria-label="Elegir foto de la moto" onChange={(event) => void uploadPhoto(event.target.files?.[0])} />
               </figcaption>
             </figure>
@@ -375,7 +377,7 @@ export function MotoDetail({
       )}
       {tab === "services" && (
         <section className="moto-profile-panel moto-profile-services">
-          <div className="moto-service-head"><h2 className="moto-section-title">Último service</h2><div className="moto-service-actions">{latestService && <button className="button secondary moto-service-config" onClick={() => openEditService(latestService)} aria-label="Editar último service"><Pencil size={18} />Editar último service</button>}<button className="button secondary moto-service-config" onClick={openConfig}><Settings2 size={18} />Configurar periodos</button></div></div>
+          <div className="moto-service-head"><h2 className="moto-section-title">Último service</h2><div className="moto-service-actions">{latestService && (can("services.editar") ? <button className="button secondary moto-service-config" onClick={() => openEditService(latestService)} aria-label="Editar último service"><Pencil size={18} />Editar último service</button> : null)}{can("motos.editar") && <button className="button secondary moto-service-config" onClick={openConfig}><Settings2 size={18} />Configurar periodos</button>}</div></div>
           <div className="moto-service-feature">
             <div className="moto-service-feature-grid">
               <VehicleField label="Fecha" value={date(latestService?.fecha ?? moto.fechaUltimoService)} />
@@ -385,7 +387,7 @@ export function MotoDetail({
             </div>
             <div className="moto-service-notes"><strong>Observaciones ↓</strong><p>{latestService?.observaciones || moto.serviceObservaciones || "Sin observaciones."}</p></div>
           </div>
-          <button className="moto-service-new" disabled={serviceSaving} onClick={openNewService}><Plus size={19} />Nuevo service</button>
+          {can("services.registrar") && <button className="moto-service-new" disabled={serviceSaving} onClick={openNewService}><Plus size={19} />Nuevo service</button>}
           <h3 className="moto-section-title moto-history-title">Historial</h3>
           <div className="moto-service-filters"><FilterBar activeCount={(serviceDesde ? 1 : 0) + (serviceHasta ? 1 : 0) + (serviceSort !== "fecha" ? 1 : 0)}>
              <label><span className="date-label">Desde</span><input type="date" value={serviceDesde} onChange={(event) => { setServiceDesde(event.target.value); setServicePage(1); }} /></label>
@@ -409,7 +411,7 @@ export function MotoDetail({
              </div>
              <button type="button" className="button primary" onClick={() => onOpenFicha(openFicha)}><Eye size={17} />Abrir ficha</button>
            </article>}
-           <button className="button primary ficha-profile-new" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewFicha({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nueva ficha</button>
+           {can("fichas.crear") && <button className="button primary ficha-profile-new" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewFicha({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nueva ficha</button>}
            <header className="ficha-profile-history-heading"><h2>Historial de fichas</h2></header>
            <FilterBar activeCount={(fichaDesde ? 1 : 0) + (fichaHasta ? 1 : 0) + (fichaEstado ? 1 : 0) + (fichaPago ? 1 : 0) + (fichaSort !== "fechaIngreso" ? 1 : 0)}>
              <label><span className="date-label">Desde</span><input type="date" value={fichaDesde} onChange={(event) => { setFichaDesde(event.target.value); setFichaPage(1); }} /></label>
@@ -434,7 +436,7 @@ export function MotoDetail({
       )}
       {tab === "repuestos" && (
         <AviantoPanel className="moto-profile-panel record-list-panel moto-profile-table">
-           <div className="panel-head"><h2>Pedidos de repuestos</h2><button className="button secondary" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewRepuesto({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nuevo pedido</button></div>
+           <div className="panel-head"><h2>Pedidos de repuestos</h2>{can("pedidos.crear") && <button className="button secondary" disabled={!moto.ingresada || moto.seccion !== "Taller"} onClick={() => onNewRepuesto({ motoId: moto.id, clienteId: moto.propietarioId })}><Plus size={17} />Nuevo pedido</button>}</div>
            <FilterBar activeCount={(repuestoDesde ? 1 : 0) + (repuestoHasta ? 1 : 0) + (repuestoEstado ? 1 : 0) + (repuestoPago ? 1 : 0) + (repuestoSort !== "fecha" ? 1 : 0)}>
              <label><span className="date-label">Desde</span><input type="date" value={repuestoDesde} onChange={(event) => { setRepuestoDesde(event.target.value); setRepuestoPage(1); }} /></label>
              <label><span className="date-label">Hasta</span><input type="date" value={repuestoHasta} onChange={(event) => { setRepuestoHasta(event.target.value); setRepuestoPage(1); }} /></label>
@@ -464,7 +466,7 @@ export function MotoDetail({
           <label>Kilometraje<input type="text" inputMode="numeric" value={integerInput(serviceKm)} onChange={(event) => setServiceKm(event.target.value)} required /></label>
           {!serviceEditing && <div className="service-modal-summary"><VehicleField label="Próx. service" value={nextService?.proximaFecha ? date(nextService.proximaFecha) : "Sin referencia"} /><VehicleField label="Próx. km" value={nextService?.proximKm?.toLocaleString("es-AR") ?? "—"} /></div>}
           <label className="service-modal-notes">Observaciones<textarea value={serviceNotes} onChange={(event) => setServiceNotes(event.target.value)} placeholder="Ej: cambio de aceite y filtros" /></label>
-          <div className="modal-actions"><button type="button" className="button secondary" onClick={closeService}>Cancelar</button><button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : serviceEditing ? "Guardar cambios" : "Guardar"}</button></div>
+          <div className="modal-actions"><button type="button" className="button secondary" onClick={closeService}>Cancelar</button><button className="button primary" disabled={serviceSaving || !can(serviceEditing ? "services.editar" : "services.registrar")}>{serviceSaving ? "Guardando..." : serviceEditing ? "Guardar cambios" : "Guardar"}</button></div>
         </form>
       </Dialog>
       <Dialog open={configOpen} title="Configurar service" className="service-modal" onClose={() => setConfigOpen(false)} dirty={configDirty}>
@@ -474,14 +476,14 @@ export function MotoDetail({
           <label>Próximo service (fecha)<input type="date" value={configProximaFecha} onChange={(event) => setConfigProximaFecha(event.target.value)} /></label>
           <div className="service-modal-summary"><VehicleField label="Próx. service" value={nextService?.proximaFecha ? date(nextService.proximaFecha) : "Sin referencia"} /><VehicleField label="Próx. km" value={nextService?.proximKm?.toLocaleString("es-AR") ?? "—"} /></div>
           <label className="service-modal-notes">Observaciones<textarea value={configNotes} onChange={(event) => setConfigNotes(event.target.value)} placeholder="Ej: cambio de aceite y filtros" /></label>
-          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setConfigOpen(false)}>Cancelar</button><button className="button primary" disabled={configSaving}>{configSaving ? "Guardando..." : "Guardar"}</button></div>
+          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setConfigOpen(false)}>Cancelar</button><button className="button primary" disabled={configSaving || !can("motos.editar")}>{configSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>
       </Dialog>
       <Dialog open={circuitTarget !== null} title={circuitTarget === "TALLER" ? "Pasar moto a Taller" : "Pasar moto a Ventas"} onClose={() => { if (!circuitSaving) setCircuitTarget(null); }} dirty={Boolean(circuitReason)}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveCircuitChange(); }}>
           <p className="form-notice">El cambio conserva el historial. Solo se permite cuando no hay ficha abierta, repuestos activos, pagos vigentes ni transferencia activa. Al volver a Taller, la ficha de venta abierta queda cancelada y auditada.</p>
           <label className="form-field-wide">Motivo del cambio<textarea value={circuitReason} maxLength={500} onChange={(event) => setCircuitReason(event.target.value)} placeholder="Ej.: se seleccionó el circuito incorrecto al ingresar la moto" required /></label>
-          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setCircuitTarget(null)} disabled={circuitSaving}>Cancelar</button><button className="button primary" disabled={!circuitReason.trim() || circuitSaving}>{circuitSaving ? "Guardando..." : "Confirmar cambio"}</button></div>
+          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setCircuitTarget(null)} disabled={circuitSaving}>Cancelar</button><button className="button primary" disabled={!circuitReason.trim() || circuitSaving || !can("motos.circuito")}>{circuitSaving ? "Guardando..." : "Confirmar cambio"}</button></div>
         </form>
       </Dialog>
     </div>

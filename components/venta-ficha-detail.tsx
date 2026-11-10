@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePermission } from "./permissions-context";
 import { ArrowRightLeft, CalendarClock, Check, ClipboardCheck, UserRound } from "lucide-react";
 import { api } from "../lib/api";
 import { formatDateInAr, todayInAr } from "../lib/dates";
@@ -19,15 +20,14 @@ export function VentaFichaDetail({
   fichaKey,
   onBack,
   onOpenMoto,
-  canAdmin,
   notify,
 }: {
   fichaKey: string;
   onBack: () => void;
   onOpenMoto: (id: string) => void;
-  canAdmin: boolean;
   notify: Notify;
 }) {
+  const can = usePermission();
   const [ficha, setFicha] = useState<VentaFichaResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
@@ -104,7 +104,7 @@ export function VentaFichaDetail({
   const cancelledTransfer = ficha.transferencia?.canceladaAt ? ficha.transferencia : null;
   const appointmentReady = Boolean(transfer?.citaFecha && transfer.citaHora && transfer.citaLugar);
   const attendanceReady = Boolean(transfer?.asistenciaAt);
-  const canStartTransfer = canAdmin && !sold && !cancelled && !transfer && Boolean(ficha.compradorId) && checklistReady;
+  const canStartTransfer = can("ventas.transferir") && !sold && !cancelled && !transfer && Boolean(ficha.compradorId) && checklistReady;
   const steps = ["Carpeta", "Comprador", "Iniciar transferencia", "Turno / proceso"] as const;
   const currentStep = cancelled ? -1 : sold ? steps.length : transfer ? 3 : ficha.compradorId ? 2 : checklistReady ? 1 : 0;
   const confirmAttendance = () => {
@@ -184,10 +184,10 @@ export function VentaFichaDetail({
 
           <section className="panel sale-transfer-panel">
             <div className="panel-head"><div><h2>Transferencia</h2><p>Una única transferencia pertenece a esta ficha de venta.</p></div>{transfer && <StatusBadge status={transfer.finalizadaAt ? "Finalizada" : "En proceso"} />}</div>
-             {!transfer ? <div className="sale-transfer-waiting"><ArrowRightLeft size={22} aria-hidden="true" /><div><strong>{cancelledTransfer ? "Transferencia cancelada" : "Transferencia aún no iniciada"}</strong><p>{cancelledTransfer ? `Cancelada ${appointmentDate(cancelledTransfer.canceladaAt)}${cancelledTransfer.canceladaPor ? ` por ${cancelledTransfer.canceladaPor}` : ""}. Seleccioná un comprador para iniciar una nueva gestión.` : "Se habilita cuando haya comprador prospectivo y los ítems obligatorios estén realizados."}</p></div>{canAdmin && !cancelled && <button className="button primary" disabled={!canStartTransfer || Boolean(pending)} onClick={() => setConfirmation({ title: cancelledTransfer ? "Reiniciar transferencia" : "Iniciar transferencia", body: `La ficha ${ficha.numero} pasará a Transferencia en proceso. El vendedor seguirá siendo titular hasta completar la venta.`, confirmLabel: cancelledTransfer ? "Reiniciar transferencia" : "Iniciar transferencia", action: () => updateFicha("transfer", `/ventas/${ficha.id}/transferencia`, { method: "POST" }, cancelledTransfer ? "Transferencia reiniciada." : "Transferencia iniciada.") })}>{cancelledTransfer ? "Reiniciar transferencia" : "Iniciar transferencia"}</button>}</div> : <div className="sale-transfer-record">
+             {!transfer ? <div className="sale-transfer-waiting"><ArrowRightLeft size={22} aria-hidden="true" /><div><strong>{cancelledTransfer ? "Transferencia cancelada" : "Transferencia aún no iniciada"}</strong><p>{cancelledTransfer ? `Cancelada ${appointmentDate(cancelledTransfer.canceladaAt)}${cancelledTransfer.canceladaPor ? ` por ${cancelledTransfer.canceladaPor}` : ""}. Seleccioná un comprador para iniciar una nueva gestión.` : "Se habilita cuando haya comprador prospectivo y los ítems obligatorios estén realizados."}</p></div>{can("ventas.transferir") && !cancelled && <button className="button primary" disabled={!canStartTransfer || Boolean(pending)} onClick={() => setConfirmation({ title: cancelledTransfer ? "Reiniciar transferencia" : "Iniciar transferencia", body: `La ficha ${ficha.numero} pasará a Transferencia en proceso. El vendedor seguirá siendo titular hasta completar la venta.`, confirmLabel: cancelledTransfer ? "Reiniciar transferencia" : "Iniciar transferencia", action: () => updateFicha("transfer", `/ventas/${ficha.id}/transferencia`, { method: "POST" }, cancelledTransfer ? "Transferencia reiniciada." : "Transferencia iniciada.") })}>{cancelledTransfer ? "Reiniciar transferencia" : "Iniciar transferencia"}</button>}</div> : <div className="sale-transfer-record">
               <div className="sale-transfer-facts"><div><span>Vendedor hasta finalizar</span><strong>{ficha.vendedor}</strong></div><div><span>{sold ? "Comprador final" : "Comprador prospectivo"}</span><strong>{ficha.comprador ?? "—"}</strong></div></div>
-               <div className="sale-appointment"><div><span>Cita de transferencia</span><strong>{appointmentDate(transfer.citaFecha)} · {appointmentTime(transfer.citaHora)}</strong><small>{transfer.citaLugar || "Lugar pendiente"}</small></div>{canAdmin && !sold && !cancelled && !transfer.asistenciaAt && <button className="button secondary" disabled={Boolean(pending)} onClick={openAppointment}>{transfer.citaFecha ? "Reprogramar cita" : "Programar cita"}</button>}</div>
-               <div className="sale-attendance"><div><span>Asistencia</span><strong>{transfer.asistenciaAt ? `Confirmada${transfer.asistenciaPor ? ` por ${transfer.asistenciaPor}` : ""}` : "Pendiente de confirmar"}</strong></div>{canAdmin && !sold && !cancelled && !transfer.asistenciaAt && <button className="button secondary" disabled={!appointmentReady || Boolean(pending)} onClick={confirmAttendance}>Confirmar asistencia</button>}{canAdmin && !sold && !cancelled && <button className="button danger" disabled={Boolean(pending)} onClick={() => setConfirmation({ title: "Cancelar transferencia", body: "La moto volverá a En venta. El comprador prospectivo y la cita quedarán liberados; la cancelación seguirá registrada en auditoría.", confirmLabel: "Cancelar transferencia", action: () => updateFicha("cancel-transfer", `/ventas/${ficha.id}/transferencia/cancelar`, { method: "POST" }, "Transferencia cancelada.") })}>Cancelar transferencia</button>}</div>
+               <div className="sale-appointment"><div><span>Cita de transferencia</span><strong>{appointmentDate(transfer.citaFecha)} · {appointmentTime(transfer.citaHora)}</strong><small>{transfer.citaLugar || "Lugar pendiente"}</small></div>{can("ventas.transferir") && !sold && !cancelled && !transfer.asistenciaAt && <button className="button secondary" disabled={Boolean(pending)} onClick={openAppointment}>{transfer.citaFecha ? "Reprogramar cita" : "Programar cita"}</button>}</div>
+               <div className="sale-attendance"><div><span>Asistencia</span><strong>{transfer.asistenciaAt ? `Confirmada${transfer.asistenciaPor ? ` por ${transfer.asistenciaPor}` : ""}` : "Pendiente de confirmar"}</strong></div>{can("ventas.transferir") && !sold && !cancelled && !transfer.asistenciaAt && <button className="button secondary" disabled={!appointmentReady || Boolean(pending)} onClick={confirmAttendance}>Confirmar asistencia</button>}{can("ventas.transferir") && !sold && !cancelled && <button className="button danger" disabled={Boolean(pending)} onClick={() => setConfirmation({ title: "Cancelar transferencia", body: "La moto volverá a En venta. El comprador prospectivo y la cita quedarán liberados; la cancelación seguirá registrada en auditoría.", confirmLabel: "Cancelar transferencia", action: () => updateFicha("cancel-transfer", `/ventas/${ficha.id}/transferencia/cancelar`, { method: "POST" }, "Transferencia cancelada.") })}>Cancelar transferencia</button>}</div>
               {sold && <p className="sale-final-audit">Venta finalizada {ficha.finalizadaAt ? `el ${appointmentDate(ficha.finalizadaAt)}` : ""}{ficha.finalizadaPor ? ` por ${ficha.finalizadaPor}` : ""}.</p>}
             </div>}
           </section>
@@ -199,9 +199,9 @@ export function VentaFichaDetail({
           <section className="sale-buyer-summary">
              <span>{sold ? "Comprador final" : cancelled ? "Comprador registrado" : "Comprador prospectivo"}</span>
             <strong>{ficha.comprador ?? "Sin seleccionar"}</strong>
-             {!sold && !cancelled && canAdmin && !transfer && <div className="sale-buyer-picker"><AutocompleteField value={buyerQuery} onChange={(value) => { setBuyerQuery(value); setSelectedBuyer(null); }} onSelect={(buyer) => { setSelectedBuyer(buyer); setBuyerQuery(buyer.label); }} onClear={() => setSelectedBuyer(null)} selected={selectedBuyer} loadOptions={loadClientOptions} minChars={2} placeholder="Buscar cliente" ariaLabel="Buscar comprador prospectivo" /><button className="button secondary" disabled={!selectedBuyer || Boolean(pending)} onClick={() => void saveBuyer()}>Guardar comprador</button></div>}
+             {!sold && !cancelled && can("ventas.comprador") && !transfer && <div className="sale-buyer-picker"><AutocompleteField value={buyerQuery} onChange={(value) => { setBuyerQuery(value); setSelectedBuyer(null); }} onSelect={(buyer) => { setSelectedBuyer(buyer); setBuyerQuery(buyer.label); }} onClear={() => setSelectedBuyer(null)} selected={selectedBuyer} loadOptions={loadClientOptions} minChars={2} placeholder="Buscar cliente" ariaLabel="Buscar comprador prospectivo" /><button className="button secondary" disabled={!selectedBuyer || Boolean(pending)} onClick={() => void saveBuyer()}>Guardar comprador</button></div>}
           </section>
-            <section className="sale-finalization"><h4>Para completar la venta</h4><ul><li className={ficha.compradorId ? "complete" : ""}>Comprador seleccionado</li><li className={checklistReady ? "complete" : ""}>Carpeta completa</li><li className={appointmentReady ? "complete" : ""}>Turno con fecha, horario y lugar</li><li className={attendanceReady ? "complete" : ""}>Asistencia confirmada</li></ul>{canAdmin && !sold && !cancelled && <button className="button primary large" disabled={!inTransfer || !ficha.compradorId || !checklistReady || !appointmentReady || !attendanceReady || Boolean(pending)} onClick={() => setConfirmation({ title: "Completar venta", body: `La moto ${ficha.patente} pasará a Vendida y ${ficha.comprador ?? "el comprador"} será su nuevo titular. Esta acción queda auditada.`, confirmLabel: "Completar venta", action: () => updateFicha("complete", `/ventas/${ficha.id}/completar`, { method: "POST" }, "Venta completada.") })}>Completar venta</button>}</section>
+            <section className="sale-finalization"><h4>Para completar la venta</h4><ul><li className={ficha.compradorId ? "complete" : ""}>Comprador seleccionado</li><li className={checklistReady ? "complete" : ""}>Carpeta completa</li><li className={appointmentReady ? "complete" : ""}>Turno con fecha, horario y lugar</li><li className={attendanceReady ? "complete" : ""}>Asistencia confirmada</li></ul>{can("ventas.completar") && !sold && !cancelled && <button className="button primary large" disabled={!inTransfer || !ficha.compradorId || !checklistReady || !appointmentReady || !attendanceReady || Boolean(pending)} onClick={() => setConfirmation({ title: "Completar venta", body: `La moto ${ficha.patente} pasará a Vendida y ${ficha.comprador ?? "el comprador"} será su nuevo titular. Esta acción queda auditada.`, confirmLabel: "Completar venta", action: () => updateFicha("complete", `/ventas/${ficha.id}/completar`, { method: "POST" }, "Venta completada.") })}>Completar venta</button>}</section>
         </aside>
       </section>
 
@@ -210,7 +210,7 @@ export function VentaFichaDetail({
           <label>Fecha<input type="date" value={appointmentDateValue} onChange={(event) => setAppointmentDateValue(event.target.value)} required /></label>
           <label>Horario<input type="time" value={appointmentTimeValue} onChange={(event) => setAppointmentTimeValue(event.target.value)} required /></label>
           <label>Lugar<input value={appointmentPlace} maxLength={300} onChange={(event) => setAppointmentPlace(event.target.value)} placeholder="Ej.: Registro Seccional 1" required /></label>
-          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setAppointmentOpen(false)} disabled={Boolean(pending)}>Cancelar</button><button className="button primary" disabled={Boolean(pending)}>{pending === "appointment" ? "Guardando..." : "Guardar cita"}</button></div>
+          <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setAppointmentOpen(false)} disabled={Boolean(pending)}>Cancelar</button><button className="button primary" disabled={Boolean(pending) || !can("ventas.transferir")}>{pending === "appointment" ? "Guardando..." : "Guardar cita"}</button></div>
         </form>
       </Dialog>
        <ConfirmModal open={confirmation !== null} title={confirmation?.title ?? ""} body={confirmation?.body ?? ""} confirmLabel={confirmation?.confirmLabel ?? "Confirmar"} variant={confirmation?.title === "Cancelar transferencia" ? "danger" : "success"} onClose={() => setConfirmation(null)} onConfirm={() => { const request = confirmation; if (!request) return; return request.action().then(() => setConfirmation(null)); }} />

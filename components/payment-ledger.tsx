@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePermission } from "./permissions-context";
 import { CircleDollarSign, Plus, X } from "lucide-react";
 import { api } from "../lib/api";
 import { parsePrice, paymentAmount, priceInput } from "../lib/format";
@@ -35,6 +36,7 @@ export function PaymentLedger({
   notify: Notify;
   presentation?: "default" | "ficha";
 }) {
+  const can = usePermission();
   const [payments, setPayments] = useState<PagoResponse[] | null>(null);
   const [historyError, setHistoryError] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -51,8 +53,8 @@ export function PaymentLedger({
   const canRegister = !cancelled && !settled;
   const registerLabel = cancelled ? "Documento cancelado" : settled ? "Saldo cubierto" : "Registrar pago";
   const activePayments = (payments ?? []).filter((payment) => !payment.anulado);
-  const registerAction = <button type="button" className="button primary payment-register" disabled={!canRegister} onClick={() => { setIdempotencyKey(crypto.randomUUID()); setFormOpen(true); }}>{presentation === "ficha" ? <Plus size={18} aria-hidden="true" /> : <CircleDollarSign size={18} />}{registerLabel}</button>;
-  const annulAction = <button type="button" className="button secondary payment-annul-open" disabled={!activePayments.length} onClick={() => setAnnulPickerOpen(true)}><X size={18} aria-hidden="true" />Anular pago</button>;
+  const registerAction = (can("pagos.registrar") ? <button type="button" className="button primary payment-register" disabled={!canRegister} onClick={() => { setIdempotencyKey(crypto.randomUUID()); setFormOpen(true); }}>{presentation === "ficha" ? <Plus size={18} aria-hidden="true" /> : <CircleDollarSign size={18} />}{registerLabel}</button> : null);
+  const annulAction = (can("pagos.anular") ? <button type="button" className="button secondary payment-annul-open" disabled={!activePayments.length} onClick={() => setAnnulPickerOpen(true)}><X size={18} aria-hidden="true" />Anular pago</button> : null);
 
   const loadPayments = async () => {
     try {
@@ -141,7 +143,7 @@ export function PaymentLedger({
                 <span>{presentation === "ficha" ? `${formatDateShortInAr(payment.fecha)} · ${payment.medioPago ?? "Sin medio"}` : `${formatDateInAr(payment.fecha)} · ${payment.medioPago ?? "Medio no informado"}`}</span>
                 {payment.anulado && <small>Anulado{payment.anuladoAt ? ` el ${formatDateTimeInAr(payment.anuladoAt)}` : ""}</small>}
               </div>
-              {payment.anulado ? <span className="payment-annulled">Anulado</span> : presentation !== "ficha" && <button type="button" className="button danger-outline payment-annul" onClick={() => setPaymentToAnnul(payment)}>Anular</button>}
+              {payment.anulado ? <span className="payment-annulled">Anulado</span> : presentation !== "ficha" && (can("pagos.anular") ? <button type="button" className="button danger-outline payment-annul" onClick={() => setPaymentToAnnul(payment)}>Anular</button> : null)}
             </li>
           ))}
         </ol>
@@ -153,7 +155,7 @@ export function PaymentLedger({
           <ul>
             {activePayments.map((payment) => <li key={payment.id}>
               <span>{formatDateShortInAr(payment.fecha)} · {payment.medioPago ?? "Sin medio"}<strong>{paymentAmount(payment.monto)}</strong></span>
-              <button type="button" className="button danger-outline" onClick={() => { setAnnulPickerOpen(false); setPaymentToAnnul(payment); }}>Anular</button>
+              {can("pagos.anular") && <button type="button" className="button danger-outline" onClick={() => { setAnnulPickerOpen(false); setPaymentToAnnul(payment); }}>Anular</button>}
             </li>)}
           </ul>
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setAnnulPickerOpen(false)}>Cancelar</button></div>
@@ -167,7 +169,7 @@ export function PaymentLedger({
             <label>Fecha<input type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} /></label>
             <SelectField label="Medio de pago (opcional)" value={paymentMethod} onChange={(value) => setPaymentMethod(value as "" | PaymentMethod)} placeholder="No especificado" options={paymentMethods.map((method) => ({ value: method, label: method }))} />
           </div>
-          <div className="modal-actions"><button type="button" className="button secondary" disabled={saving} onClick={closeForm}>Cancelar</button><button className="button primary" disabled={saving}>{saving ? "Registrando..." : "Registrar pago"}</button></div>
+          <div className="modal-actions"><button type="button" className="button secondary" disabled={saving} onClick={closeForm}>Cancelar</button>{can("pagos.registrar") && <button className="button primary" disabled={saving}>{saving ? "Registrando..." : "Registrar pago"}</button>}</div>
         </form>
       </Dialog>
       <ConfirmModal open={paymentToAnnul !== null} title="Anular pago" body={`Vas a anular el pago de ${paymentAmount(paymentToAnnul?.monto ?? 0)}. El movimiento permanecerá visible en el historial y se recalculará el saldo.`} confirmLabel="Anular pago" onClose={() => setPaymentToAnnul(null)} onConfirm={annulPayment} className="payment-ledger-modal" />

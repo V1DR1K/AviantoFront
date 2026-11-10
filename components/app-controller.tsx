@@ -33,7 +33,15 @@ import {
   type AuthSession,
 } from "../lib/auth";
 import { api } from "../lib/api";
-import { normalizeNavigationPage } from "./avianto-navigation";
+import { normalizeNavigationPage, pagePermission } from "./avianto-navigation";
+import { PermissionsProvider } from "./permissions-context";
+import { RolesView } from "./roles-view";
+
+// Una página se abre solo si el usuario tiene el permiso de menú que la habilita.
+const canOpenPage = (session: AuthSession, page: string) => {
+  const permission = pagePermission[normalizeNavigationPage(page)];
+  return !permission || (session.user.permisos ?? []).includes(permission);
+};
 
 type RouteState = {
   page: string;
@@ -102,6 +110,7 @@ function routeState(pathname: string, search: string): RouteState {
     trabajos: "trabajos",
     auditoria: "audit",
     administracion: "settings",
+    roles: "roles",
     services: "services",
     reportes: "reports",
     taller: "taller-dashboard",
@@ -123,6 +132,7 @@ const pathForPage = (page: string) => ({
   trabajos: "/trabajos",
   audit: "/auditoria",
   settings: "/administracion",
+  roles: "/roles",
   services: "/services",
     reports: "/reportes",
     intake: "/ingresar",
@@ -229,7 +239,7 @@ export function AppController() {
   useEffect(() => {
     if (route.invalid) router.replace("/app");
     if (session && route.page === "login") router.replace("/app");
-    if (session && session.user.rol !== "ADMINISTRACION" && ["audit", "settings", "trabajos", "catalog"].includes(route.page)) {
+    if (session && !canOpenPage(session, route.page)) {
       router.replace("/app");
     }
   }, [route.invalid, route.page, router, session]);
@@ -239,7 +249,7 @@ export function AppController() {
 
   const navigate = (path: string) => router.push(path);
   const navigatePage = (page: string) => {
-    if (session.user.rol !== "ADMINISTRACION" && ["audit", "settings", "trabajos", "catalog"].includes(page)) return navigate("/app");
+    if (!canOpenPage(session, page)) return navigate("/app");
     navigate(pathForPage(page));
   };
   const openFicha = (ficha: FichaResponse, returnTo?: string) => { const params = new URLSearchParams(); if (returnTo) params.set("returnTo", returnTo); navigate(`/fichas/${ficha.id}${params.size ? `?${params}` : ""}`); };
@@ -265,7 +275,7 @@ export function AppController() {
     navigate(`/repuestos/nuevo?${params}`);
   };
   const openRepuestoById = (id: string, returnTo?: string) => openRepuesto({ id }, returnTo);
-   const currentPage = ["audit", "settings", "trabajos", "catalog"].includes(route.page) && session.user.rol !== "ADMINISTRACION" ? "dashboard" : route.page;
+   const currentPage = canOpenPage(session, route.page) ? route.page : "dashboard";
   let content: ReactNode;
   if (currentPage === "create") {
       content = route.initialMotoId ? <FichaForm key={`${pathname}?${urlSearch}`} initialMotoId={route.initialMotoId} onClose={() => navigate(route.returnTo || "/perfiles")} onSave={(ficha) => { notify("Ficha creada correctamente."); setRefreshKey((key) => key + 1); openFicha(ficha, route.returnTo); }} notify={notify} /> : <ProfilesView onIntake={(plate) => navigate(`/ingresar?returnTo=%2Fperfiles&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} onOpen={openMoto} onOpenSale={(id) => openSaleForMoto(id, "/perfiles")} notify={notify} />;
@@ -278,7 +288,7 @@ export function AppController() {
   } else if (currentPage === "sales") {
       content = <VentasView onIntake={() => navigate("/ingresar?returnTo=%2Fventas&base=sales")} onOpenMoto={(id) => openMoto(id, "/ventas")} onOpenSale={(sale) => openSale(sale, "/ventas")} notify={notify} />;
   } else if (currentPage === "sale" && route.saleId) {
-      content = <VentaFichaDetail fichaKey={route.saleId} onBack={() => navigate(route.returnTo || "/ventas")} onOpenMoto={(id) => openMoto(id, route.returnTo || `/ventas/${route.saleId}`, "venta")} canAdmin={session.user.rol === "ADMINISTRACION"} notify={notify} />;
+      content = <VentaFichaDetail fichaKey={route.saleId} onBack={() => navigate(route.returnTo || "/ventas")} onOpenMoto={(id) => openMoto(id, route.returnTo || `/ventas/${route.saleId}`, "venta")} notify={notify} />;
   } else if (currentPage === "profiles") {
        content = <ProfilesView onIntake={(plate) => navigate(`/ingresar?returnTo=%2Fperfiles&base=profiles${plate ? `&dominio=${encodeURIComponent(plate)}` : ""}`)} onOpen={openMoto} onOpenSale={(id) => openSaleForMoto(id, "/perfiles")} notify={notify} />;
   } else if (currentPage === "wiki") {
@@ -304,6 +314,8 @@ export function AppController() {
      content = <AdminView resource={currentPage as "clients" | "vehicles" | "catalog" | "audit"} notify={notify} onOpenVehicle={(id) => openMoto(id, "/motos", "general")} onOpenServices={() => navigate("/services")} />;
   } else if (currentPage === "services") {
       content = <ServicesView onOpenMoto={(id) => openMoto(id, "/services", "services")} notify={notify} />;
+  } else if (currentPage === "roles") {
+    content = <RolesView notify={notify} />;
   } else if (currentPage === "settings") {
     content = <SettingsView notify={notify} />;
   } else {
@@ -311,6 +323,7 @@ export function AppController() {
   }
 
   return (
+    <PermissionsProvider permisos={session.user.permisos}>
     <AppShell
       page={normalizeNavigationPage(currentPage)}
       onPage={navigatePage}
@@ -346,5 +359,6 @@ export function AppController() {
        <IntakeView key={`${route.intake ? "open" : "closed"}-${route.initialPlate ?? ""}-${route.returnTo ?? ""}`} open={Boolean(route.intake)} initialPlate={route.initialPlate} onClose={() => navigate(route.returnTo || "/app")} onOpenProfile={(id) => openMoto(id, route.returnTo || "/perfiles")} canStartSale={session.user.rol === "ADMINISTRACION"} notify={notify} />
       <Toast notification={toast} onClose={() => setToast(null)} />
     </AppShell>
+    </PermissionsProvider>
   );
 }

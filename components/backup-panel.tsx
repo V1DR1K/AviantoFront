@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePermission } from "./permissions-context";
 import { AlertTriangle, CheckCircle2, Cloud, Copy, HardDrive, Link2Off, Loader2, ShieldCheck } from "lucide-react";
 import { api, apiUrl } from "../lib/api";
 import { authenticatedFetch } from "../lib/auth";
@@ -24,6 +25,9 @@ const draftOf = (status: BackupStatus): Draft => ({ destinoLocal: status.destino
 const statusLabel = { OK: "Correcta", PARCIAL: "Parcial", ERROR: "Con error", RUNNING: "En curso" } as const;
 
 export function BackupSection({ notify }: { notify: Notify }) {
+  const can = usePermission();
+  const canEdit = can("respaldos.editar");
+  const canRun = can("respaldos.ejecutar");
   const [status, setStatus] = useState<BackupStatus | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -159,8 +163,8 @@ export function BackupSection({ notify }: { notify: Notify }) {
             {!showLinkForm ? <>
               <p className="bk-state ok"><CheckCircle2 size={16} aria-hidden="true" />Conectado como <strong>{status.drive.account}</strong>. Las copias se suben a la carpeta «{status.drive.folderName}» de tu Drive.</p>
               <div className="bk-actions">
-                <button type="button" className="button secondary" onClick={() => setConfirmDisconnect(true)}><Link2Off size={16} aria-hidden="true" />Desvincular cuenta</button>
-                <button type="button" className="button tertiary" onClick={() => { setScriptUrl(""); setLinkError(null); setEditingLink(true); }}>Cambiar script</button>
+                <button type="button" className="button secondary" disabled={!canEdit} onClick={() => setConfirmDisconnect(true)}><Link2Off size={16} aria-hidden="true" />Desvincular cuenta</button>
+                <button type="button" className="button tertiary" disabled={!canEdit} onClick={() => { setScriptUrl(""); setLinkError(null); setEditingLink(true); }}>Cambiar script</button>
               </div>
             </> : <>
               <p>Avianto guarda las copias en tu Google Drive mediante un script que publicás desde tu propia cuenta de Google. No hace falta crear nada en la consola de Google. Se hace una sola vez y lleva unos 5 minutos.</p>
@@ -183,7 +187,7 @@ export function BackupSection({ notify }: { notify: Notify }) {
               </label>
               {linkError && <p className="bk-alert bk-alert-error" role="alert"><AlertTriangle size={16} aria-hidden="true" />{linkError}</p>}
               <div className="bk-actions">
-                <button type="button" className="button primary" disabled={!scriptUrl.trim() || linking} aria-busy={linking || undefined} onClick={() => void link()}>{linking ? "Probando conexión..." : "Vincular y probar"}</button>
+                <button type="button" className="button primary" disabled={!canEdit || !scriptUrl.trim() || linking} aria-busy={linking || undefined} onClick={() => void link()}>{linking ? "Probando conexión..." : "Vincular y probar"}</button>
                 {editingLink && <button type="button" className="button tertiary" onClick={() => setEditingLink(false)}>Cancelar</button>}
               </div>
               <p className="bk-note">Si cambiás el código del script, volvé a implementarlo con Implementar → Administrar implementaciones → Editar → Nueva versión. Crear una «Nueva implementación» cambia la URL y hay que pegar la nueva acá.</p>
@@ -209,7 +213,7 @@ export function BackupSection({ notify }: { notify: Notify }) {
             <span>{noDestination ? "Todavía no elegiste dónde guardar." : draft.autoEnabled ? <>Se hará una copia <strong>todos los días a las {String(draft.autoHour).padStart(2, "0")}:00</strong> y se guardará en <strong>{summary}</strong>.</> : <>La copia automática está <strong>desactivada</strong>. Solo se harán copias cuando vos lo pidas (paso 4).</>}</span>
           </div>
           <div className="bk-actions">
-            <button type="button" className="button primary" disabled={!dirty || noDestination || saving} aria-busy={saving || undefined} onClick={() => void save()}>{saving ? "Guardando..." : "Guardar configuración"}</button>
+            <button type="button" className="button primary" disabled={!canEdit || !dirty || noDestination || saving} aria-busy={saving || undefined} onClick={() => void save()}>{saving ? "Guardando..." : "Guardar configuración"}</button>
             {dirty && <span className="bk-note inline">Tenés cambios sin guardar.</span>}
           </div>
         </li>
@@ -217,7 +221,7 @@ export function BackupSection({ notify }: { notify: Notify }) {
         <li className="bk-step">
           <StepTitle n={4} title="Generar una copia ahora" hint="Hacela antes de cualquier cambio importante o antes de mudar el sistema a otra PC." />
           <div className="bk-actions">
-            <button type="button" className="button primary" disabled={status.running || starting || dirty || noDestination} onClick={() => void runNow()}>{status.running || starting ? <><Loader2 size={16} className="bk-spin" aria-hidden="true" />Generando copia...</> : "Generar copia ahora"}</button>
+            <button type="button" className="button primary" disabled={!canRun || status.running || starting || dirty || noDestination} onClick={() => void runNow()}>{status.running || starting ? <><Loader2 size={16} className="bk-spin" aria-hidden="true" />Generando copia...</> : "Generar copia ahora"}</button>
             {dirty && <span className="bk-note inline">Guardá la configuración (paso 3) para poder generar la copia.</span>}
           </div>
           {status.running && <p className="bk-note" role="status">La copia está en curso. Puede tardar unos minutos según la cantidad de fotos. Podés seguir usando el sistema.</p>}

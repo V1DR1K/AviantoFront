@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, LogOut, X } from "lucide-react";
 import { BrandLogo } from "./brand-logo";
+import type { CanPermission } from "./permissions-context";
 import {
   aviantoHome,
   aviantoNavigationGroups,
@@ -12,7 +13,7 @@ import {
 
 type AviantoSidebarNavigationProps = {
   page: string;
-  isAdmin: boolean;
+  can: CanPermission;
   variant: "sidebar" | "drawer";
   collapsed?: boolean;
   onNavigate: (page: string) => void;
@@ -24,7 +25,7 @@ type AviantoSidebarNavigationProps = {
 
 export function AviantoSidebarNavigation({
   page,
-  isAdmin,
+  can,
   variant,
   collapsed = false,
   onNavigate,
@@ -37,6 +38,7 @@ export function AviantoSidebarNavigation({
   const [groupState, setGroupState] = useState({ page, group: activeGroup ?? "taller" });
   const openGroup = groupState.page === page ? groupState.group : activeGroup ?? groupState.group;
   const isDrawer = variant === "drawer";
+  const visible = (item: AviantoNavigationItem) => !item.permission || can(item.permission);
 
   const go = (target: string) => {
     onNavigate(target);
@@ -75,11 +77,12 @@ export function AviantoSidebarNavigation({
         <BrandLogo className="avianto-nav-logo-lockup" variant="white" size={isDrawer ? "md" : "sm"} descriptor={isDrawer} />
       </button>
       <nav className="avianto-nav-menu" aria-label={isDrawer ? "Menú principal móvil" : "Menú principal"}>
-        {renderItem(aviantoHome)}
-        {aviantoPrimaryNavigation.map(renderItem)}
+        {visible(aviantoHome) && renderItem(aviantoHome)}
+        {aviantoPrimaryNavigation.filter(visible).map(renderItem)}
         {aviantoNavigationGroups.map((group) => {
           const expanded = openGroup === group.id;
-          const visibleItems = group.items.filter((item) => !item.adminOnly || isAdmin);
+          const visibleItems = group.items.filter(visible);
+          if (!visibleItems.length) return null;
           return (
             <section className={`avianto-nav-group${expanded ? " expanded" : ""}`} key={group.id}>
               <button

@@ -4,6 +4,7 @@ import type { AuthSession } from "../lib/auth";
 import { AviantoHeader, BottomNavigation } from "./avianto-mobile";
 import { aviantoHome, aviantoNavigationGroups, aviantoPrimaryNavigation, normalizeBottomNavigationPage } from "./avianto-navigation";
 import { AviantoSidebarNavigation } from "./avianto-sidebar-navigation";
+import { usePermission } from "./permissions-context";
 import { Plus, UserRound } from "lucide-react";
 export function AppShell({
   children,
@@ -24,7 +25,7 @@ export function AppShell({
   const [collapsed, setCollapsed] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
-  const isAdmin = session.user.rol === "ADMINISTRACION";
+  const can = usePermission();
   const currentItem = [aviantoHome, ...aviantoPrimaryNavigation, ...aviantoNavigationGroups.flatMap((group) => group.items)].find((item) => item.id === page);
   const openMenu = () => setMenuOpen(true);
   const go = (target: string) => {
@@ -56,7 +57,7 @@ export function AppShell({
       <aside className={`sidebar${collapsed ? " collapsed" : ""}`}>
         <AviantoSidebarNavigation
           page={page}
-          isAdmin={isAdmin}
+          can={can}
           variant="sidebar"
           collapsed={collapsed}
           onNavigate={go}
@@ -69,7 +70,7 @@ export function AppShell({
         <AviantoHeader onMenu={openMenu} onHome={() => go("dashboard")} onIntake={onIntake} />
         <div className="avianto-workspace-header">
           <div className="avianto-workspace-location"><span>Avianto</span><span aria-hidden="true">/</span><strong>{currentItem?.label ?? "Detalle del registro"}</strong></div>
-          <div className="avianto-workspace-tools"><div className="avianto-user"><UserRound size={19} aria-hidden="true" /><span><strong>{session.user.nombre}</strong><small>{isAdmin ? "Administración" : "Operario"}</small></span></div><button type="button" className="button primary" onClick={onIntake}><Plus size={18} aria-hidden="true" />Ingresar moto</button></div>
+          <div className="avianto-workspace-tools"><div className="avianto-user"><UserRound size={19} aria-hidden="true" /><span><strong>{session.user.nombre}</strong><small>{session.user.rolNombre}</small></span></div>{can("motos.ingresar_taller") && <button type="button" className="button primary" onClick={onIntake}><Plus size={18} aria-hidden="true" />Ingresar moto</button>}</div>
         </div>
         <div id="avianto-content" tabIndex={-1}>{children}</div>
       </main>
@@ -85,7 +86,7 @@ export function AppShell({
           >
             <AviantoSidebarNavigation
               page={page}
-              isAdmin={isAdmin}
+              can={can}
               variant="drawer"
               onNavigate={go}
               onLogout={onLogout}

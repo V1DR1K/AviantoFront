@@ -1,7 +1,7 @@
 export type AuthSession = {
   accessToken: string;
   refreshToken: string;
-  user: { id: string; nombre: string; email: string; rol: "ADMINISTRACION" | "OPERARIO"; activo: boolean };
+  user: { id: string; nombre: string; email: string; rol: string; rolId: string; rolNombre: string; permisos: string[]; activo: boolean };
 };
 
 const sessionKey = "avianto.session";
