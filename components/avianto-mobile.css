@@ -108,9 +108,9 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
 .moto-profile-hero { overflow: hidden; border-radius: 24px 24px 0 0; background: var(--brand-blue); color: var(--brand-white); }
 .moto-profile-back { display: inline-flex; align-items: center; gap: 9px; min-height: 46px; margin: 16px 24px 0; padding: 0 8px; border: 0; background: transparent; color: var(--brand-white); font-size: 1rem; }
 .moto-profile-back span { color: var(--brand-red); font-size: 1.7rem; }
-.moto-profile-hero-inner { display: grid; grid-template-columns: minmax(360px, 1.2fr) minmax(320px, .8fr); gap: 20px 42px; width: min(1180px, 100%); margin: 0 auto; padding: 12px 36px 32px; }
+.moto-profile-hero-inner { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px 42px; width: min(1180px, 100%); margin: 0 auto; padding: 12px 36px 32px; }
 .moto-profile-hero h1 { grid-column: 1 / -1; margin: 0; color: var(--brand-white); font-size: clamp(2.35rem, 4vw, 3.5rem); line-height: 1; text-align: center; letter-spacing: .02em; }
-.moto-profile-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.moto-profile-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .moto-profile-summary .avianto-vehicle-field:first-child { border-radius: var(--radius-field) 0 0 var(--radius-field); }
 .moto-profile-summary .avianto-vehicle-field:last-child { border-radius: 0 var(--radius-field) var(--radius-field) 0; }
 .moto-profile-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -127,11 +127,9 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
 .moto-profile-panel { position: relative; z-index: 1; width: min(1120px, 100%); margin: 0 auto; }
 .moto-section-title { width: fit-content; min-width: min(300px, 100%); margin: 0 auto 22px; padding: 11px 26px; border: 1px solid var(--brand-blue); border-radius: var(--radius-control); background: var(--brand-white); color: var(--brand-blue); font-size: 1.25rem; line-height: 1.2; text-align: center; text-transform: uppercase; }
 .moto-profile-general::after { position: absolute; inset: 90px 0 auto; z-index: -1; height: 420px; background: var(--asset-moto-fondo) center / min(760px, 90%) auto no-repeat; content: ""; opacity: .28; pointer-events: none; }
-.moto-profile-fields { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
-.moto-profile-fields .avianto-vehicle-field:nth-child(-n + 3),
-.moto-profile-fields .avianto-vehicle-field:nth-child(n + 6) { grid-column: span 2; }
-.moto-profile-fields .avianto-vehicle-field:nth-child(4),
-.moto-profile-fields .avianto-vehicle-field:nth-child(5) { grid-column: span 3; }
+.moto-vehicle-layout { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 32px; align-items: start; }
+.moto-vehicle-info { display: grid; gap: 20px; min-width: 0; }
+.moto-profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .moto-profile-observations { margin-top: 24px; padding: 18px; border: 1px solid var(--brand-blue); border-radius: var(--radius-surface); background: rgb(255 255 255 / .94); color: var(--brand-blue); }
 .moto-profile-observations p { margin: 6px 0 0; }
 
@@ -240,7 +238,9 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
   .moto-profile-back { margin: 12px 30px 0; }
   .moto-profile-hero-inner { grid-template-columns: 1fr; gap: 14px; padding: 10px 34px 20px; }
   .moto-profile-hero h1 { font-size: 2.35rem; }
+  .moto-profile-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .moto-profile-summary .avianto-vehicle-field { min-height: 58px; }
+  .moto-vehicle-layout { grid-template-columns: 1fr; gap: 20px; }
   .moto-profile-actions { gap: 4px; }
   .moto-profile-action { min-height: 44px; padding: 6px 8px; font-size: .9rem; }
   .moto-profile-state { min-height: 48px; }

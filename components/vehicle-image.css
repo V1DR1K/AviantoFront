@@ -103,28 +103,52 @@
   color: var(--muted);
 }
 
-/* Foto en el encabezado del perfil de la moto. */
-.moto-profile-photo {
-  grid-column: 1 / -1;
-  justify-self: center;
+/* Foto en la pestaña "Datos del vehículo", a la izquierda de la información (en mobile, arriba). */
+.moto-vehicle-photo {
   display: grid;
-  justify-items: center;
-  gap: 10px;
-  width: min(100%, 360px);
+  gap: 12px;
+  align-content: start;
   margin: 0;
+  min-width: 0;
 }
 
-.moto-profile-photo .vehicle-image {
+.moto-vehicle-photo .vehicle-image {
   width: 100%;
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--brand-white);
+  aspect-ratio: 4 / 3;
+  border: 2px solid var(--brand-blue);
+  border-radius: 20px;
+  background: var(--color-surface-subtle);
+  color: var(--brand-blue);
 }
 
-.moto-profile-photo-actions {
+.moto-vehicle-photo .vehicle-image img {
+  object-fit: contain;
+}
+
+.moto-vehicle-photo-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
+}
+
+.moto-photo-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--brand-blue);
+  border-radius: var(--radius-control);
+  background: var(--brand-white);
+  color: var(--brand-blue);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.moto-photo-action:disabled {
+  opacity: 0.6;
 }
 
 @media (max-width: 640px) {

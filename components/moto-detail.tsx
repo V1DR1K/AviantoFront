@@ -244,17 +244,10 @@ export function MotoDetail({
         <button className="moto-profile-back" onClick={onBack}><span aria-hidden="true">←</span> Volver a perfiles</button>
         <div className="moto-profile-hero-inner">
           <h1>{moto.patente}</h1>
-          <figure className="moto-profile-photo">
-            <VehicleImage motoId={moto.id} version={moto.imagenActualizadaAt} tamano="completa" eager alt={`Foto de la moto ${moto.patente}`} />
-            <figcaption className="moto-profile-photo-actions">
-              <button type="button" className="moto-profile-action" disabled={photoBusy} onClick={() => photoInput.current?.click()}><Camera size={18} aria-hidden="true" />{photoBusy ? "Guardando foto..." : moto.imagenActualizadaAt ? "Cambiar foto" : "Subir foto"}</button>
-              {moto.imagenActualizadaAt && <button type="button" className="moto-profile-action" disabled={photoBusy} onClick={() => setPhotoRemoving(true)}>Quitar foto</button>}
-              <input ref={photoInput} type="file" accept="image/*,.heic,.heif" hidden aria-label="Elegir foto de la moto" onChange={(event) => void uploadPhoto(event.target.files?.[0])} />
-            </figcaption>
-          </figure>
           <div className="moto-profile-summary" aria-label="Resumen de la moto">
             <VehicleField label="Moto" value={moto.marca} />
             <VehicleField label="Modelo" value={moto.modelo} />
+            <VehicleField label="Año" value={moto.anio ?? "—"} />
             <VehicleField label="Km" value={moto.kilometraje?.toLocaleString("es-AR") ?? "—"} />
           </div>
           <div className="moto-profile-actions">
@@ -270,17 +263,29 @@ export function MotoDetail({
       {tab === "general" && (
         <section className="moto-profile-panel moto-profile-general">
           <h2 className="moto-section-title">Datos del vehículo</h2>
-          <div className="moto-profile-fields">
-            <VehicleField label="Moto" value={moto.marca} />
-            <VehicleField label="Modelo" value={moto.modelo} />
-            <VehicleField label="Año" value={moto.anio ?? "—"} />
-            <VehicleField label="Cliente" value={moto.propietario ?? "Sin propietario"} />
-            <VehicleField label="Estado" value={<StatusBadge status={moto.estado} />} tone="red" />
-            <VehicleField label="Km" value={moto.kilometraje?.toLocaleString("es-AR") ?? "—"} />
-            <VehicleField label="Fecha ingreso" value={date(latestFicha?.fechaIngreso)} />
-            <VehicleField label="Ficha" value={latestFicha?.numero ?? "—"} />
+          <div className="moto-vehicle-layout">
+            <figure className="moto-vehicle-photo">
+              <VehicleImage motoId={moto.id} version={moto.imagenActualizadaAt} tamano="completa" eager alt={`Foto de la moto ${moto.patente}`} />
+              <figcaption className="moto-vehicle-photo-actions">
+                <button type="button" className="moto-photo-action" disabled={photoBusy} onClick={() => photoInput.current?.click()}><Camera size={18} aria-hidden="true" />{photoBusy ? "Guardando foto..." : moto.imagenActualizadaAt ? "Cambiar foto" : "Subir foto"}</button>
+                {moto.imagenActualizadaAt && <button type="button" className="moto-photo-action" disabled={photoBusy} onClick={() => setPhotoRemoving(true)}>Quitar foto</button>}
+                <input ref={photoInput} type="file" accept="image/*,.heic,.heif" hidden aria-label="Elegir foto de la moto" onChange={(event) => void uploadPhoto(event.target.files?.[0])} />
+              </figcaption>
+            </figure>
+            <div className="moto-vehicle-info">
+              <div className="moto-profile-fields">
+                <VehicleField label="Moto" value={moto.marca} />
+                <VehicleField label="Modelo" value={moto.modelo} />
+                <VehicleField label="Año" value={moto.anio ?? "—"} />
+                <VehicleField label="Km" value={moto.kilometraje?.toLocaleString("es-AR") ?? "—"} />
+                <VehicleField label="Cliente" value={moto.propietario ?? "Sin propietario"} />
+                <VehicleField label="Estado" value={<StatusBadge status={moto.estado} />} tone="red" />
+                <VehicleField label="Fecha ingreso" value={date(latestFicha?.fechaIngreso)} />
+                <VehicleField label="Ficha" value={latestFicha?.numero ?? "—"} />
+              </div>
+              {moto.observaciones && <div className="moto-profile-observations"><strong>Observaciones</strong><p>{moto.observaciones}</p></div>}
+            </div>
           </div>
-          {moto.observaciones && <div className="moto-profile-observations"><strong>Observaciones</strong><p>{moto.observaciones}</p></div>}
         </section>
       )}
       {tab === "client" && (
