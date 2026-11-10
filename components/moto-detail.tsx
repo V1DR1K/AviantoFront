@@ -94,6 +94,7 @@ export function MotoDetail({
   const [configKm, setConfigKm] = useState("");
   const [configMonths, setConfigMonths] = useState("");
   const [configNotes, setConfigNotes] = useState("");
+  const [configProximaFecha, setConfigProximaFecha] = useState("");
   const [configSaving, setConfigSaving] = useState(false);
   const [circuitTarget, setCircuitTarget] = useState<"TALLER" | "VENTA" | null>(null);
   const [circuitReason, setCircuitReason] = useState("");
@@ -188,6 +189,11 @@ export function MotoDetail({
     ? serviceKm !== String(serviceEditing.kilometraje) || serviceDate !== serviceEditing.fecha || serviceNotes !== (serviceEditing.observaciones ?? "")
     : Boolean(serviceNotes);
 
+  const configDirty = configKm !== String(moto?.kmServicePeriodo ?? "")
+    || configMonths !== String(moto?.mesesServicePeriodo ?? "")
+    || configProximaFecha !== (moto?.proximoServiceFecha ?? "")
+    || configNotes !== (moto?.serviceObservaciones ?? "");
+
   const saveService = async () => {
     if (!serviceKm) return notify("Ingresá el kilometraje del service.", "error");
     if (serviceSaving) return;
@@ -220,6 +226,7 @@ export function MotoDetail({
           kmServicePeriodo: configKm ? parseIntegerInput(configKm) : null,
           mesesServicePeriodo: configMonths ? parseIntegerInput(configMonths) : null,
           serviceObservaciones: configNotes || null,
+          proximoServiceFecha: configProximaFecha || null,
         }),
       });
       setMoto(next);
@@ -233,6 +240,7 @@ export function MotoDetail({
     setConfigKm(moto?.kmServicePeriodo != null ? String(moto.kmServicePeriodo) : "");
     setConfigMonths(moto?.mesesServicePeriodo != null ? String(moto.mesesServicePeriodo) : "");
     setConfigNotes(moto?.serviceObservaciones ?? "");
+    setConfigProximaFecha(moto?.proximoServiceFecha ?? "");
     setConfigOpen(true);
   };
   const openCircuitChange = () => {
@@ -459,11 +467,13 @@ export function MotoDetail({
           <div className="modal-actions"><button type="button" className="button secondary" onClick={closeService}>Cancelar</button><button className="button primary" disabled={serviceSaving}>{serviceSaving ? "Guardando..." : serviceEditing ? "Guardar cambios" : "Guardar"}</button></div>
         </form>
       </Dialog>
-      <Dialog open={configOpen} title="Configurar service" onClose={() => setConfigOpen(false)} dirty={Boolean(configNotes || configKm !== String(moto.kmServicePeriodo ?? "") || configMonths !== String(moto.mesesServicePeriodo ?? ""))}>
+      <Dialog open={configOpen} title="Configurar service" className="service-modal" onClose={() => setConfigOpen(false)} dirty={configDirty}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveConfig(); }}>
           <label>Periodo en km<input type="text" inputMode="numeric" value={integerInput(configKm)} onChange={(event) => setConfigKm(event.target.value)} placeholder="Ej: 5.000" /></label>
           <label>Periodo en meses<input type="text" inputMode="numeric" value={integerInput(configMonths)} onChange={(event) => setConfigMonths(event.target.value)} placeholder="Ej: 6" /></label>
-          <label>Observaciones<input type="text" value={configNotes} onChange={(event) => setConfigNotes(event.target.value)} /></label>
+          <label>Próximo service (fecha)<input type="date" value={configProximaFecha} onChange={(event) => setConfigProximaFecha(event.target.value)} /></label>
+          <div className="service-modal-summary"><VehicleField label="Próx. service" value={nextService?.proximaFecha ? date(nextService.proximaFecha) : "Sin referencia"} /><VehicleField label="Próx. km" value={nextService?.proximKm?.toLocaleString("es-AR") ?? "—"} /></div>
+          <label className="service-modal-notes">Observaciones<textarea value={configNotes} onChange={(event) => setConfigNotes(event.target.value)} placeholder="Ej: cambio de aceite y filtros" /></label>
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setConfigOpen(false)}>Cancelar</button><button className="button primary" disabled={configSaving}>{configSaving ? "Guardando..." : "Guardar"}</button></div>
         </form>
       </Dialog>

@@ -79,6 +79,7 @@ export interface MotovehiculoResponse {
   estado: MotoStatus;
   kmUltimoService?: number | null;
   fechaUltimoService?: string | null;
+  proximoServiceFecha?: string | null;
   kmServicePeriodo: number | null;
   mesesServicePeriodo: number | null;
   serviceObservaciones?: string | null;
