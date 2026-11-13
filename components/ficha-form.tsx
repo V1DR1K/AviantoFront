@@ -6,6 +6,7 @@ import { Camera, Check, Plus, Save, X } from "lucide-react";
 import { api, objectUrl } from "../lib/api";
 import { integerInput, money, parseIntegerInput, parsePrice, priceDraft, priceInput } from "../lib/format";
 import { todayInAr } from "../lib/dates";
+import { normalizeSearchText } from "../lib/search";
 import type {
   FichaRequest,
   FichaResponse,
@@ -265,7 +266,7 @@ export function FichaForm({
       else next.add(key);
       return next;
     });
-  const normalizedWork = (value: string) => value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+  const normalizedWork = (value: string) => normalizeSearchText(value);
   const chooseTrabajo = (key: string, trabajo: TrabajoCatalogoResponse, force = false) => {
     const duplicate = trabajos.some((line) => line.key !== key && normalizedWork(line.descripcion) === normalizedWork(trabajo.descripcion));
     if (duplicate && !force) {

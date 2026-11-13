@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ArrowDownUp, Download, Eye, FileText, Filter } from "lucide-react";
 import { api, download } from "../lib/api";
+import { matchesSearchText } from "../lib/search";
 import type { PageResponse, TransferResponse } from "../lib/types";
 import { EmptyState, FilterBar, LoadingState, Pagination, SearchBox, StatusBadge, type Notify } from "./ui";
 import { AviantoRecordList } from "./avianto-records";
@@ -47,9 +48,8 @@ export function TransferenciasView({
     }
     void api<TransferResponse[]>(`/motovehiculos/${initialMotoId}/transferencias`, { signal: controller.signal })
       .then((entries) => {
-        const normalized = query.trim().toLowerCase();
         const filtered = entries.filter((entry) => {
-          const matchesQuery = !normalized || `${entry.patente} ${entry.moto} ${entry.clienteAnterior} ${entry.clienteNuevo} ${entry.fichaVentaId ?? ""}`.toLowerCase().includes(normalized);
+          const matchesQuery = matchesSearchText(`${entry.patente} ${entry.moto} ${entry.clienteAnterior} ${entry.clienteNuevo} ${entry.fichaVentaId ?? ""}`, query);
           const effectiveDate = entry.fechaTransferencia ?? entry.createdAt.slice(0, 10);
           return matchesQuery && (!desde || effectiveDate >= desde) && (!hasta || effectiveDate <= hasta);
         }).sort((left, right) => {

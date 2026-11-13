@@ -14,6 +14,7 @@ La API del backend Avianto está bajo `/api`. Las respuestas usan DTOs; no expon
 ## Respuestas y errores
 
 - Los listados paginados devuelven `{ content, page, size, totalElements, totalPages, sortBy, direction }`.
+- Los parámetros de búsqueda textual de listados, filtros y autocompletados ignoran mayúsculas, minúsculas y acentos. La API normaliza el texto consultado y compara con `unaccent` en PostgreSQL; los campos de fecha, estado e identificadores conservan sus filtros tipados.
 - Los errores devuelven `{ timestamp, status, message }`: `400` datos inválidos, `403` falta de sesión o permiso, `404` recurso inexistente o ruta desconocida, `409` conflicto de negocio, `422` transición inválida y `500` error inesperado.
 - Una colección anidada valida primero su recurso padre. Si la moto no existe, `/motovehiculos/{id}/propietarios`, `/transferencias`, `/services` y `/services/historial` responden `404`; una colección vacía de una moto existente responde `200`.
 - Los borrados de registros de negocio y configuración son lógicos, conservan historial y responden `204`.

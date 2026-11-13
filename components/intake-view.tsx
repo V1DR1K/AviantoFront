@@ -5,6 +5,7 @@ import { usePermission } from "./permissions-context";
 import { ArrowRight, Plus, Search } from "lucide-react";
 import { api } from "../lib/api";
 import { integerInput, parseIntegerInput, yearInput } from "../lib/format";
+import { normalizeSearchText } from "../lib/search";
 import type { AutocompleteResponse, ClienteResponse, MarcaMotoResponse, PageResponse, PerfilResponse } from "../lib/types";
 import { AbmFormModal } from "./modal/abm-form-modal";
 import { VehiclePhotoField } from "./vehicle-image";
@@ -40,12 +41,12 @@ export function IntakeView({ open, initialPlate, onClose, onOpenProfile, canStar
   }, [open, notify]);
 
   const search = useCallback(async () => {
-    const normalized = plate.replace(/[^a-z0-9]/gi, "").toUpperCase();
+    const normalized = normalizeSearchText(plate).replace(/[^a-z0-9]/g, "").toUpperCase();
     if (!normalized) return notify("Ingresá el dominio de la moto.", "error");
     setBusy(true); setSearched(true); setProfile(null);
     try {
       const result = await api<PageResponse<PerfilResponse>>("/perfiles", {}, { q: normalized, size: 100 });
-      const existing = result.content.find((item) => item.patente.replace(/[^a-z0-9]/gi, "").toUpperCase() === normalized);
+      const existing = result.content.find((item) => normalizeSearchText(item.patente).replace(/[^a-z0-9]/g, "").toUpperCase() === normalized);
       if (existing) { setProfile(existing); setValues({ patente: existing.patente }); }
       else setValues((current) => ({ ...current, patente: normalized }));
     } catch (reason) { notify(reason instanceof Error ? reason.message : "No se pudo buscar el dominio.", "error"); }

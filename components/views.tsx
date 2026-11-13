@@ -6,6 +6,7 @@ import { ArrowDownUp, ArrowLeft, Check, ChevronDown, Download, Edit3, Eye, FileD
 import { api, download, objectUrl } from "../lib/api";
 import { GANANCIA_REPUESTOS_PCT, integerInput, money, parseIntegerInput, paymentAmount } from "../lib/format";
 import { daysAgoInAr, formatDateInAr, todayInAr } from "../lib/dates";
+import { matchesSearchText } from "../lib/search";
 import type {
   BillingMonthResponse,
   DashboardFichasResponse,
@@ -943,7 +944,7 @@ export function ServicesView({ onOpenMoto, notify }: { onOpenMoto: (id: string) 
   const withoutRef = rows?.filter((row) => row.sinReferencia && !row.atrasadoKm && !row.atrasadoFecha) ?? [];
   const upcoming = rows?.filter((row) => !row.sinReferencia && !row.atrasadoKm && !row.atrasadoFecha) ?? [];
   const stateFor = (row: NextServiceResponse) => row.atrasadoKm || row.atrasadoFecha ? "Atrasado" : row.sinReferencia ? "Sin services" : "Al día";
-  const visible = (rows ?? []).filter((row) => (!query || `${row.patente} ${row.moto} ${row.cliente}`.toLocaleLowerCase("es-AR").includes(query.toLocaleLowerCase("es-AR"))) && (filter === "Todos" || stateFor(row) === filter));
+  const visible = (rows ?? []).filter((row) => matchesSearchText(`${row.patente} ${row.moto} ${row.cliente}`, query) && (filter === "Todos" || stateFor(row) === filter));
   return <AviantoPage className="services-page">
     <AviantoPageHeader title="Services" description="Próximos vencimientos, kilometraje y mantenimiento de cada moto." />
     {rows && !loadError && <div className="metrics avianto-metrics">

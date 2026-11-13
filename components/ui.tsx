@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type CSS
 import { AlertTriangle, Check, CheckCircle2, ChevronDown, Clock3, FileSearch, Info, Search, SlidersHorizontal, X, type LucideIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { AutocompleteResponse } from "../lib/types";
+import { matchesSearchText } from "../lib/search";
 import { lockDocumentScroll, unlockDocumentScroll } from "../lib/scroll-lock";
 
 export type ToastTone = "success" | "error" | "warning" | "info";
@@ -423,7 +424,7 @@ export function AutocompleteField({
   const [activeIndex, setActiveIndex] = useState(-1);
   const query = value.trim();
   const localSuggestions = !selected && !loadOptions && query.length >= minChars
-    ? (options ?? []).filter((item) => `${item.label} ${item.secondary ?? ""}`.toLowerCase().includes(query.toLowerCase())).slice(0, 10)
+    ? (options ?? []).filter((item) => matchesSearchText(`${item.label} ${item.secondary ?? ""}`, query)).slice(0, 10)
     : [];
   const visibleSuggestions = loadOptions ? suggestions : localSuggestions;
   const listboxId = useId();

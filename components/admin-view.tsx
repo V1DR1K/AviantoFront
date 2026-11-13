@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Download, Edit3, Eye, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download } from "../lib/api";
 import { parseIntegerInput } from "../lib/format";
+import { matchesSearchText } from "../lib/search";
 import type { AuditoriaResponse, ClienteResponse, ControlResponse, MarcaMotoResponse, MotovehiculoResponse, PageResponse, RolResponse, VentaChecklistPlantillaRequest, VentaChecklistPlantillaResponse } from "../lib/types";
 import { ConfirmModal, Dialog, EmptyState, FilterBar, LoadingState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 import { AbmFormModal, type AbmField, VehicleAbmModal } from "./modal/abm-form-modal";
@@ -76,7 +77,7 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
     const params = { q: query || undefined, activo: filter === "Todos" ? undefined : filter === "Activo", page: page - 1, size: 20 };
     if (resource === "catalog") {
       void api<ControlResponse[]>("/configuracion/controles", { signal: requestSignal }, { includeDeleted: false })
-        .then((list) => { const filtered = list.filter((item) => (!query || `${item.nombre} ${item.descripcion ?? ""}`.toLowerCase().includes(query.toLowerCase())) && (filter === "Todos" || (filter === "Activo" ? item.activo : !item.activo))); setRows(filtered.map((item) => rowFor("catalog", item))); setTotal(1); setLoaded(true); setLoadError(null); })
+        .then((list) => { const filtered = list.filter((item) => matchesSearchText(`${item.nombre} ${item.descripcion ?? ""}`, query) && (filter === "Todos" || (filter === "Activo" ? item.activo : !item.activo))); setRows(filtered.map((item) => rowFor("catalog", item))); setTotal(1); setLoaded(true); setLoadError(null); })
         .catch((reason) => { if (!requestSignal?.aborted) { setLoadError(requestError(reason)); notify(requestError(reason), "error"); } });
       return () => controller?.abort();
     }
