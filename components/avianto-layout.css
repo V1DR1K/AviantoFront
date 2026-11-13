@@ -1444,6 +1444,16 @@ a { text-underline-offset: 3px; }
 
 .record-form label { color: var(--brand-blue); font-weight: 650; }
 .record-form input, .record-form textarea { border-color: var(--color-border-strong); }
+.work-price-scopes { display: grid; gap: 0; min-width: 0; margin: 2px 0 0; padding: 0; border: 0; }
+.work-price-scopes legend { margin-bottom: 8px; color: var(--brand-blue); font-size: .9375rem; font-weight: 750; }
+.record-form .work-price-scope { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: start; gap: 10px; margin: 0; padding: 12px 4px; border-bottom: 1px solid var(--color-border); color: var(--color-text); cursor: pointer; }
+.work-price-scope input[type="checkbox"] { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--brand-blue); }
+.work-price-scope > span:first-of-type { min-width: 0; }
+.work-price-scope strong { display: block; color: var(--brand-blue); font-size: var(--text-md); }
+.work-price-scope small { display: block; margin-top: 3px; color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 450; line-height: 1.45; }
+.work-price-scope-future { cursor: default !important; }
+.work-price-auto { align-self: center; padding: 4px 8px; border-radius: 999px; background: var(--brand-blue-soft); color: var(--brand-blue); font-size: .75rem; font-weight: 700; white-space: nowrap; }
+.work-price-scope-note { margin: 10px 0 0; color: var(--color-text-muted); font-size: var(--text-sm); line-height: 1.5; }
 .record-detail { overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-field); }
 .record-detail > div { padding: 14px 16px; }
 .record-detail dt { color: var(--brand-blue); }

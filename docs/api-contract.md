@@ -55,6 +55,7 @@ Todos los paths siguientes incluyen el prefijo `/api`.
 
 - `/clientes/{id}`, `/motovehiculos/{id}`, `/ventas/{id}/comprador`, `/ventas/{id}/transferencia/cita`, `/fichas/{id}`, `/fichas/{id}/trabajos/{trabajoId}`, `/repuestos/{id}`, `/repuestos/{id}/items/{itemId}`.
 - Configuración: `/configuracion/trabajos/{id}`, `/configuracion/controles/{id}`, `/configuracion/ventas/checklist/{id}`, `/configuracion/marcas-moto/{id}`, `/configuracion/categorias/{id}`, `/configuracion/usuarios/{id}`.
+- `PUT /configuracion/trabajos/{id}` recibe `TrabajoCatalogoRequest` (`descripcion`, `precioBase`, `activo?`, `actualizarEnFichas?: [CERRADAS, ABIERTAS]`) y devuelve `TrabajoCatalogoResponse` con los conteos adicionales `fichasActualizadas` y `trabajosActualizados`. Las fichas futuras que seleccionen un trabajo activo obtienen el nuevo precio del catálogo.
 
 ### PATCH (8)
 
@@ -77,6 +78,7 @@ Todos los paths siguientes incluyen el prefijo `/api`.
 
 - `MotorcycleRequest`: `clienteId?`, `marcaId`, `modelo`, `patente`, `anio?`, `kilometraje?`, `observaciones?`. No contiene campos `color` ni `cilindrada`.
 - `ProfileRequest`: `marcaId`, `modelo`, `patente`, `anio?`, `kilometraje?`, `observaciones?`, `clienteId?`, `clienteNombre?`, `clienteTelefono?`.
+- `TrabajoCatalogoRequest.actualizarEnFichas` permite propagar el precio a fichas cerradas (`CERRADAS`) y/o abiertas (`ABIERTAS`); si se omite, solo cambia el catálogo. El backend actualiza trabajos con la misma descripción (comparación exacta sin distinguir mayúsculas), conserva descuentos y recalcula subtotales, total y estado de pago. Si el nuevo total queda por debajo de lo cobrado, responde `409` y revierte toda la operación.
 - Pagos de fichas y repuestos usan `PagoRegistroRequest` con `monto`, `fecha?`, `medioPago?` e `idempotencyKey?`; anular conserva el movimiento en el historial.
 - Las fotos de fichas se crean con `PhotoRequest` (`filename`, `contentType`, `base64`, `idempotencyKey?`) y se consultan con `/fichas/{id}/fotos/{fotoId}`. `GET /fichas/{id}/pdf` genera el PDF en el backend.
 - Foto de la moto (una por motovehículo): `PUT /motovehiculos/{id}/imagen` recibe `VehicleImageRequest` (`filename?`, `contentType` WebP/JPEG/PNG, `miniaturaBase64` ≤ 100 KB, `completaBase64` ≤ 600 KB, `width`, `height`) y responde `VehicleImageResponse`; `DELETE /motovehiculos/{id}/imagen` la quita; `GET /motovehiculos/{id}/imagen?tamano=miniatura|completa&v=…` devuelve el binario con caché inmutable. Los listados de motos solo informan `imagenActualizadaAt` (la versión) y nunca incluyen los bytes.

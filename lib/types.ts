@@ -125,6 +125,8 @@ export interface TrabajoCatalogoResponse {
   activo: boolean;
   createdAt?: string;
   updatedAt?: string;
+  fichasActualizadas?: number;
+  trabajosActualizados?: number;
 }
 
 export interface FichaTrabajoRequest {
