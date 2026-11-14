@@ -935,3 +935,14 @@
   .ficha-detail-page .ficha-actions:not(:has(> .button.primary)) { grid-template-columns: 48px; }
   .ficha-detail-page .ficha-actions > .button.primary { width: auto; min-width: 240px; }
 }
+
+/* Fill the shell: pages and their content blocks use the full content width instead of fixed caps (1600px, 1180px, 1120px, 760px).
+   Forms, dialogs and the login keep their own widths. */
+.page:not(.avianto-detail-page),
+.avianto-page,
+.avianto-detail-page { width: 100%; max-width: none; }
+.avianto-ficha-form { width: 100%; }
+.moto-profile-hero-inner,
+.moto-profile-panel,
+.moto-client-grid { width: 100%; }
+.ficha-profile-current { width: 100%; }
