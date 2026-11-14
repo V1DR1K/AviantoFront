@@ -102,8 +102,9 @@ export function FichaForm({
   const [persistedFichaId, setPersistedFichaId] = useState<string | null>(fichaKey ?? null);
   const [baseline, setBaseline] = useState<string | null>(null);
   const [loadedEstado, setLoadedEstado] = useState<string | null>(null);
+  const [withinEditWindow, setWithinEditWindow] = useState(!fichaKey);
   const editable =
-    !editing || loadedEstado === "Pendiente" || loadedEstado === "En proceso";
+    !editing || ((loadedEstado === "Pendiente" || loadedEstado === "En proceso") && withinEditWindow);
   const [currentVehicle, setCurrentVehicle] = useState<MotovehiculoResponse | null>(null);
   const [fechaIngreso, setFechaIngreso] = useState(today());
   const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState("");
@@ -160,6 +161,7 @@ export function FichaForm({
       .then((ficha) => {
         void api<MotovehiculoResponse>(`/motovehiculos/${ficha.motoId}`, { signal: controller.signal }).then(setCurrentVehicle).catch(() => undefined);
         setLoadedEstado(ficha.estado);
+        setWithinEditWindow(Date.parse(ficha.fechaCierre) > Date.now());
         setFechaIngreso(ficha.fechaIngreso.slice(0, 10) || today());
         setFechaEntregaEstimada(ficha.fechaEntregaEstimada ?? "");
         setKilometrajeIngreso(
@@ -393,8 +395,9 @@ export function FichaForm({
       />
       {editing && !editable && (
         <p className="form-notice" role="status">
-          Esta ficha ya está en &quot;{loadedEstado}&quot;. Solo se pueden
-           editar fichas en &quot;Pendiente&quot; o &quot;En proceso&quot;.
+          {withinEditWindow
+            ? `Esta ficha ya está en "${loadedEstado}". Solo se pueden editar fichas en "Pendiente" o "En proceso".`
+            : "Venció el plazo de 7 días para editar esta ficha."}
         </p>
       )}
         <div className="form-layout ficha-form-layout">

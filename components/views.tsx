@@ -357,6 +357,7 @@ export function FichasView({
          ) : pendingMotos ? <EmptyState title="Sin motos ingresadas" body="No hay motos en Taller pendientes de ficha." /> : <LoadingState label="Cargando motos..." /> : !result ? <LoadingState label="Cargando fichas..." /> : result.content.length ? (
           <AviantoRecordList label="Fichas de trabajo" records={result.content.map((ficha) => {
             const editable = ficha.estado === "Pendiente" || ficha.estado === "En proceso";
+            const withinEditWindow = Date.parse(ficha.fechaCierre) > Date.now();
             return { id: ficha.id, title: ficha.numero, label: "Ficha", fields: [
               { label: "Moto", value: <>{ficha.moto}<small>{ficha.patente}</small></>, wide: true },
               { label: "Cliente", value: ficha.cliente, wide: true },
@@ -366,7 +367,8 @@ export function FichasView({
               { label: "Total", value: money(ficha.total) },
             ], actions: <>
               <button type="button" className="text-button" onClick={() => onSelect(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} />Abrir ficha</button>
-              {editable && <>{can("fichas.editar") && <button type="button" className="text-button secondary" onClick={() => onEdit(ficha)} aria-label={`Editar ficha ${ficha.numero}`}><Edit3 size={17} />Editar</button>}{can("fichas.eliminar") && <button type="button" className="text-button danger-action" onClick={() => onDelete(ficha)} aria-label={`Eliminar ficha ${ficha.numero}`}><Trash2 size={17} />Eliminar</button>}</>}
+              {editable && withinEditWindow && <>{can("fichas.editar") && <button type="button" className="text-button secondary" onClick={() => onEdit(ficha)} aria-label={`Editar ficha ${ficha.numero}`}><Edit3 size={17} />Editar</button>}{can("fichas.eliminar") && <button type="button" className="text-button danger-action" onClick={() => onDelete(ficha)} aria-label={`Eliminar ficha ${ficha.numero}`}><Trash2 size={17} />Eliminar</button>}</>}
+              {editable && !withinEditWindow && <span className="muted" title="Venció el plazo de 7 días">Plazo de edición vencido</span>}
             </> };
           })} />
         ) : (
@@ -437,6 +439,7 @@ function MoreActions({ actions, pending }: { actions: { key: string; label: stri
 
 export function FichaDetail({
   fichaKey,
+  isAdministrator,
   onBack,
   backLabel = "Volver a fichas",
   onConfirm,
@@ -447,6 +450,7 @@ export function FichaDetail({
   notify,
 }: {
   fichaKey: string;
+  isAdministrator: boolean;
   onBack: () => void;
   backLabel?: string;
   onConfirm: (request: { title: string; body: string; confirmLabel: string; successMessage: string; variant?: "danger" | "success"; action: () => void | Promise<void> }) => void;
@@ -560,6 +564,20 @@ export function FichaDetail({
       return false;
     }
   };
+  const markAllControlsReviewed = async () => {
+    if (pending || !revision || revision.estado === "APROBADA") return;
+    setPending("marcar-todos-controles");
+    try {
+      const next = await api<RevisionResponse>(`/fichas/${fichaKey}/revision/controles/marcar-todos`, { method: "POST" });
+      setRevision(next);
+      notify("Todos los controles quedaron marcados como revisados.");
+    } catch (reason) {
+      setError(errorMessage(reason));
+      notify(errorMessage(reason), "error");
+    } finally {
+      setPending(null);
+    }
+  };
   const openRevisionNote = (control: RevisionControlResponse) => {
     setRevisionNoteControl(control);
     setRevisionNote(control.observacion ?? "");
@@ -606,6 +624,7 @@ export function FichaDetail({
     await update(`/fichas/${fichaKey}/trabajos/${item.id}/estado`, { estado: "Realizado" }, `item-${item.id}`, "Trabajo actualizado.");
   };
   const current = ficha.estado;
+  const withinEditWindow = Date.parse(ficha.fechaCierre) > Date.now();
   const vehicle = splitVehicleName(ficha.moto);
   const subtotalTrabajos = ficha.trabajos.filter((item) => item.estadoTrabajo !== "Cancelado").reduce((sum, item) => sum + item.subtotal, 0);
   const subtotalDespuesDescuento = Math.max(0, subtotalTrabajos - ficha.descuentoGlobal);
@@ -678,9 +697,10 @@ export function FichaDetail({
           <StatusBadge status={ficha.estado} />
           <StatusBadge status={ficha.estadoPago} />
         </div>
+        <p className="muted">{withinEditWindow ? "Edición y eliminación disponibles hasta" : "Plazo de edición y eliminación vencido el"} {new Date(ficha.fechaCierre).toLocaleString("es-AR")}</p>
         <div className="ficha-record-actions">
           <strong>{money(ficha.total)}</strong>
-          {(current === "Pendiente" || current === "En proceso") && (can("fichas.editar") ? <button type="button" onClick={onEdit}><Edit3 size={17} />Editar ficha</button> : null)}
+          {(current === "Pendiente" || current === "En proceso") && withinEditWindow && (can("fichas.editar") ? <button type="button" onClick={onEdit}><Edit3 size={17} />Editar ficha</button> : null)}
         </div>
       </section>
       <ol className={`flow-steps${current === "Cancelada" ? " canceled" : ""}`} aria-label="Etapas de la ficha">
@@ -798,7 +818,7 @@ export function FichaDetail({
 
         {ficha.estado === "En revisión" && revision && (
           <section className="ficha-design-section" aria-label="Revisión de la ficha">
-            <AviantoPanelHeader title="Revisión" description={revision.estado === "APROBADA" ? `Aprobada${revision.forzada ? " (forzada)" : ""}${revision.aprobadoAt ? ` · ${date(revision.aprobadoAt)}` : ""}` : "Controles pendientes"} />
+            <AviantoPanelHeader title="Revisión" description={revision.estado === "APROBADA" ? `Aprobada${revision.forzada ? " (forzada)" : ""}${revision.aprobadoAt ? ` · ${date(revision.aprobadoAt)}` : ""}` : "Controles pendientes"} actions={revision.estado !== "APROBADA" && isAdministrator && can("revision.controlar") ? <button type="button" className="button secondary" disabled={Boolean(pending) || revision.controles.every((control) => control.estado === "Revisado")} onClick={() => void markAllControlsReviewed()}><Check size={17} />{pending === "marcar-todos-controles" ? "Marcando…" : "Marcar todos revisados"}</button> : undefined} />
             <AviantoPanel className="ficha-design-card revision-panel">
               <div className="ficha-table-heading ficha-review-table-heading"><span>Controles</span></div>
               {revision.estado !== "APROBADA" && (

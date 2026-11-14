@@ -187,6 +187,7 @@ export interface FichaResponse {
   montoCobrado: number;
   saldoPendiente: number;
   creadoEn: string;
+  fechaCierre: string;
   trabajos: FichaTrabajoResponse[];
   fotos: PhotoResponse[];
 }
