@@ -84,7 +84,6 @@ export function ProfilesView({ onIntake, onOpen, onOpenSale, notify }: { onIntak
         <FilterBar primary={<SearchBox value={dominio} onChange={(value) => { setDominio(value); setPage(1); }} placeholder="Dominio" />} activeCount={(motoQuery ? 1 : 0) + (clienteQuery ? 1 : 0) + (estado ? 1 : 0) + (sortBy !== "updatedAt" ? 1 : 0)}>
           <SearchBox value={motoQuery} onChange={(value) => { setMotoQuery(value); setPage(1); }} placeholder="Marca o modelo" />
           <SearchBox value={clienteQuery} onChange={(value) => { setClienteQuery(value); setPage(1); }} placeholder="Cliente" />
-          <SelectField value={estado} onChange={(value) => { setEstado(value); setPage(1); }} options={profileStates.map((option) => ({ value: option, label: option }))} placeholder="Todos los estados" icon={Filter} ariaLabel="Filtrar perfiles por estado" />
           <SelectField value={sortBy} onChange={(value) => { setSortBy(value); setPage(1); }} options={[{ value: "patente", label: "Dominio" }, { value: "modelo", label: "Moto" }, { value: "estado", label: "Estado" }, { value: "updatedAt", label: "Última modificación" }]} icon={Filter} ariaLabel="Ordenar perfiles por" />
           <button className="button secondary" onClick={() => { setDirection((value) => value === "ASC" ? "DESC" : "ASC"); setPage(1); }} aria-label="Cambiar orden de perfiles"><ArrowDownUp size={16} />{direction === "DESC" ? "Más recientes" : "Más antiguas"}</button>
         </FilterBar>
