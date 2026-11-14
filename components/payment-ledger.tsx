@@ -53,8 +53,8 @@ export function PaymentLedger({
   const canRegister = !cancelled && !settled;
   const registerLabel = cancelled ? "Documento cancelado" : settled ? "Saldo cubierto" : "Registrar pago";
   const activePayments = (payments ?? []).filter((payment) => !payment.anulado);
-  const registerAction = (can("pagos.registrar") ? <button type="button" className="button primary payment-register" disabled={!canRegister} onClick={() => { setIdempotencyKey(crypto.randomUUID()); setFormOpen(true); }}>{presentation === "ficha" ? <Plus size={18} aria-hidden="true" /> : <CircleDollarSign size={18} />}{registerLabel}</button> : null);
-  const annulAction = (can("pagos.anular") ? <button type="button" className="button secondary payment-annul-open" disabled={!activePayments.length} onClick={() => setAnnulPickerOpen(true)}><X size={18} aria-hidden="true" />Anular pago</button> : null);
+  const registerAction = (can("pagos.registrar") ? (presentation === "ficha" ? <button type="button" className="ficha-icon-button is-primary payment-register" disabled={!canRegister} aria-label={registerLabel} title={registerLabel} onClick={() => { setIdempotencyKey(crypto.randomUUID()); setFormOpen(true); }}><Plus size={20} aria-hidden="true" /></button> : <button type="button" className="button primary payment-register" disabled={!canRegister} onClick={() => { setIdempotencyKey(crypto.randomUUID()); setFormOpen(true); }}><CircleDollarSign size={18} />{registerLabel}</button>) : null);
+  const annulAction = (can("pagos.anular") ? (presentation === "ficha" ? <button type="button" className="ficha-icon-button is-danger payment-annul-open" disabled={!activePayments.length} aria-label="Anular pago" title="Anular pago" onClick={() => setAnnulPickerOpen(true)}><X size={18} aria-hidden="true" /></button> : <button type="button" className="button secondary payment-annul-open" disabled={!activePayments.length} onClick={() => setAnnulPickerOpen(true)}><X size={18} aria-hidden="true" />Anular pago</button>) : null);
 
   const loadPayments = async () => {
     try {

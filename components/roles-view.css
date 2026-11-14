@@ -1,5 +1,5 @@
 /* Gestión > Roles y permisos */
-.roles-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.roles-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .roles-card { display: grid; align-content: start; gap: 10px; padding: 18px; border: 1px solid var(--brand-blue); border-radius: 18px; background: var(--brand-white); color: var(--brand-blue); min-width: 0; }
 .roles-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .roles-card h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }

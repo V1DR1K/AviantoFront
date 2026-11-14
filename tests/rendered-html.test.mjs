@@ -132,7 +132,9 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.doesNotMatch(views, /className="summary-work-list"|className="summary-economic-status"/);
   assert.match(views, /className="ficha-record-hero"/);
   assert.match(views, /className="ficha-total-bar"/);
-  assert.match(views, /className="ficha-footer-actions"[\s\S]*?Descargar PDF/);
+  assert.match(views, /key: "pdf", label: "Descargar PDF"/);
+  assert.doesNotMatch(views, /className="ficha-footer-actions"/);
+  assert.match(views, /ficha-budget-section[\s\S]*?Desglose del presupuesto/);
   assert.match(motoDetail, /<h2>Historial de fichas<\/h2>/);
   assert.match(views, /Enviar a revisión/);
   assert.match(views, /className="ficha-design-card ficha-repair-panel"/);

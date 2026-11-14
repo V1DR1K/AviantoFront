@@ -817,5 +817,121 @@
 /* Desktop record collections: dense grid for the administrative PC workflow instead of two oversized cards. */
 @media (min-width: 1200px) {
   .avianto-record-list.avianto-record-list,
-  .avianto-mobile-list.avianto-mobile-list { grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); align-items: stretch; gap: 20px; }
+  .avianto-mobile-list.avianto-mobile-list { grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); align-items: stretch; gap: 20px; }
+}
+
+/* Ficha de taller, propuesta v4 (PDF "Sección Ficha, Pagos y Presupuesto" + manual de marca).
+   Icon-only secondary actions, numbered section titles, Presupuesto block, two columns on desktop. */
+.ficha-icon-button {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: var(--size-touch-target);
+  height: var(--size-touch-target);
+  padding: 0;
+  border: 2px solid var(--brand-blue);
+  border-radius: 9px;
+  background: var(--color-surface);
+  color: var(--brand-blue);
+  cursor: pointer;
+  list-style: none;
+}
+.ficha-icon-button::-webkit-details-marker { display: none; }
+.ficha-icon-button:focus-visible { outline: 3px solid var(--brand-blue-strong); outline-offset: 2px; }
+.ficha-icon-button:disabled { opacity: 0.45; cursor: not-allowed; }
+.ficha-icon-button.is-primary { background: var(--brand-blue); color: var(--brand-white); }
+.ficha-icon-button.is-ghost { background: transparent; border-color: var(--brand-white); color: var(--brand-white); }
+.ficha-icon-button.is-danger { width: 36px; height: 36px; border-color: var(--color-danger); color: var(--color-danger); }
+.ficha-icon-button.is-sm { width: 34px; height: 34px; }
+
+.ficha-detail-page .ficha-actions { position: static; bottom: auto; }
+.ficha-detail-page .ficha-actions:not(:has(> .button.primary)) { grid-template-columns: minmax(0, 1fr); justify-items: end; }
+.ficha-detail-page .ficha-more-trigger { width: 48px; height: 48px; }
+
+.ficha-detail-page .ficha-flow-sections { gap: 36px; width: 100%; max-width: none; }
+.ficha-detail-page .ficha-flow-sections > section { grid-column: 1; min-width: 0; }
+
+.ficha-flow-sections { counter-reset: ficha-section; }
+.ficha-detail-page .ficha-flow-sections > section > .avianto-panel-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  padding: 0 0 8px;
+  border: 0;
+  border-bottom: 3px solid var(--brand-blue);
+  background: transparent;
+  color: var(--brand-blue);
+}
+.ficha-detail-page .ficha-flow-sections > section > .avianto-panel-header > div:first-child { display: flex; align-items: baseline; justify-content: flex-start; flex: 1 1 auto; gap: 10px; min-width: 0; }
+.ficha-detail-page .ficha-flow-sections > section > .avianto-panel-header h2 {
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand-blue);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.ficha-detail-page .ficha-flow-sections > section > .avianto-panel-header h2::before {
+  content: counter(ficha-section, decimal-leading-zero);
+  counter-increment: ficha-section;
+  margin-right: 10px;
+  color: var(--brand-red);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+}
+.ficha-detail-page .ficha-flow-sections > section > .avianto-panel-header .avianto-panel-header-actions { display: flex; align-items: center; gap: 8px; }
+
+.ficha-budget-card.avianto-panel { min-width: 0; }
+.ficha-budget-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 18px;
+  border-radius: 10px;
+  background: var(--brand-blue);
+  color: var(--brand-white);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ficha-budget-total strong { font-size: 24px; font-variant-numeric: tabular-nums; }
+.ficha-detail-page .ficha-budget-disclosure { margin: 0; }
+
+.ficha-detail-page .ficha-payment-actions { display: flex; justify-content: center; align-items: center; gap: 10px; }
+@media (min-width: 768px) {
+  .ficha-detail-page .ficha-payment-actions { justify-content: flex-end; }
+}
+
+@media (min-width: 1200px) {
+  .ficha-detail-page .ficha-flow-sections { grid-template-columns: minmax(0, 1fr) 380px; align-items: start; column-gap: 32px; }
+  .ficha-detail-page .ficha-flow-sections > .ficha-budget-section { grid-column: 2; grid-row: 1; position: sticky; top: 20px; }
+  .ficha-detail-page .ficha-flow-sections > .ficha-payment-ledger { grid-column: 2; grid-row: 2; position: sticky; top: 20px; }
+}
+
+/* "Más acciones" menu: anchored to its trigger (the bar is not positioned, so the menu must be relative to the trigger wrapper). */
+.ficha-detail-page .ficha-more-actions { position: relative; width: 48px; justify-self: end; }
+.ficha-detail-page .ficha-actions { position: static; bottom: auto; z-index: auto; width: 100%; margin: 0; box-shadow: none; border-radius: var(--radius-surface); padding: var(--space-3); }
+@media (max-width: 767px) {
+  .ficha-detail-page .ficha-actions { grid-template-columns: minmax(0, 1fr) 48px; }
+  .ficha-detail-page .ficha-actions:not(:has(> .button.primary)) { grid-template-columns: 48px; justify-content: end; }
+  .ficha-detail-page .ficha-actions > .button.primary { width: 100%; }
+}
+.ficha-detail-page .ficha-more-actions > div { top: calc(100% + 8px); right: 0; bottom: auto; left: auto; min-width: 240px; z-index: 40; transform-origin: top right; }
+.ficha-detail-page .ficha-more-actions.is-open > div { pointer-events: auto; }
+
+/* Desktop: the action bar sits on the right, the primary action keeps its natural width. */
+@media (min-width: 768px) {
+  .ficha-detail-page .ficha-actions { grid-template-columns: auto 48px; justify-content: end; justify-items: end; width: 100%; }
+  .ficha-detail-page .ficha-actions:not(:has(> .button.primary)) { grid-template-columns: 48px; }
+  .ficha-detail-page .ficha-actions > .button.primary { width: auto; min-width: 240px; }
 }

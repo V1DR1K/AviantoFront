@@ -124,7 +124,9 @@ Record collections use the same document composition as Perfiles in SoftwareDesi
 
 ### Desktop
 
-The designer drew mobile only, so desktop is derived: Ficha detail at 1200px+ places Trabajos, Pedidos and Revisión in a main column with Pagos sticky beside them and the PDF/stage actions below; action bars size to their content instead of stretching; table rows keep the delete action inline. Record collections (`.avianto-record-list`, `.avianto-mobile-list`) use a dense `auto-fill` grid of 330px+ cards at 1200px+ so administrators see 3+ records per row (2 on tablet, 1 on mobile).
+The designer drew mobile only, so desktop is derived: Ficha detail at 1200px+ places Trabajos, Pedidos and Revisión in a main column, with Presupuesto and Pagos in a sticky column beside them; action bars size to their content instead of stretching; table rows keep the delete action inline as an icon.
+
+Ficha detail (propuesta v4, from the designer PDF and the brand manual): section titles are numbered in red (01 Trabajos, 02 Pedidos, 03 Presupuesto, 04 Pagos) with an uppercase blue heading and a 3px blue rule. Secondary actions are icon-only buttons with an `aria-label` and `title` (`.ficha-icon-button`: edit, add payment, annul payment, delete work, new order, open order, more actions). Enviar a revisión keeps its text as the single primary action, and Descargar PDF lives in Más acciones, so the footer repetition is gone. Presupuesto shows the total once, with the breakdown in a disclosure. The PaymentLedger keeps its own ficha-level balance (Presupuesto total, Pagado, Pendiente for the ficha only). Record collections (`.avianto-record-list`, `.avianto-mobile-list`) use a dense `auto-fill` grid of 290px+ cards at 1200px+, so a 1280px window with the 252px sidebar still shows 3 records per row (2 on tablet, 1 on mobile).
 
 ### Module coverage
 

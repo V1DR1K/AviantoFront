@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { usePermission } from "./permissions-context";
-import { ArrowDownUp, ArrowLeft, Check, ChevronDown, Download, Edit3, Eye, FileDown, FileText, Filter, Plus, Trash2, X } from "lucide-react";
+import type { ReactNode } from "react";
+import { ArrowDownUp, ArrowLeft, Check, ChevronDown, Download, Edit3, Eye, ExternalLink, FileDown, FileText, Filter, MoreHorizontal, Plus, Trash2, X } from "lucide-react";
 import { api, download, objectUrl } from "../lib/api";
 import { GANANCIA_REPUESTOS_PCT, integerInput, money, parseIntegerInput, paymentAmount } from "../lib/format";
 import { daysAgoInAr, formatDateInAr, todayInAr } from "../lib/dates";
@@ -410,7 +411,7 @@ function ItemRow({
         <StatusBadge status={item.estadoTrabajo} />
         <span className="detail-work-price">{money(Number(item.precioUnitario))}{item.descuento > 0 && ` · desc. ${money(Number(item.descuento))}`}</span>
       </div>
-      <div className="detail-work-actions" role="cell">{canDelete && (can("fichas.editar") ? <button type="button" className="danger-action" onClick={onDelete} aria-label={`Eliminar trabajo ${item.descripcion}`}><Trash2 size={17} /><span>Eliminar</span></button> : null)}</div>
+      <div className="detail-work-actions" role="cell">{canDelete && (can("fichas.editar") ? <button type="button" className="ficha-icon-button is-danger" onClick={onDelete} aria-label={`Eliminar trabajo ${item.descripcion}`} title="Eliminar trabajo"><Trash2 size={17} aria-hidden="true" /></button> : null)}</div>
     </div>
   );
 }
@@ -419,9 +420,16 @@ function FichaTotalBar({ label, value }: { label: string; value: string }) {
   return <div className="ficha-total-bar"><span>{label}</span><strong>{value}</strong></div>;
 }
 
-function MoreActions({ actions, pending }: { actions: { key: string; label: string; className: string; onClick: () => void }[]; pending: boolean }) {
+function MoreActions({ actions, pending }: { actions: { key: string; label: string; className: string; onClick: () => void; icon?: ReactNode }[]; pending: boolean }) {
   const detailsRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
   const [open, setOpen] = useState(false);
+  const closeOnEscape = (event: { key: string }) => {
+    if (event.key !== "Escape") return;
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
   useEffect(() => {
     const close = (event: PointerEvent) => {
       if (!detailsRef.current?.contains(event.target as Node)) setOpen(false);
@@ -431,8 +439,8 @@ function MoreActions({ actions, pending }: { actions: { key: string; label: stri
   }, []);
   return (
     <div ref={detailsRef} className={`ficha-more-actions${open ? " is-open" : ""}`} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false); }}>
-      <button type="button" className="ficha-more-trigger" aria-expanded={open} onClick={() => setOpen((value) => !value)}>Más acciones<ChevronDown size={16} aria-hidden="true" /></button>
-      <div aria-hidden={!open}>{actions.map((action) => <button key={action.key} className={`button large ${action.className}`} disabled={pending} onClick={() => { setOpen(false); action.onClick(); }}>{action.label}</button>)}</div>
+      <button ref={triggerRef} type="button" className="ficha-icon-button ficha-more-trigger" aria-expanded={open} aria-controls={menuId} aria-label="Más acciones" title="Más acciones" onKeyDown={closeOnEscape} onClick={() => setOpen((value) => !value)}><MoreHorizontal size={22} aria-hidden="true" /></button>
+      <div id={menuId} aria-hidden={!open}>{actions.map((action) => <button key={action.key} className={`button large ${action.className}`} disabled={pending} tabIndex={open ? undefined : -1} onKeyDown={closeOnEscape} onClick={() => { setOpen(false); action.onClick(); }}>{action.icon}{action.label}</button>)}</div>
     </div>
   );
 }
@@ -699,8 +707,7 @@ export function FichaDetail({
         </div>
         <p className="muted">{withinEditWindow ? "Edición y eliminación disponibles hasta" : "Plazo de edición y eliminación vencido el"} {new Date(ficha.fechaCierre).toLocaleString("es-AR")}</p>
         <div className="ficha-record-actions">
-          <strong>{money(ficha.total)}</strong>
-          {(current === "Pendiente" || current === "En proceso") && withinEditWindow && (can("fichas.editar") ? <button type="button" onClick={onEdit}><Edit3 size={17} />Editar ficha</button> : null)}
+          {(current === "Pendiente" || current === "En proceso") && withinEditWindow && (can("fichas.editar") ? <button type="button" className="ficha-icon-button is-ghost" onClick={onEdit} aria-label="Editar ficha" title="Editar ficha"><Edit3 size={18} aria-hidden="true" /></button> : null)}
         </div>
       </section>
       <ol className={`flow-steps${current === "Cancelada" ? " canceled" : ""}`} aria-label="Etapas de la ficha">
@@ -722,12 +729,10 @@ export function FichaDetail({
           </li>
         )}
       </ol>
-      {bottomActions.length > 0 && (
-        <StickyActionBar className="ficha-actions">
-           {bottomActions.filter((action) => action.className === "primary").map((action) => <button key={action.key} className="button large primary" disabled={Boolean(pending) || (action.key === "aprobar" && (!revision || pendingControls.length > 0))} onClick={action.onClick}>{action.label}</button>)}
-          {bottomActions.some((action) => action.className !== "primary") && <MoreActions actions={bottomActions.filter((action) => action.className !== "primary")} pending={Boolean(pending)} />}
-        </StickyActionBar>
-      )}
+      <StickyActionBar className="ficha-actions">
+        {bottomActions.filter((action) => action.className === "primary").map((action) => <button key={action.key} className="button large primary" disabled={Boolean(pending) || (action.key === "aprobar" && (!revision || pendingControls.length > 0))} onClick={action.onClick}>{action.label}</button>)}
+        <MoreActions actions={[...bottomActions.filter((action) => action.className !== "primary"), { key: "pdf", label: "Descargar PDF", className: "secondary", icon: <FileDown size={18} aria-hidden="true" />, onClick: () => void download(`/fichas/${ficha.id}/pdf`, `${ficha.numero}.pdf`).catch((reason) => notify(errorMessage(reason), "error")) }]} pending={Boolean(pending)} />
+      </StickyActionBar>
       <div className="ficha-flow-sections">
         <section className="ficha-design-section" aria-label="Detalle de ficha">
           <AviantoPanelHeader title="Detalle de ficha" />
@@ -762,7 +767,7 @@ export function FichaDetail({
         <section className="ficha-design-section" aria-label="Detalle de pedidos">
           <AviantoPanelHeader
             title="Detalle de pedidos"
-            actions={!locked ? (can("pedidos.crear") ? <button type="button" className="button primary ficha-new-order" onClick={() => onNewRepuesto({ motoId: ficha.motoId, clienteId: ficha.clienteId, fichaId: ficha.id })}><Plus size={17} />Nuevo pedido</button> : null) : undefined}
+            actions={!locked ? (can("pedidos.crear") ? <button type="button" className="ficha-icon-button is-primary ficha-new-order" aria-label="Nuevo pedido" title="Nuevo pedido" onClick={() => onNewRepuesto({ motoId: ficha.motoId, clienteId: ficha.clienteId, fichaId: ficha.id })}><Plus size={20} aria-hidden="true" /></button> : null) : undefined}
           />
           <AviantoPanel className="ficha-design-card ficha-orders-panel">
             <div className="ficha-table-heading ficha-order-table-heading" role="rowgroup">
@@ -774,7 +779,7 @@ export function FichaDetail({
                   <div className="summary-linked-order-head">
                     <strong>{pedido.numero}</strong>
                     <div className="summary-linked-order-status"><StatusBadge status={pedido.estado} /><StatusBadge status={pedido.estadoPago} /></div>
-                    <button type="button" className="text-button summary-linked-order-action" onClick={() => onOpenRepuesto(pedido.id)}>Abrir pedido</button>
+                    <button type="button" className="ficha-icon-button is-sm summary-linked-order-action" aria-label={`Abrir pedido ${pedido.numero}`} title="Abrir pedido" onClick={() => onOpenRepuesto(pedido.id)}><ExternalLink size={16} aria-hidden="true" /></button>
                   </div>
                   <small>{pedido.proveedor ? `Proveedor: ${pedido.proveedor}` : "Sin proveedor"}</small>
                   <div className="summary-order-items" role="table" aria-label={`Artículos del pedido ${pedido.numero}`}>
@@ -786,7 +791,15 @@ export function FichaDetail({
                 </article>
               ))}</div> : <p className="summary-empty">No hay pedidos vinculados a esta ficha.</p>}
               <FichaTotalBar label="Total" value={money(totalRepuestos)} />
-              <div className="ficha-total-bar is-outline"><span>Total presupuesto</span><strong>{money(totalPresupuesto)}</strong></div>
+            </div>
+          </AviantoPanel>
+        </section>
+
+        <section className="ficha-design-section ficha-budget-section" aria-label="Presupuesto">
+          <AviantoPanelHeader title="Presupuesto" />
+          <AviantoPanel className="ficha-design-card ficha-budget-card">
+            <div className="avianto-panel-body">
+              <div className="ficha-budget-total"><span>Total presupuesto</span><strong>{money(totalPresupuesto)}</strong></div>
               <details className="ficha-disclosure ficha-budget-disclosure">
                 <summary><span>Desglose del presupuesto</span><ChevronDown size={18} aria-hidden="true" /></summary>
                 <BudgetBreakdown
@@ -842,10 +855,6 @@ export function FichaDetail({
           </section>
         )}
 
-        <div className="ficha-footer-actions">
-          {bottomActions.filter((action) => action.className === "primary").map((action) => <button key={action.key} className="button large primary" disabled={Boolean(pending) || (action.key === "aprobar" && (!revision || pendingControls.length > 0))} onClick={action.onClick}>{action.label}</button>)}
-          <button type="button" className="button large secondary" onClick={() => void download(`/fichas/${ficha.id}/pdf`, `${ficha.numero}.pdf`).catch((reason) => notify(errorMessage(reason), "error"))}><FileDown size={18} aria-hidden="true" />Descargar PDF</button>
-        </div>
       </div>
       <Dialog open={serviceOpen} title="Registrar service" onClose={() => setServiceOpen(false)} dirty={Boolean(serviceNotes)}>
         <form className="record-form" onSubmit={(event) => { event.preventDefault(); void saveService(); }}>
