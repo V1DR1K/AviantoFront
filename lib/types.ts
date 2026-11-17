@@ -464,6 +464,7 @@ export interface TallerMotoResponse {
   estado: MotoStatus;
   fechaIngreso: string | null;
   imagenActualizadaAt?: string | null;
+  anio?: number | null;
 }
 export interface TallerEstadoResponse { estado: MotoStatus; motos: TallerMotoResponse[]; }
 export interface TallerResponse { estados: TallerEstadoResponse[]; }
@@ -478,10 +479,11 @@ export interface DashboardFichaResponse {
   fechaIngreso: string | null;
   motoId?: string | null;
   imagenActualizadaAt?: string | null;
+  anio?: number | null;
 }
 export interface DashboardFichaEstadoResponse { estado: FichaStatus; fichas: DashboardFichaResponse[]; }
 export interface DashboardFichasResponse { estados: DashboardFichaEstadoResponse[]; }
-export interface VentaMotoResponse { motoId: string; patente: string; moto: string; cliente: string | null; kilometraje: number | null; estado: MotoStatus; fechaIngreso: string | null; imagenActualizadaAt?: string | null; }
+export interface VentaMotoResponse { anio?: number | null; motoId: string; patente: string; moto: string; cliente: string | null; kilometraje: number | null; estado: MotoStatus; fechaIngreso: string | null; imagenActualizadaAt?: string | null; }
 export interface VentaEstadoResponse { estado: MotoStatus; motos: VentaMotoResponse[]; }
 export interface VentaResponse { estados: VentaEstadoResponse[]; }
 export interface AutocompleteResponse { id: string; label: string; secondary?: string; }
