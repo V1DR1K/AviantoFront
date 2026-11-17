@@ -17,11 +17,11 @@ test("server-renders Avianto landing metadata", async () => {
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
-  assert.match(html, /<title>Avianto \| Mecánica integral de motos<\/title>/i);
+  assert.match(html, /<title>Software de gestión para talleres de motos<\/title>/i);
   assert.match(html, /<meta[^>]+name="viewport"[^>]+content="width=device-width, initial-scale=1"[^>]*>/i);
   assert.doesNotMatch(html, /maximum-scale|user-scalable=no/i);
   assert.match(html, /Cada moto tiene una historia/);
-  assert.match(html, /Conocer Avianto/);
+  assert.match(html, /Pedir una demo/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview|SkeletonPreview/);
 });
 
@@ -62,7 +62,7 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   ]);
   assert.match(page, /LandingPage/);
   assert.match(loginPage, /AppController/);
-  assert.match(layout, /title: "Avianto \| Mecánica integral de motos"/);
+  assert.match(layout, /title: "Software de gestión para talleres de motos"/);
   assert.match(layout, /viewportFit: "cover"/);
   assert.match(responsiveStyles, /@media \(max-width: 767px\)/);
   assert.match(responsiveStyles, /grid-template-columns: var\(--shell-sidebar-wide\) minmax\(0, 1fr\)/);

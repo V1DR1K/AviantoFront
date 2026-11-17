@@ -191,7 +191,7 @@ function HeroRecord() {
         className="lp-hero-record"
         onPointerMove={handleMove}
         onPointerLeave={resetTilt}
-        aria-label="Ejemplo animado de una ficha de servicio de Avianto"
+        aria-label="Ejemplo animado de una ficha de servicio"
       >
         <div className="lp-record-top">
           <div>
@@ -269,7 +269,7 @@ const TICKER_ITEMS = [
 
 function Ticker() {
   return (
-    <div className="lp-ticker" aria-label="Módulos de Avianto">
+    <div className="lp-ticker" aria-label="Módulos del sistema">
       <div className="lp-ticker-track">
         {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, index) => (
           <span key={`${item}-${index}`} aria-hidden={index >= TICKER_ITEMS.length || undefined}>
@@ -723,7 +723,7 @@ function PhoneMock() {
   const current = PHONE_TABS[active];
 
   return (
-    <div className="lp-phone" aria-label="Vista móvil de Avianto para el operario">
+    <div className="lp-phone" aria-label="Vista móvil para el operario">
       <div className="lp-phone-notch" aria-hidden="true" />
       <div className="lp-phone-screen">
         <div className="lp-phone-top">
@@ -842,7 +842,7 @@ export function LandingPage() {
   return (
     <main className={`lp${mounted ? " is-js" : ""}`}>
       <header className="lp-header">
-        <a className="lp-brand" href="#inicio" aria-label="Avianto, volver al inicio">
+        <a className="lp-brand" href="#inicio" aria-label="Volver al inicio">
           <BrandLogo variant="color" size="sm" descriptor />
         </a>
         <nav className="lp-nav" aria-label="Navegación principal">
@@ -862,11 +862,11 @@ export function LandingPage() {
           <span className="lp-eyebrow lp-eyebrow-live">
             <i aria-hidden="true" /> Mecánica integral de motos
           </span>
-          <h1 aria-label="Cada moto tiene una historia. Avianto la ordena.">
+          <h1 aria-label="Cada moto tiene una historia. El taller la ordena.">
             <span aria-hidden="true">
               <SplitWords text="Cada moto tiene una historia." />
               <em className="lp-hero-em">
-                <SplitWords text="Avianto la ordena." startDelay={520} />
+                <SplitWords text="El taller la ordena." startDelay={520} />
               </em>
             </span>
           </h1>
@@ -876,7 +876,7 @@ export function LandingPage() {
           </p>
           <div className="lp-actions lp-fade" style={{ "--d": "1100ms" } as CSSProperties}>
             <a className="lp-btn lp-btn-primary" href={WHATSAPP_URL} target="_blank" rel="noreferrer">
-              Conocer Avianto <ArrowUpRight size={18} aria-hidden="true" />
+              Pedir una demo <ArrowUpRight size={18} aria-hidden="true" />
             </a>
             <a className="lp-btn lp-btn-ghost" href="#recorrido">Ver el recorrido</a>
           </div>
@@ -968,7 +968,7 @@ export function LandingPage() {
                       <span className="lp-module-icon"><Icon size={20} aria-hidden="true" /></span>
                       <div>
                         <strong>{item.label}</strong>
-                        <span>{item.text}</span>
+                        <p className="lp-module-desc">{item.text}</p>
                       </div>
                     </li>
                   );
@@ -983,7 +983,7 @@ export function LandingPage() {
         <div className="lp-cta-copy">
           <Reveal>
             <h2>Conocé el flujo completo con tu taller.</h2>
-            <p>Escribinos y te mostramos cómo Avianto conecta el ingreso de una moto con su venta o su entrega.</p>
+            <p>Escribinos y te mostramos cómo el sistema conecta el ingreso de una moto con su venta o su entrega.</p>
           </Reveal>
         </div>
         <Reveal delay={150} className="lp-cta-actions">
@@ -995,7 +995,7 @@ export function LandingPage() {
       </section>
 
       <footer className="lp-footer">
-        <a className="lp-brand" href="#inicio" aria-label="Avianto, volver al inicio">
+        <a className="lp-brand" href="#inicio" aria-label="Volver al inicio">
           <BrandLogo variant="color" size="sm" descriptor />
         </a>
         <div>

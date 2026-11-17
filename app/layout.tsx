@@ -10,7 +10,7 @@ import "../components/roles-view.css";
 import "../components/modal.css";
 import "../components/landing.css";
 export const metadata: Metadata = {
-  title: "Avianto | Mecánica integral de motos",
+  title: "Software de gestión para talleres de motos",
   description: "Órdenes de trabajo, presupuestos e historial para talleres de motos.",
   manifest: "/manifest.webmanifest",
   icons: {

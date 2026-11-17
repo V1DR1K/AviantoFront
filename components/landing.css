@@ -1,6 +1,27 @@
 /* Landing pública de Avianto: identidad de la marca (manual), recursos gráficos y movimiento.
    Todo el alcance va bajo .lp para no interferir con la consola. */
 
+/* La fuente Arboria del proyecto tiene mal calculado el ancho de las letras acentuadas
+   (á, é, í, ó, ú, ñ): la letra invade el espacio siguiente y las palabras se pegan.
+   Las letras sin acento siguen en Arboria; las acentuadas usan la fuente del sistema. */
+@font-face {
+  font-family: "Arboria Landing";
+  src: url("/fonts/arboria-medium.woff2") format("woff2");
+  font-weight: 400 500;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00BF, U+00D7, U+00F7;
+}
+
+@font-face {
+  font-family: "Arboria Landing";
+  src: url("/fonts/arboria-bold.woff2") format("woff2");
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00BF, U+00D7, U+00F7;
+}
+
 .lp {
   --lp-blue: var(--brand-blue);
   --lp-blue-strong: var(--brand-blue-strong);
@@ -20,7 +41,7 @@
   overflow-x: clip;
   background: var(--lp-canvas);
   color: var(--lp-ink);
-  font-family: var(--font-body, Arboria, "Segoe UI Variable", "Segoe UI", sans-serif);
+  font-family: "Arboria Landing", "Segoe UI Variable", "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -46,6 +67,7 @@
 .lp h2,
 .lp h3 {
   margin: 0;
+  font-family: inherit;
   font-weight: 700;
 }
 
@@ -1899,7 +1921,7 @@
 
 .lp-module-card {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 13px;
   padding: 12px;
   border: 1px solid transparent;
@@ -1938,9 +1960,8 @@
   font-size: 16px;
 }
 
-.lp-module-card span {
-  display: block;
-  margin-top: 2px;
+.lp-module-desc {
+  margin: 2px 0 0;
   color: var(--lp-muted);
   font-size: 14px;
   line-height: 1.45;
