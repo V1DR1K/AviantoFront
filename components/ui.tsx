@@ -4,7 +4,6 @@ import { AlertTriangle, Check, CheckCircle2, ChevronDown, Clock3, FileSearch, In
 import { createPortal } from "react-dom";
 import type { AutocompleteResponse } from "../lib/types";
 import { matchesSearchText } from "../lib/search";
-import { lockDocumentScroll, unlockDocumentScroll } from "../lib/scroll-lock";
 
 export type ToastTone = "success" | "error" | "warning" | "info";
 export type ToastState = { message: string; tone: ToastTone };
@@ -61,7 +60,6 @@ function useModalFocus(open: boolean, onClose: () => void) {
   useEffect(() => {
     if (!open) return;
     prior.current = document.activeElement as HTMLElement;
-    lockDocumentScroll();
     const frame = requestAnimationFrame(() =>
       ref.current
         ?.querySelector<HTMLElement>(
@@ -71,7 +69,6 @@ function useModalFocus(open: boolean, onClose: () => void) {
     );
     return () => {
       cancelAnimationFrame(frame);
-      unlockDocumentScroll();
       prior.current?.focus();
     };
   }, [open]);

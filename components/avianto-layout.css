@@ -723,6 +723,8 @@ html {
   .mobile-drawer-backdrop {
     display: block;
     z-index: 69;
+    overflow: hidden;
+    overscroll-behavior: contain;
   }
 
   .mobile-drawer {
@@ -733,6 +735,7 @@ html {
     align-content: start;
     gap: 8px;
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding: max(18px, env(safe-area-inset-top)) 15px calc(24px + env(safe-area-inset-bottom));
     background: var(--color-surface-muted);
     box-shadow: 12px 0 34px rgb(48 52 139 / 0.25);

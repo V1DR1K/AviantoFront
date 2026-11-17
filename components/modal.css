@@ -13,13 +13,8 @@
   --modal-pad-y: 22px;
 }
 
-/* Bloqueo de scroll del documento mientras hay un modal abierto.
-   Se aplica al <html> (viewport): el body no alcanza porque html tiene overflow-x. */
-html.modal-open {
-  overflow: hidden;
-  overscroll-behavior: none;
-}
-
+/* Sin bloqueo del documento: no se toca overflow ni position en <html>/<body> (rompe position: sticky
+   del sidebar). El scroll de fondo se contiene con overscroll-behavior sobre el backdrop y el modal. */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -29,6 +24,7 @@ html.modal-open {
   padding: max(var(--modal-gutter), env(safe-area-inset-top)) max(var(--modal-gutter), env(safe-area-inset-right)) max(var(--modal-gutter), env(safe-area-inset-bottom)) max(var(--modal-gutter), env(safe-area-inset-left));
   background: rgb(9 28 51 / 0.62);
   backdrop-filter: blur(4px);
+  overflow: hidden;
   overscroll-behavior: contain;
   animation: modal-backdrop-in 180ms ease-out both;
 }
@@ -36,6 +32,7 @@ html.modal-open {
 .modal {
   --modal-width: 560px;
   position: relative;
+  overscroll-behavior: contain;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   width: min(var(--modal-width), 100%);
