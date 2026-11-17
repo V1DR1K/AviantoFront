@@ -577,6 +577,11 @@
 .ficha-profile-history-heading h2 { width: max-content; max-width: 100%; margin: 0; padding: 8px 22px; border: 1px solid var(--brand-blue); border-radius: var(--radius-field); color: var(--brand-blue); font-size: var(--text-lg); text-align: center; }
 .ficha-history-empty { margin: 0; color: var(--color-text-muted); text-align: center; }
 
+/* Tablet: tres columnas angostas. Rótulo arriba e importe abajo en las tres, así todas tienen la misma altura. */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .ficha-detail-page .ficha-payment-ledger .payment-balance > div { flex-direction: column; align-items: flex-start; gap: 2px; }
+}
+
 @media (min-width: 768px) {
   .ficha-detail-page > .flow-steps > .flow-step { flex-basis: 0; }
   .ficha-detail-page .ficha-payment-ledger .payment-balance { grid-template-columns: repeat(3, minmax(0, 1fr)); }
