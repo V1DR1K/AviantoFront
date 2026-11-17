@@ -124,9 +124,8 @@ export function PaymentLedger({
   };
 
   const headingId = `${resource}-${documentId}-payments`;
+  const header = <AviantoPanelHeader headingId={headingId} title={presentation === "ficha" ? "Pagos" : <>Pagos<StatusBadge status={estadoPago} /></>} actions={presentation === "ficha" ? <span className="payment-state-note">Estado: <StatusBadge status={estadoPago} /></span> : registerAction} />;
   const body = (
-    <>
-      <AviantoPanelHeader headingId={headingId} title={presentation === "ficha" ? "Pagos" : <>Pagos<StatusBadge status={estadoPago} /></>} actions={presentation === "ficha" ? <span className="payment-state-note">Estado: <StatusBadge status={estadoPago} /></span> : registerAction} />
       <div className="avianto-panel-body">
       <div className={`payment-balance${saldoPendiente <= 0 ? " is-settled" : ""}`} aria-label="Balance de pagos del documento">
         <div><span>{presentation === "ficha" ? "Presupuesto total" : "Total"}</span><strong>{paymentAmount(total)}</strong></div>
@@ -175,10 +174,9 @@ export function PaymentLedger({
       </Dialog>
       <ConfirmModal open={paymentToAnnul !== null} title="Anular pago" body={`Vas a anular el pago de ${paymentAmount(paymentToAnnul?.monto ?? 0)}. El movimiento permanecerá visible en el historial y se recalculará el saldo.`} confirmLabel="Anular pago" onClose={() => setPaymentToAnnul(null)} onConfirm={annulPayment} />
       </div>
-    </>
   );
-  // En Ficha la sección va sin marco: el encabezado "04 PAGOS" es el mismo que el de las demás secciones.
+  // En Ficha el encabezado "04 PAGOS" va fuera del marco, igual que Presupuesto: solo el cuerpo tiene borde.
   return presentation === "ficha"
-    ? <section className="payment-ledger ficha-payment-ledger" aria-labelledby={headingId}>{body}</section>
-    : <AviantoPanel variant="section" className="payment-ledger" aria-labelledby={headingId}>{body}</AviantoPanel>;
+    ? <section className="ficha-design-section payment-ledger ficha-payment-ledger" aria-labelledby={headingId}>{header}<AviantoPanel className="ficha-design-card ficha-payment-card">{body}</AviantoPanel></section>
+    : <AviantoPanel variant="section" className="payment-ledger" aria-labelledby={headingId}>{header}{body}</AviantoPanel>;
 }
