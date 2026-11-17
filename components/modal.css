@@ -15,8 +15,7 @@
 
 /* Bloqueo de scroll del documento mientras hay un modal abierto.
    Se aplica al <html> (viewport): el body no alcanza porque html tiene overflow-x. */
-html.modal-open,
-html.modal-open body {
+html.modal-open {
   overflow: hidden;
   overscroll-behavior: none;
 }
