@@ -731,6 +731,10 @@
 .ficha-detail-page .ficha-record-status .status[data-status="entregada"] { color: var(--color-success); }
 
 /* Pagos: Presupuesto / Pagado / Pendiente bars and a two-button footer. */
+.ficha-payment-ledger > .avianto-panel-header { flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.ficha-payment-ledger > .avianto-panel-header > div:first-child { display: grid; justify-items: center; gap: var(--space-2); width: 100%; text-align: center; }
+.ficha-payment-ledger > .avianto-panel-header h2 { text-align: center; }
+.ficha-payment-ledger > .avianto-panel-header p { margin: 0; }
 .ficha-payment-ledger .payment-state-note { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--brand-blue); font-size: var(--text-sm); font-weight: 400; text-transform: none; }
 .ficha-payment-ledger .payment-state-note .status { background: var(--color-work-done-soft); color: var(--brand-blue); }
 .ficha-payment-ledger .payment-state-note .status[data-status="no-pagado"] { background: var(--color-work-pending-soft); color: var(--color-danger); }
@@ -914,7 +918,7 @@
 
 @media (min-width: 1200px) {
   .ficha-detail-page .ficha-flow-sections { grid-template-columns: minmax(0, 1fr) 380px; align-items: start; column-gap: 32px; }
-  .ficha-detail-page .ficha-flow-sections > .ficha-budget-section { grid-column: 2; grid-row: 1; position: sticky; top: 20px; }
+  .ficha-detail-page .ficha-flow-sections > .ficha-budget-section { grid-column: 2; grid-row: 1; }
   .ficha-detail-page .ficha-flow-sections > .ficha-payment-ledger { grid-column: 2; grid-row: 2; position: sticky; top: 20px; }
 }
 

@@ -125,7 +125,7 @@ export function PaymentLedger({
 
   return (
     <AviantoPanel variant="section" className={`payment-ledger${presentation === "ficha" ? " ficha-payment-ledger" : ""}`} aria-labelledby={`${resource}-${documentId}-payments`}>
-      <AviantoPanelHeader headingId={`${resource}-${documentId}-payments`} title={presentation === "ficha" ? <>Pagos<span className="payment-state-note">Estado: <StatusBadge status={estadoPago} /></span></> : <>Pagos<StatusBadge status={estadoPago} /></>} actions={presentation === "ficha" ? undefined : registerAction} />
+      <AviantoPanelHeader headingId={`${resource}-${documentId}-payments`} title={presentation === "ficha" ? "Pagos" : <>Pagos<StatusBadge status={estadoPago} /></>} description={presentation === "ficha" ? <span className="payment-state-note">Estado: <StatusBadge status={estadoPago} /></span> : undefined} actions={presentation === "ficha" ? undefined : registerAction} />
       <div className="avianto-panel-body">
       <div className={`payment-balance${saldoPendiente <= 0 ? " is-settled" : ""}`} aria-label="Balance de pagos del documento">
         <div><span>{presentation === "ficha" ? "Presupuesto total" : "Total"}</span><strong>{paymentAmount(total)}</strong></div>
