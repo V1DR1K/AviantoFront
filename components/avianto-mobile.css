@@ -122,7 +122,7 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
 .moto-profile-state .status { justify-self: start; padding: 0; background: transparent; color: var(--brand-red); font-size: 1.05rem; font-weight: 700; }
 .avianto-tabs { display: flex; width: 100%; overflow-x: auto; background: var(--brand-white); scrollbar-width: none; }
 .avianto-tabs button { flex: 1 0 132px; min-height: 64px; padding: 10px 18px; border: 0; border-right: 1px solid var(--brand-blue); background: var(--brand-white); color: var(--brand-blue); font-size: 1rem; font-weight: 700; text-transform: uppercase; }
-.avianto-tabs button.active { border-radius: 0 0 var(--radius-field) var(--radius-field); background: var(--brand-blue); color: var(--brand-white); }
+.avianto-tabs button.active { border-radius: 0; background: var(--brand-blue); color: var(--brand-white); }
 .moto-profile-content { position: relative; min-height: 430px; padding: 34px; border-radius: 0 0 24px 24px; background: var(--brand-white); box-shadow: var(--shadow-document); }
 .moto-profile-panel { position: relative; z-index: 1; width: min(1120px, 100%); margin: 0 auto; }
 .moto-section-title { width: fit-content; min-width: min(300px, 100%); margin: 0 auto 22px; padding: 11px 26px; border: 1px solid var(--brand-blue); border-radius: var(--radius-control); background: var(--brand-white); color: var(--brand-blue); font-size: 1.25rem; line-height: 1.2; text-align: center; text-transform: uppercase; }
