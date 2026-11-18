@@ -6,9 +6,13 @@ import { ArrowDownUp, ArrowRightLeft, Camera, Eye, FileText, Filter, LogIn, Penc
 import { api } from "../lib/api";
 import { integerInput, money, parseIntegerInput } from "../lib/format";
 import { formatDateInAr, formatDateShortInAr, todayInAr } from "../lib/dates";
+import { AbmFormModal, type AbmField } from "./modal/abm-form-modal";
+import { ClientCompletionDialog } from "./client-completion-dialog";
 import type {
+  ClientCompletionResponse,
   ClienteResponse,
   FichaResponse,
+  MarcaMotoResponse,
   MotovehiculoResponse,
   NextServiceResponse,
   PageResponse,
@@ -31,6 +35,14 @@ const errorMessage = (reason: unknown) => reason instanceof Error ? reason.messa
 const fichaStates = ["Pendiente", "En proceso", "En revisión", "Terminada", "Entregada", "Cancelada"] as const;
 const pagoStates: PagoStatus[] = ["No pagado", "Parcial", "Pagado"];
 const repuestoStates: RepuestoState[] = ["En curso", "Completado", "Cancelado"];
+const clientProfileFields: AbmField[] = [
+  { key: "nombre", label: "Nombre y apellido / razón social", required: true },
+  { key: "documento", label: "DNI", required: true },
+  { key: "telefono", label: "Teléfono", type: "tel" },
+  { key: "email", label: "Email", type: "email" },
+  { key: "direccion", label: "Dirección" },
+  { key: "observaciones", label: "Observaciones", type: "textarea", wide: true },
+];
 
 export function MotoDetail({
   id,
@@ -59,6 +71,12 @@ export function MotoDetail({
   const [tab, setTab] = useState<"general" | "client" | "services" | "fichas" | "repuestos" | "venta">(initialTab ?? "general");
   const [moto, setMoto] = useState<MotovehiculoResponse | null>(null);
   const [client, setClient] = useState<ClienteResponse | null>(null);
+  const [brands, setBrands] = useState<MarcaMotoResponse[]>([]);
+  const [profileEditorOpen, setProfileEditorOpen] = useState(false);
+  const [profileEditorLoading, setProfileEditorLoading] = useState(false);
+  const [clientEditorOpen, setClientEditorOpen] = useState(false);
+  const [clientEditorLoading, setClientEditorLoading] = useState(false);
+  const [clientCompletionOpen, setClientCompletionOpen] = useState(false);
   const [transfers, setTransfers] = useState<TransferResponse[]>([]);
   const [services, setServices] = useState<PageResponse<ServiceResponse> | null>(null);
   const [nextService, setNextService] = useState<NextServiceResponse | null>(null);
@@ -133,6 +151,72 @@ export function MotoDetail({
     void api<VentaFichaResponse>(`/motovehiculos/${id}/venta`, { signal: controller.signal }).then(setSaleFicha).catch(() => { if (!controller.signal.aborted) setSaleFicha(null); });
     return () => controller.abort();
   }, [id, moto?.seccion]);
+
+  const openProfileEditor = async () => {
+    if (!moto || !can("motos.editar") || profileEditorLoading) return;
+    setProfileEditorLoading(true);
+    try {
+      const availableBrands = brands.length
+        ? brands
+        : can("marcas.ver")
+          ? await api<MarcaMotoResponse[]>("/configuracion/marcas-moto")
+          : [{ id: moto.marcaId, nombre: moto.marca, activo: true }];
+      const selectableBrands = availableBrands.filter((brand) => brand.activo || brand.id === moto.marcaId);
+      if (!selectableBrands.some((brand) => brand.id === moto.marcaId)) {
+        notify("No se encontró la marca actual de esta moto. Revisá el catálogo de marcas y volvé a intentar.", "error");
+        return;
+      }
+      setBrands(selectableBrands);
+      setProfileEditorOpen(true);
+    } catch (reason) {
+      notify(errorMessage(reason), "error");
+    } finally {
+      setProfileEditorLoading(false);
+    }
+  };
+
+  const saveMotoProfile = async (values: Record<string, string>) => {
+    if (!moto || !can("motos.editar")) return;
+    const updated = await api<MotovehiculoResponse>(`/motovehiculos/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        ...values,
+        anio: values.anio ? parseIntegerInput(values.anio) : null,
+        kilometraje: values.kilometraje ? parseIntegerInput(values.kilometraje) : null,
+      }),
+    });
+    setMoto(updated);
+    setProfileEditorOpen(false);
+    notify("Perfil actualizado.");
+  };
+
+  const openClientEditor = async () => {
+    if (!moto?.propietarioId || !can("clientes.ver") || !can("clientes.editar") || clientEditorLoading) return;
+    setClientEditorLoading(true);
+    try {
+      const currentClient = client?.id === moto.propietarioId
+        ? client
+        : await api<ClienteResponse>(`/clientes/${moto.propietarioId}`);
+      setClient(currentClient);
+      setClientEditorOpen(true);
+    } catch (reason) {
+      notify(errorMessage(reason), "error");
+    } finally {
+      setClientEditorLoading(false);
+    }
+  };
+
+  const saveClientProfile = async (values: Record<string, string>) => {
+    if (!client || !can("clientes.editar")) return;
+    const updated = await api<ClienteResponse>(`/clientes/${client.id}`, {
+      method: "PUT",
+      body: JSON.stringify(values),
+    });
+    setClient(updated);
+    setMoto((current) => current ? { ...current, propietario: updated.nombre } : current);
+    setClientEditorOpen(false);
+    notify("Cliente actualizado.");
+  };
 
   const uploadPhoto = async (file: File | undefined) => {
     if (!file || photoBusy) return;
@@ -286,10 +370,23 @@ export function MotoDetail({
   const latestService = servicePage === 1 ? services?.content[0] ?? null : null;
   const serviceHistory = servicePage === 1 ? services?.content.slice(1) ?? [] : services?.content ?? [];
   const serviceInterval = moto.kmServicePeriodo ?? null;
+  const motoProfileFields: AbmField[] = [
+    { key: "marcaId", label: "Marca", type: "select", options: brands.map((brand) => ({ value: brand.id, label: brand.nombre })), required: true },
+    { key: "modelo", label: "Modelo", required: true },
+    { key: "patente", label: "Dominio", required: true },
+    { key: "anio", label: "Año", type: "number", min: 1900, max: 2100 },
+    { key: "kilometraje", label: "Kilometraje", type: "number", min: 0 },
+    { key: "observaciones", label: "Observaciones", type: "textarea", wide: true },
+  ];
   return (
     <div className="page avianto-detail-page">
       <header className="moto-profile-hero">
-        <button className="moto-profile-back" onClick={onBack}><span aria-hidden="true">←</span> Volver a perfiles</button>
+        <div className="moto-profile-toolbar">
+          <button type="button" className="moto-profile-back" onClick={onBack}><span aria-hidden="true">←</span> Volver a perfiles</button>
+          {can("motos.editar") && <button type="button" className="moto-profile-action moto-profile-edit" onClick={() => void openProfileEditor()} disabled={profileEditorLoading} aria-busy={profileEditorLoading}>
+            <Pencil size={18} aria-hidden="true" />{profileEditorLoading ? "Cargando…" : "Editar perfil"}
+          </button>}
+        </div>
         <div className="moto-profile-hero-inner">
           <h1>{moto.patente}</h1>
           <div className="moto-profile-summary" aria-label="Resumen de la moto">
@@ -351,9 +448,18 @@ export function MotoDetail({
       {tab === "client" && (
         <section className="moto-profile-panel moto-profile-client">
           <div className="moto-client-current">
-            <h2 className="moto-section-title">Cliente actual</h2>
+            <div className="moto-client-current-heading">
+              <h2 className="moto-section-title">Cliente actual</h2>
+              {moto.propietarioId && can("clientes.ver") && can("clientes.editar") && <button type="button" className="button secondary moto-client-edit" onClick={() => void openClientEditor()} disabled={clientEditorLoading} aria-busy={clientEditorLoading}>
+                <Pencil size={17} aria-hidden="true" />{clientEditorLoading ? "Cargando cliente…" : "Editar cliente"}
+              </button>}
+              {moto.propietarioId && !(can("clientes.ver") && can("clientes.editar")) && can("clientes.completar_datos") && <button type="button" className="button secondary moto-client-edit" onClick={() => setClientCompletionOpen(true)}>
+                <Pencil size={17} aria-hidden="true" />Completar datos
+              </button>}
+            </div>
             <div className="moto-client-grid">
-              <VehicleField label="Cliente" value={moto.propietario ?? "—"} />
+              <VehicleField label="Cliente" value={client?.nombre ?? moto.propietario ?? "—"} />
+              <VehicleField label="DNI" value={client?.documento || "—"} />
               <VehicleField label="Teléfono" value={client?.telefono ?? "—"} />
               <VehicleField label="Dirección" value={client?.direccion ?? "—"} />
             </div>
@@ -486,6 +592,38 @@ export function MotoDetail({
           <div className="modal-actions"><button type="button" className="button secondary" onClick={() => setCircuitTarget(null)} disabled={circuitSaving}>Cancelar</button><button className="button primary" disabled={!circuitReason.trim() || circuitSaving || !can("motos.circuito")}>{circuitSaving ? "Guardando..." : "Confirmar cambio"}</button></div>
         </form>
       </Dialog>
+      <AbmFormModal
+        key={`${moto.id}-${profileEditorOpen ? "open" : "closed"}`}
+        open={profileEditorOpen}
+        resource="perfil"
+        mode="modificar"
+        initialValues={moto}
+        fields={motoProfileFields}
+        onClose={() => setProfileEditorOpen(false)}
+        onSubmit={saveMotoProfile}
+        onError={(message) => notify(message, "error")}
+      />
+      <AbmFormModal
+        key={`${client?.id ?? "cliente"}-${clientEditorOpen ? "open" : "closed"}`}
+        open={clientEditorOpen}
+        resource="cliente"
+        mode="modificar"
+        initialValues={client ?? {}}
+        fields={clientProfileFields}
+        onClose={() => setClientEditorOpen(false)}
+        onSubmit={saveClientProfile}
+        onError={(message) => notify(message, "error")}
+      />
+      <ClientCompletionDialog
+        clientId={moto.propietarioId ?? null}
+        open={clientCompletionOpen}
+        onClose={() => setClientCompletionOpen(false)}
+        onSaved={(updated: ClientCompletionResponse) => {
+          setClient((current) => current ? { ...current, ...updated } : current);
+          setMoto((current) => current ? { ...current, propietario: updated.nombre } : current);
+          notify("Datos del cliente actualizados.");
+        }}
+      />
     </div>
   );
 }

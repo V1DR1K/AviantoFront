@@ -106,8 +106,10 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
 /* Vehicle profile: one responsive structure derived from SoftwareDesign pages 4-9. */
 .avianto-detail-page { display: grid; gap: 0; overflow: hidden; padding: 38px max(34px, 4vw) 58px; }
 .moto-profile-hero { overflow: hidden; border-radius: 24px 24px 0 0; background: var(--brand-blue); color: var(--brand-white); }
-.moto-profile-back { display: inline-flex; align-items: center; gap: 9px; min-height: 46px; margin: 16px 24px 0; padding: 0 8px; border: 0; background: transparent; color: var(--brand-white); font-size: 1rem; }
+.moto-profile-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 24px 0; }
+.moto-profile-back { display: inline-flex; align-items: center; gap: 9px; min-height: 46px; margin: 0; padding: 0 8px; border: 0; background: transparent; color: var(--brand-white); font-size: 1rem; }
 .moto-profile-back span { color: var(--brand-red); font-size: 1.7rem; }
+.moto-profile-edit { min-height: 44px; padding: 7px 13px; white-space: nowrap; }
 .moto-profile-hero-inner { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px 42px; width: min(1180px, 100%); margin: 0 auto; padding: 12px 36px 32px; }
 .moto-profile-hero h1 { grid-column: 1 / -1; margin: 0; color: var(--brand-white); font-size: clamp(2.35rem, 4vw, 3.5rem); line-height: 1; text-align: center; letter-spacing: .02em; }
 .moto-profile-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -135,9 +137,10 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
 
 .moto-profile-client { display: grid; gap: 30px; }
 .moto-client-current { margin: -34px -34px 0; padding: 28px 34px 30px; background: var(--brand-blue); }
-.moto-client-current .moto-section-title { margin-bottom: 18px; }
+.moto-client-current-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: min(900px, 100%); margin: 0 auto 18px; }
+.moto-client-current-heading .moto-section-title { flex: 1 1 auto; margin: 0; }
+.moto-client-edit { min-height: 48px; white-space: nowrap; }
 .moto-client-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(900px, 100%); margin: 0 auto; }
-.moto-client-grid .avianto-vehicle-field:first-child { grid-column: 1 / -1; }
 .moto-transfer-history { display: grid; }
 .moto-transfer-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .moto-transfer-card { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--brand-blue); border-radius: var(--radius-surface); }
@@ -221,7 +224,8 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
   body main.login-page .login-card { width: min(100%, 360px); padding: 40px 24px 28px; border-radius: 18px; }
 
   .moto-profile-hero { border-radius: 0; }
-  .moto-profile-back { margin: 12px 30px 0; }
+  .moto-profile-toolbar { padding: 10px 18px 0; }
+  .moto-profile-back { min-height: 44px; }
   .moto-profile-hero-inner { grid-template-columns: 1fr; gap: 14px; padding: 10px 34px 20px; }
   .moto-profile-hero h1 { font-size: 2.35rem; }
   .moto-profile-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -242,6 +246,9 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
   .moto-profile-observations { background: rgb(255 255 255 / .9); }
   .moto-profile-client { gap: 24px; }
   .moto-client-current { margin: -26px 0 0; padding: 26px 34px 30px; }
+  .moto-client-current-heading { align-items: stretch; flex-direction: column; }
+  .moto-client-current-heading .moto-section-title { flex: initial; width: 100%; }
+  .moto-client-edit { width: 100%; justify-content: center; }
   .moto-transfer-history { padding-inline: 34px; }
   .moto-transfer-list,
   .moto-service-history { grid-template-columns: 1fr; gap: 20px; }
@@ -265,6 +272,7 @@ body main.login-page .login-card .button.primary { background: var(--brand-white
   .avianto-bottom-label { font-size: .9rem; }
   .avianto-bottom-art { width: 42px; height: 42px; }
   .moto-profile-hero-inner,
+  .moto-profile-toolbar,
   .moto-profile-general,
   .moto-profile-services,
   .sale-profile-entry,

@@ -5,11 +5,12 @@ import { usePermission } from "./permissions-context";
 import type { ReactNode } from "react";
 import { ArrowDownUp, ArrowLeft, Check, ChevronDown, Download, Edit3, Eye, ExternalLink, FileDown, FileText, Filter, MoreHorizontal, Plus, Trash2, X } from "lucide-react";
 import { api, download, objectUrl } from "../lib/api";
-import { GANANCIA_REPUESTOS_PCT, integerInput, money, parseIntegerInput, paymentAmount } from "../lib/format";
+import { foreignMoney, GANANCIA_REPUESTOS_PCT, integerInput, money, parseIntegerInput, paymentAmount } from "../lib/format";
 import { daysAgoInAr, formatDateInAr, todayInAr } from "../lib/dates";
 import { matchesSearchText } from "../lib/search";
 import type {
   BillingMonthResponse,
+  ClientCompletionResponse,
   DashboardFichasResponse,
   FichaResponse,
   FichaStatus,
@@ -36,6 +37,7 @@ import { MetricCard, StatusRail, VehicleCard, VehicleField } from "./avianto-mob
 import { VehicleImage } from "./vehicle-image";
 import { AviantoRecordList } from "./avianto-records";
 import { AviantoPage, AviantoPageHeader, AviantoPanel, AviantoPanelHeader, StickyActionBar } from "./avianto-layout";
+import { ClientCompletionDialog } from "./client-completion-dialog";
 
 const splitVehicleName = (value: string) => {
   const [make, ...modelParts] = value.trim().split(/\s+/);
@@ -365,7 +367,7 @@ export function FichasView({
               { label: "Estado", value: <StatusBadge status={ficha.estado} /> },
               { label: "Pago", value: <StatusBadge status={ficha.estadoPago} /> },
               { label: "Fecha de ingreso", value: date(ficha.fechaIngreso) },
-              { label: "Total", value: money(ficha.total) },
+              { label: "Total", value: paymentAmount(ficha.total) },
             ], actions: <>
               <button type="button" className="text-button" onClick={() => onSelect(ficha)} aria-label={`Ver ficha ${ficha.numero}`}><Eye size={17} />Abrir ficha</button>
               {editable && withinEditWindow && <>{can("fichas.editar") && <button type="button" className="text-button secondary" onClick={() => onEdit(ficha)} aria-label={`Editar ficha ${ficha.numero}`}><Edit3 size={17} />Editar</button>}{can("fichas.eliminar") && <button type="button" className="text-button danger-action" onClick={() => onDelete(ficha)} aria-label={`Eliminar ficha ${ficha.numero}`}><Trash2 size={17} />Eliminar</button>}</>}
@@ -406,10 +408,11 @@ function ItemRow({
           </label>
         )}
       </div>
-      <div className="detail-work-copy" role="cell"><strong>{item.descripcion}</strong>{item.observacionTrabajo && <p className="work-observation">{item.observacionTrabajo}</p>}</div>
+      <div className="detail-work-copy" role="cell"><div className="detail-work-title"><strong>{item.descripcion}</strong>{item.observacionTrabajo?.trim() && <span className="work-observation-indicator" role="img" aria-label="Tiene observaciones" title="Tiene observaciones" />}</div>{item.observacionTrabajo && <p className="work-observation">{item.observacionTrabajo}</p>}</div>
       <div className="detail-work-meta" role="cell">
         <StatusBadge status={item.estadoTrabajo} />
-        <span className="detail-work-price">{money(Number(item.precioUnitario))}{item.descuento > 0 && ` · desc. ${money(Number(item.descuento))}`}</span>
+        <span className="detail-work-price">{item.monedaOrigen === "USD" ? `${foreignMoney(Number(item.precioOrigen ?? 0))} → ${paymentAmount(Number(item.precioUnitario))}` : paymentAmount(Number(item.precioUnitario))}{item.descuento > 0 && ` · desc. ${paymentAmount(Number(item.descuento))}`}</span>
+        {item.monedaOrigen === "USD" && item.cotizacionUsd != null && <small className="detail-work-exchange">Venta {item.referenciaCotizacion ?? "USD"} · {paymentAmount(Number(item.cotizacionUsd))} por USD</small>}
       </div>
       <div className="detail-work-actions" role="cell">{canDelete && (can("fichas.editar") ? <button type="button" className="ficha-icon-button is-danger" onClick={onDelete} aria-label={`Eliminar trabajo ${item.descripcion}`} title="Eliminar trabajo"><Trash2 size={17} aria-hidden="true" /></button> : null)}</div>
     </div>
@@ -486,6 +489,13 @@ export function FichaDetail({
   const [revisionNoteSaving, setRevisionNoteSaving] = useState(false);
   const [startWorkItem, setStartWorkItem] = useState<FichaTrabajoResponse | null>(null);
   const [linkedRepuestos, setLinkedRepuestos] = useState<RepuestoResponse[]>([]);
+  const [clientInfo, setClientInfo] = useState<ClientCompletionResponse | null>(null);
+  const [clientInfoLoading, setClientInfoLoading] = useState(false);
+  const [clientInfoError, setClientInfoError] = useState<string | null>(null);
+  const [clientInfoRefresh, setClientInfoRefresh] = useState(0);
+  const [clientDialogOpen, setClientDialogOpen] = useState(false);
+  const [bulkWorkSaving, setBulkWorkSaving] = useState(false);
+  const canCompleteClientData = can("clientes.completar_datos");
   const load = async () => {
     try {
       setFicha(await api<FichaResponse>(`/fichas/${fichaKey}`));
@@ -515,6 +525,17 @@ export function FichaDetail({
         .then(setRevision)
         .catch(() => undefined);
   }, [ficha?.estado, fichaKey]);
+  useEffect(() => {
+    if (!ficha?.clienteId || !canCompleteClientData) return;
+    const controller = new AbortController();
+    setClientInfoLoading(true);
+    setClientInfoError(null);
+    void api<ClientCompletionResponse>(`/clientes/${ficha.clienteId}/datos-completos`, { signal: controller.signal })
+      .then((result) => { setClientInfo(result); setClientInfoError(null); })
+      .catch((reason) => { if (!controller.signal.aborted) setClientInfoError(errorMessage(reason)); })
+      .finally(() => { if (!controller.signal.aborted) setClientInfoLoading(false); });
+    return () => controller.abort();
+  }, [canCompleteClientData, ficha?.clienteId, clientInfoRefresh]);
   const pendingControls = revision?.controles.filter((control) => control.obligatorio && control.estado === "Pendiente") ?? [];
   const openDelivery = () => {
     if (!ficha) return;
@@ -586,6 +607,37 @@ export function FichaDetail({
       setPending(null);
     }
   };
+  const confirmMarkAllWorkDone = () => {
+    if (!ficha) return;
+    const pendingCount = ficha.trabajos.filter((item) => item.estadoTrabajo === "Pendiente").length;
+    if (!pendingCount) return;
+    onConfirm({
+      title: "Marcar todos los trabajos realizados",
+      body: `Se marcarán ${pendingCount} ${pendingCount === 1 ? "trabajo pendiente" : "trabajos pendientes"} como realizados. Confirmá que ya se completaron antes de continuar.`,
+      confirmLabel: "Marcar todos realizados",
+      successMessage: "Todos los trabajos pendientes quedaron realizados.",
+      variant: "success",
+      action: async () => {
+        if (bulkWorkSaving) return;
+        setBulkWorkSaving(true);
+        try {
+          const updated = await api<FichaResponse>(`/fichas/${ficha.id}/trabajos/marcar-todos`, { method: "POST" });
+          setFicha(updated);
+          notify("Todos los trabajos pendientes quedaron realizados.");
+        } catch (reason) {
+          setError(errorMessage(reason));
+          notify(errorMessage(reason), "error");
+          throw reason;
+        } finally {
+          setBulkWorkSaving(false);
+        }
+      },
+    });
+  };
+  const openClientDataEditor = () => {
+    if (!clientInfo) return;
+    setClientDialogOpen(true);
+  };
   const openRevisionNote = (control: RevisionControlResponse) => {
     setRevisionNoteControl(control);
     setRevisionNote(control.observacion ?? "");
@@ -642,6 +694,7 @@ export function FichaDetail({
   const totalPresupuesto = ficha.total + totalRepuestos;
   const saldoPendientePresupuesto = ficha.saldoPendiente + repuestosActivos.reduce((sum, pedido) => sum + pedido.saldoPendiente, 0);
   const trabajosPendientes = ficha.trabajos.some((item) => item.estadoTrabajo !== "Realizado" && item.estadoTrabajo !== "Cancelado");
+  const trabajosParaMarcar = ficha.trabajos.filter((item) => item.estadoTrabajo === "Pendiente");
   const entregaConSaldoPendiente = saldoPendientePresupuesto > 0;
   const saveService = async () => {
     if (!serviceKm) return notify("Ingresá el kilometraje del service.", "error");
@@ -735,7 +788,7 @@ export function FichaDetail({
       </StickyActionBar>
       <div className="ficha-flow-sections">
         <section className="ficha-design-section" aria-label="Detalle de ficha">
-          <AviantoPanelHeader title="Detalle de ficha" />
+          <AviantoPanelHeader title="Detalle de ficha" actions={isAdministrator && can("fichas.marcar_trabajos") && !locked && trabajosParaMarcar.length > 0 ? <button type="button" className="button secondary" disabled={Boolean(pending) || bulkWorkSaving} onClick={confirmMarkAllWorkDone}><Check size={17} aria-hidden="true" />{bulkWorkSaving ? "Marcando trabajos…" : "Marcar todos realizados"}</button> : undefined} />
           <AviantoPanel className="ficha-design-card ficha-repair-panel">
             <div className="ficha-table-heading" role="rowgroup">
               <span aria-hidden="true"></span><span>Trabajos</span><span>Estado</span><span>Total</span>
@@ -754,7 +807,7 @@ export function FichaDetail({
                   />
                 ))}
               </div> : <p className="ficha-table-note">Los trabajos se muestran en el estado registrado al preparar la revisión.</p>}
-              <FichaTotalBar label="Total" value={money(ficha.total)} />
+              <FichaTotalBar label="Total" value={paymentAmount(ficha.total)} />
               <details className="ficha-disclosure">
                 <summary><span>Observaciones</span><ChevronDown size={18} aria-hidden="true" /></summary>
                 <p>{ficha.observaciones?.trim() || "Sin observaciones registradas."}</p>
@@ -790,7 +843,7 @@ export function FichaDetail({
                   {pedido.estado !== "Cancelado" && <div className="summary-payment-amounts"><span>Cobrado <strong>{paymentAmount(pedido.montoCobrado)}</strong></span><span>Saldo <strong>{paymentAmount(pedido.saldoPendiente)}</strong></span></div>}
                 </article>
               ))}</div> : <p className="summary-empty">No hay pedidos vinculados a esta ficha.</p>}
-              <FichaTotalBar label="Total" value={money(totalRepuestos)} />
+              <FichaTotalBar label="Total" value={paymentAmount(totalRepuestos)} />
             </div>
           </AviantoPanel>
         </section>
@@ -799,7 +852,7 @@ export function FichaDetail({
           <AviantoPanelHeader title="Presupuesto" />
           <AviantoPanel className="ficha-design-card ficha-budget-card">
             <div className="avianto-panel-body">
-              <div className="ficha-budget-total"><span>Total presupuesto</span><strong>{money(totalPresupuesto)}</strong></div>
+              <div className="ficha-budget-total"><span>Total presupuesto</span><strong>{paymentAmount(totalPresupuesto)}</strong></div>
               <details className="ficha-disclosure ficha-budget-disclosure">
                 <summary><span>Desglose del presupuesto</span><ChevronDown size={18} aria-hidden="true" /></summary>
                 <BudgetBreakdown
@@ -815,6 +868,26 @@ export function FichaDetail({
             </div>
           </AviantoPanel>
         </section>
+
+        {canCompleteClientData && <section className="ficha-design-section" aria-label="Datos del cliente">
+          <AviantoPanelHeader
+            title="Datos del cliente"
+            description="Información personal y de contacto asociada a esta ficha."
+            actions={clientInfo ? <button type="button" className="button secondary" disabled={clientInfoLoading} onClick={openClientDataEditor}>{clientInfo.documento && clientInfo.direccion && clientInfo.telefono ? "Editar datos" : "Completar datos"}</button> : undefined}
+          />
+          <AviantoPanel className="ficha-design-card client-data-panel">
+            <div className="avianto-panel-body">
+              {clientInfoLoading ? <LoadingState label="Cargando datos del cliente…" /> : clientInfoError ? <EmptyState title="No se pudieron cargar los datos del cliente" body={clientInfoError} action={<button type="button" className="button secondary" onClick={() => setClientInfoRefresh((value) => value + 1)}>Reintentar</button>} /> : clientInfo ? <dl className="record-detail client-data-grid">
+                <div><dt>Nombre</dt><dd>{clientInfo.nombre || "Sin completar"}</dd></div>
+                <div><dt>DNI</dt><dd>{clientInfo.documento || "Sin completar"}</dd></div>
+                <div><dt>Teléfono</dt><dd>{clientInfo.telefono || "Sin completar"}</dd></div>
+                <div><dt>Email</dt><dd>{clientInfo.email || "Sin completar"}</dd></div>
+                <div><dt>Dirección</dt><dd>{clientInfo.direccion || "Sin completar"}</dd></div>
+                <div><dt>Observaciones</dt><dd>{clientInfo.observaciones || "Sin completar"}</dd></div>
+              </dl> : <p className="summary-empty">Todavía no hay datos de cliente cargados.</p>}
+            </div>
+          </AviantoPanel>
+        </section>}
 
         <PaymentLedger
           resource="fichas"
@@ -880,6 +953,7 @@ export function FichaDetail({
           <div className="modal-actions"><button type="button" className="button secondary" disabled={revisionNoteSaving} onClick={closeRevisionNote}>Cancelar</button><button className="button primary" disabled={revisionNoteSaving}>{revisionNoteSaving ? "Guardando..." : "Guardar observación"}</button></div>
         </form>
       </Dialog>
+      <ClientCompletionDialog clientId={ficha.clienteId} open={clientDialogOpen} onClose={() => setClientDialogOpen(false)} onSaved={(client) => { setClientInfo(client); setClientInfoError(null); notify("Datos del cliente actualizados."); }} />
       <ConfirmModal open={startWorkItem !== null} title="Iniciar trabajo" body="Esta ficha se marcará como En proceso si realizás un trabajo." confirmLabel="Marcar en proceso" variant="success" onClose={() => setStartWorkItem(null)} onConfirm={startWork} />
     </AviantoPage>
   );

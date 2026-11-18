@@ -108,8 +108,8 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(views, /saldoPendientePresupuesto > 0/);
   assert.match(views, /La moto se entregará con un saldo pendiente de/);
   assert.doesNotMatch(stylesheet, /\.ficha-summary\s*\{[^}]*max-height/);
-  assert.match(views, /<FichaTotalBar label="Total" value=\{money\(ficha\.total\)\} \/>/);
-  assert.match(views, /<FichaTotalBar label="Total" value=\{money\(totalRepuestos\)\} \/>/);
+  assert.match(views, /<FichaTotalBar label="Total" value=\{paymentAmount\(ficha\.total\)\} \/>/);
+  assert.match(views, /<FichaTotalBar label="Total" value=\{paymentAmount\(totalRepuestos\)\} \/>/);
   assert.match(stylesheet, /\.summary-economic-status \{[\s\S]*?border-top: 1px solid var\(--line\);[\s\S]*?border-bottom: 1px solid var\(--line\);/);
   assert.match(fichaForm, /<h2 className="form-section-title">Presupuesto<\/h2>/);
   assert.match(fichaForm, /const \[priceDrafts, setPriceDrafts\] = useState<Record<string, string>>\(\{\}\);/);
@@ -153,7 +153,7 @@ test("keeps the application entrypoint, production scripts, and responsive opera
   assert.match(paymentLedger, /parsePrice\(amount\)/);
   assert.match(paymentLedger, /paymentAmount\(total\)/);
   assert.match(paymentLedger, /Documento cancelado: no admite nuevos pagos/);
-  assert.match(paymentLedger, /<AviantoPanel variant="section" className=\{`payment-ledger/);
+  assert.match(paymentLedger, /<AviantoPanel variant="section" className="payment-ledger"/);
   assert.match(paymentLedger, /className="button primary payment-register"/);
   assert.match(paymentLedger, /Saldo cubierto: no admite nuevos pagos/);
   assert.match(paymentLedger, /title="Anular pago"/);
@@ -263,7 +263,7 @@ test("keeps the sale ficha workflow, read-only transfer registry, and sale check
   assert.match(admin, /Carpeta de transferencia/);
   assert.match(admin, /"\/configuracion\/ventas\/checklist"/);
   assert.match(intake, /Solo Administración puede ingresar una moto a Ventas/);
-  assert.match(motoDetail, /!moto\.ingresada \? <button className="moto-profile-action"/);
+  assert.match(motoDetail, /!moto\.ingresada \? \(can\("motos\.ingresar_taller"\) \? <button className="moto-profile-action"/);
   assert.match(types, /export interface VentaFichaResponse/);
   assert.match(types, /export interface VentaTransferenciaResponse/);
   assert.match(types, /fichaVentaId\?: string \| null;/);

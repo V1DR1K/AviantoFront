@@ -3786,6 +3786,157 @@ td.table-actions {
   }
 }
 
+/* Ficha work currency and IVA controls */
+.order-form .line-item .line-price {
+  display: grid;
+  grid-template-columns: minmax(88px, .82fr) minmax(112px, 1.18fr);
+  align-items: end;
+  gap: 8px;
+  min-width: 0;
+}
+.order-form .line-item .line-price label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--color-label);
+  font-size: 12px;
+}
+.order-form .line-item .line-price input,
+.order-form .line-item .line-price select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px 8px;
+  font-size: 14px;
+}
+.line-exchange-note {
+  grid-column: 1 / -1;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.ficha-summary .iva-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.ficha-summary .iva-toggle input[type="checkbox"] {
+  appearance: auto;
+  flex: 0 0 20px;
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  accent-color: #30348B;
+  box-shadow: none;
+}
+.ficha-summary .iva-toggle input[type="checkbox"]:focus-visible {
+  outline: 2px solid #30348B;
+  outline-offset: 3px;
+}
+.summary-group .exchange-rate-select {
+  display: grid;
+  gap: 7px;
+}
+.exchange-rate-caption,
+.exchange-rate-error {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.exchange-rate-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--red);
+}
+.work-observation-indicator {
+  display: inline-block;
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #30348B;
+  box-shadow: 0 0 0 2px rgba(48, 52, 139, .12);
+  animation: observation-light 1.45s ease-in-out 3;
+}
+.detail-work-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.detail-work-title > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.detail-work-exchange {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: right;
+}
+@keyframes observation-light {
+  0%, 100% { opacity: .45; transform: scale(.9); }
+  50% { opacity: 1; transform: scale(1.16); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .work-observation-indicator { animation: none; }
+}
+.work-suggestions-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.work-suggestions-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.work-suggestions-list li > div {
+  display: grid;
+  gap: 4px;
+}
+.work-suggestions-list small,
+.work-suggestion-form-note {
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+.work-suggestions-empty { margin: 0 0 16px; }
+.client-data-grid { margin: 0; }
+.client-completion-form { max-width: 620px; }
+@media (max-width: 767px) {
+  .order-form .line-item .line-price {
+    grid-template-columns: minmax(78px, .82fr) minmax(96px, 1.18fr);
+  }
+  .order-form .line-item .line-price input,
+  .order-form .line-item .line-price select {
+    font-size: 16px;
+  }
+  .work-suggestions-list li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 /* Avianto Motos brand system: applied after legacy surface rules so every view shares the same visual language. */
 .brand-logo {
   display: inline-flex;

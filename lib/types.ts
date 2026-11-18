@@ -44,6 +44,22 @@ export interface ClienteResponse extends ClienteRequest {
   createdAt?: string;
   updatedAt?: string;
 }
+export interface ClientCompletionResponse {
+  id: string;
+  nombre: string;
+  documento?: string | null;
+  telefono?: string | null;
+  email?: string | null;
+  direccion?: string | null;
+  observaciones?: string | null;
+}
+export interface ClientCompletionRequest {
+  documento: string | null;
+  telefono: string | null;
+  email: string | null;
+  direccion: string | null;
+  observaciones: string | null;
+}
 export interface MarcaMotoResponse { id: string; nombre: string; activo: boolean; createdAt?: string; updatedAt?: string; }
 export interface CategoriaResponse { id: string; nombre: string; activo: boolean; createdAt?: string; updatedAt?: string; }
 export interface UsuarioResponse {
@@ -128,6 +144,19 @@ export interface TrabajoCatalogoResponse {
   fichasActualizadas?: number;
   trabajosActualizados?: number;
 }
+export interface TrabajoSugerenciaResponse {
+  descripcion: string;
+  fichas: number;
+  usos: number;
+}
+export interface ExchangeRateResponse {
+  codigo: "OFICIAL" | "BLUE" | "MEP";
+  nombre: string;
+  compra: number;
+  venta: number;
+  fuente: string;
+  fechaActualizacion: string;
+}
 
 export interface FichaTrabajoRequest {
   id?: string;
@@ -136,6 +165,12 @@ export interface FichaTrabajoRequest {
   descuento: number;
   estadoTrabajo?: TrabajoStatus;
   observacionTrabajo?: string;
+  monedaOrigen?: "ARS" | "USD";
+  precioOrigen?: number;
+  descuentoOrigen?: number;
+  cotizacionUsd?: number;
+  referenciaCotizacion?: "OFICIAL" | "BLUE" | "MEP";
+  fechaCotizacion?: string;
 }
 export interface FichaTrabajoResponse {
   id: string;
@@ -147,6 +182,12 @@ export interface FichaTrabajoResponse {
   observacionTrabajo?: string | null;
   completadoAt?: string | null;
   completadoPor?: string | null;
+  monedaOrigen?: "ARS" | "USD";
+  precioOrigen?: number | null;
+  descuentoOrigen?: number | null;
+  cotizacionUsd?: number | null;
+  referenciaCotizacion?: "OFICIAL" | "BLUE" | "MEP" | null;
+  fechaCotizacion?: string | null;
 }
 export interface PhotoResponse {
   id: string;

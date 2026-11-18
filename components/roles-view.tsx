@@ -73,8 +73,8 @@ export function RolesView({ notify }: { notify: Notify }) {
     setEditor(next);
     setInitial(next);
   };
-  const openNew = () => openEditor({ id: null, readOnly: false, nombre: "", descripcion: "", permisos: [] });
-  const openDuplicate = (rol: RolResponse) => openEditor({ id: null, readOnly: false, nombre: `Copia de ${rol.nombre}`, descripcion: rol.descripcion ?? "", permisos: [...rol.permisos] });
+  const openNew = () => openEditor({ id: null, readOnly: false, nombre: "", descripcion: "", permisos: ["clientes.completar_datos"] });
+  const openDuplicate = (rol: RolResponse) => openEditor({ id: null, readOnly: false, nombre: `Copia de ${rol.nombre}`, descripcion: rol.descripcion ?? "", permisos: rol.permisos.filter((permiso) => permiso !== "fichas.marcar_trabajos") });
   const openRol = (rol: RolResponse) => openEditor({
     id: rol.id,
     readOnly: !rol.editable || !can("roles.editar"),
@@ -97,7 +97,7 @@ export function RolesView({ notify }: { notify: Notify }) {
   const toggleModulo = (modulo: PermisoModuloResponse) => {
     setEditor((current) => {
       if (!current) return current;
-      const codigos = modulo.permisos.map((permiso) => permiso.codigo);
+      const codigos = modulo.permisos.map((permiso) => permiso.codigo).filter((codigo) => codigo !== "fichas.marcar_trabajos");
       const todos = codigos.every((codigo) => current.permisos.includes(codigo));
       const sinModulo = current.permisos.filter((codigo) => !codigos.includes(codigo));
       return { ...current, permisos: todos ? sinModulo : [...sinModulo, ...codigos] };
@@ -138,7 +138,8 @@ export function RolesView({ notify }: { notify: Notify }) {
 
   const renderPermisos = (modulo: PermisoModuloResponse, readOnly: boolean) => {
     const seleccionados = editor?.permisos ?? [];
-    const todos = modulo.permisos.every((permiso) => seleccionados.includes(permiso.codigo));
+    const editables = modulo.permisos.filter((permiso) => permiso.codigo !== "fichas.marcar_trabajos");
+    const todos = editables.every((permiso) => seleccionados.includes(permiso.codigo));
     return (
       <section className="roles-module" key={modulo.id} aria-labelledby={`roles-module-${modulo.id}`}>
         <div className="roles-module-head">
@@ -155,7 +156,7 @@ export function RolesView({ notify }: { notify: Notify }) {
               <input
                 type="checkbox"
                 checked={seleccionados.includes(permiso.codigo)}
-                disabled={readOnly}
+                disabled={readOnly || permiso.codigo === "fichas.marcar_trabajos"}
                 onChange={() => togglePermiso(permiso.codigo)}
               />
               <span>{permiso.etiqueta}</span>

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePermission } from "./permissions-context";
 import { Camera, Check, Plus, Save, X } from "lucide-react";
 import { api, objectUrl } from "../lib/api";
-import { integerInput, money, parseIntegerInput, parsePrice, priceDraft, priceInput } from "../lib/format";
+import { foreignMoney, integerInput, money, parseIntegerInput, parsePrice, paymentAmount, priceDraft, priceInput, roundMoney } from "../lib/format";
 import { todayInAr } from "../lib/dates";
 import { normalizeSearchText } from "../lib/search";
 import type {
@@ -13,6 +13,7 @@ import type {
   MotovehiculoResponse,
   PhotoResponse,
   RepuestoResponse,
+  ExchangeRateResponse,
   TrabajoCatalogoResponse,
 } from "../lib/types";
 import { ConfirmModal, StatusBadge, type Notify } from "./ui";
@@ -25,6 +26,12 @@ type Line = {
   descripcion: string;
   precioUnitario: number;
   descuento: number;
+  monedaOrigen: "ARS" | "USD";
+  precioOrigen: number;
+  descuentoOrigen: number;
+  cotizacionUsd?: number;
+  referenciaCotizacion?: "OFICIAL" | "BLUE" | "MEP";
+  fechaCotizacion?: string;
   realizado: boolean;
   estadoTrabajo?: "Pendiente" | "Realizado" | "Cancelado";
   observacionTrabajo?: string;
@@ -115,6 +122,11 @@ export function FichaForm({
   const [workQuery, setWorkQuery] = useState("");
   const [workOpen, setWorkOpen] = useState<string | null>(null);
   const [workSuggestions, setWorkSuggestions] = useState<TrabajoCatalogoResponse[]>([]);
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRateResponse[]>([]);
+  const [exchangeRateError, setExchangeRateError] = useState<string | null>(null);
+  const [exchangeRatesLoading, setExchangeRatesLoading] = useState(false);
+  const [exchangeRateRefresh, setExchangeRateRefresh] = useState(0);
+  const [selectedRateCode, setSelectedRateCode] = useState<ExchangeRateResponse["codigo"]>("BLUE");
   const [duplicateWork, setDuplicateWork] = useState<{ key: string; trabajo: TrabajoCatalogoResponse } | null>(null);
   const [notes, setNotes] = useState("");
   const [iva, setIva] = useState(false);
@@ -130,6 +142,8 @@ export function FichaForm({
   const photoUrls = useRef(new Set<string>());
   const existingUrls = useRef<Record<string, string>>({});
   const workSearchController = useRef<AbortController | null>(null);
+
+  const refreshExchangeRates = () => setExchangeRateRefresh((version) => version + 1);
 
   useEffect(
     () => () => {
@@ -147,6 +161,16 @@ export function FichaForm({
       .catch(() => { if (!controller.signal.aborted) setWorkSuggestions([]); });
     return () => controller.abort();
   }, [workQuery]);
+  useEffect(() => {
+    if (!can("fichas.crear") && !can("fichas.editar")) return;
+    const controller = new AbortController();
+    setExchangeRatesLoading(true);
+    void api<ExchangeRateResponse[]>("/tipo-cambio/dolar", { signal: controller.signal })
+      .then((rates) => { setExchangeRates(rates); setExchangeRateError(null); })
+      .catch((reason) => { if (!controller.signal.aborted) setExchangeRateError(reason instanceof Error ? reason.message : "No se pudo cargar la cotización."); })
+      .finally(() => { if (!controller.signal.aborted) setExchangeRatesLoading(false); });
+    return () => controller.abort();
+  }, [can, exchangeRateRefresh]);
   useEffect(() => {
     const motoId = fichaKey ? undefined : initialMotoId;
     if (!motoId) return;
@@ -179,10 +203,18 @@ export function FichaForm({
           descripcion: trabajo.descripcion,
           precioUnitario: trabajo.precioUnitario,
           descuento: trabajo.descuento,
+          monedaOrigen: trabajo.monedaOrigen ?? "ARS",
+          precioOrigen: trabajo.precioOrigen ?? trabajo.precioUnitario,
+          descuentoOrigen: trabajo.descuentoOrigen ?? trabajo.descuento,
+          cotizacionUsd: trabajo.cotizacionUsd ?? undefined,
+          referenciaCotizacion: trabajo.referenciaCotizacion ?? undefined,
+          fechaCotizacion: trabajo.fechaCotizacion ?? undefined,
           realizado: trabajo.estadoTrabajo === "Realizado",
           estadoTrabajo: trabajo.estadoTrabajo,
           observacionTrabajo: trabajo.observacionTrabajo ?? "",
         }));
+        const usdLine = nextTrabajos.find((trabajo) => trabajo.monedaOrigen === "USD" && trabajo.referenciaCotizacion);
+        if (usdLine?.referenciaCotizacion) setSelectedRateCode(usdLine.referenciaCotizacion);
         const nextFechaIngreso = ficha.fechaIngreso.slice(0, 10) || today();
         setBaseline(fichaSnapshot({ fechaIngreso: nextFechaIngreso, fechaEntregaEstimada: ficha.fechaEntregaEstimada ?? "", kilometrajeIngreso: ficha.kilometrajeIngreso != null ? String(ficha.kilometrajeIngreso) : "", notes: ficha.observaciones ?? "", iva: ficha.iva, descuentoGlobal: Number(ficha.descuentoGlobal ?? 0), trabajos: nextTrabajos }));
         setTrabajos(nextTrabajos);
@@ -202,6 +234,44 @@ export function FichaForm({
 
   const vehicleId = currentVehicle?.id ?? "";
   const clientId = currentVehicle?.propietarioId ?? "";
+  const selectedRate = exchangeRates.find((rate) => rate.codigo === selectedRateCode);
+  const rateForLine = (line: Line) => line.monedaOrigen === "USD"
+    ? line.cotizacionUsd ?? exchangeRates.find((rate) => rate.codigo === line.referenciaCotizacion)?.venta ?? selectedRate?.venta
+    : undefined;
+  const changeLineCurrency = (key: string, currency: "ARS" | "USD") => {
+    const line = trabajos.find((item) => item.key === key);
+    if (!line || line.monedaOrigen === currency) return;
+    if (currency === "USD") {
+      if (!selectedRate) return notify("La cotización no está disponible. Reintentá cargarla antes de usar dólares.", "error");
+      updateLine(key, {
+        monedaOrigen: "USD",
+        precioOrigen: roundMoney(line.precioUnitario / selectedRate.venta),
+        descuentoOrigen: roundMoney(line.descuento / selectedRate.venta),
+        cotizacionUsd: selectedRate.venta,
+        referenciaCotizacion: selectedRate.codigo,
+        fechaCotizacion: selectedRate.fechaActualizacion,
+      });
+      return;
+    }
+    updateLine(key, {
+      monedaOrigen: "ARS",
+      precioOrigen: line.precioUnitario,
+      descuentoOrigen: line.descuento,
+      cotizacionUsd: undefined,
+      referenciaCotizacion: undefined,
+      fechaCotizacion: undefined,
+    });
+  };
+  const updateLinePrice = (line: Line, value: string) => {
+    const originalPrice = parsePrice(value);
+    if (line.monedaOrigen === "USD") {
+      const rate = rateForLine(line);
+      if (!rate) return notify("No hay una cotización disponible para calcular pesos.", "error");
+      updateLine(line.key, { precioOrigen: originalPrice, precioUnitario: roundMoney(originalPrice * rate) });
+      return;
+    }
+    updateLine(line.key, { precioOrigen: originalPrice, precioUnitario: originalPrice });
+  };
   const startWork = async (key: string) => {
     if (fichaKey) {
       try {
@@ -216,17 +286,17 @@ export function FichaForm({
   };
   const subtotal = useMemo(
     () =>
-      trabajos.reduce(
+      roundMoney(trabajos.reduce(
         (sum, trabajo) => trabajo.estadoTrabajo === "Cancelado" ? sum : sum + Number(trabajo.precioUnitario) - Number(trabajo.descuento),
         0,
-      ),
+      )),
     [trabajos],
   );
-  const taxableSubtotal = Math.max(0, subtotal - descuentoGlobal);
-  const ivaVal = iva ? taxableSubtotal * 0.21 : 0;
-  const total = taxableSubtotal + ivaVal;
+  const taxableSubtotal = roundMoney(Math.max(0, subtotal - descuentoGlobal));
+  const ivaVal = iva ? roundMoney(taxableSubtotal * 0.21) : 0;
+  const total = roundMoney(taxableSubtotal + ivaVal);
   const repuestosTotal = (linkedRepuestos ?? []).filter((pedido) => pedido.estado !== "Cancelado").reduce((sum, pedido) => sum + pedido.totalVenta, 0);
-  const totalPresupuesto = total + repuestosTotal;
+  const totalPresupuesto = roundMoney(total + repuestosTotal);
   const hasDraftContent =
     trabajos.length > 0 ||
     Boolean(notes) ||
@@ -251,6 +321,9 @@ export function FichaForm({
         descripcion: "",
         precioUnitario: 0,
         descuento: 0,
+        monedaOrigen: "ARS",
+        precioOrigen: 0,
+        descuentoOrigen: 0,
         realizado: false,
         ...r,
       },
@@ -276,7 +349,7 @@ export function FichaForm({
       setWorkOpen(null);
       return;
     }
-    updateLine(key, { descripcion: trabajo.descripcion, precioUnitario: Number(trabajo.precioBase), catalogo: true });
+    updateLine(key, { descripcion: trabajo.descripcion, precioUnitario: Number(trabajo.precioBase), descuento: 0, monedaOrigen: "ARS", precioOrigen: Number(trabajo.precioBase), descuentoOrigen: 0, cotizacionUsd: undefined, referenciaCotizacion: undefined, fechaCotizacion: undefined, catalogo: true });
     setWorkOpen(null);
   };
   const attachPhotos = async (files: File[]) => {
@@ -334,6 +407,12 @@ export function FichaForm({
           descripcion: trabajo.descripcion.trim(),
           precioUnitario: trabajo.precioUnitario,
           descuento: trabajo.descuento,
+          monedaOrigen: trabajo.monedaOrigen,
+          precioOrigen: trabajo.monedaOrigen === "USD" ? trabajo.precioOrigen : trabajo.precioUnitario,
+          descuentoOrigen: trabajo.monedaOrigen === "USD" ? trabajo.descuentoOrigen : trabajo.descuento,
+          cotizacionUsd: trabajo.monedaOrigen === "USD" ? (rateForLine(trabajo) ?? trabajo.cotizacionUsd) : undefined,
+          referenciaCotizacion: trabajo.monedaOrigen === "USD" ? trabajo.referenciaCotizacion : undefined,
+          fechaCotizacion: trabajo.monedaOrigen === "USD" ? trabajo.fechaCotizacion : undefined,
           id: trabajo.id,
           estadoTrabajo: trabajo.estadoTrabajo ?? (trabajo.realizado ? "Realizado" : "Pendiente"),
           observacionTrabajo: trabajo.observacionTrabajo || undefined,
@@ -453,29 +532,38 @@ export function FichaForm({
                       </div>}
                     </div>
                   </label>
-                   <label className="line-price">
-                     Precio
-                     <input
-                       type="text"
-                       inputMode="decimal"
-                       value={priceDrafts[trabajo.key] ?? priceInput(trabajo.precioUnitario)}
-                       onFocus={() => setPriceDrafts((all) => ({ ...all, [trabajo.key]: all[trabajo.key] ?? priceDraft(trabajo.precioUnitario) }))}
-                       onChange={(event) => {
-                         setPriceDrafts((all) => ({ ...all, [trabajo.key]: event.target.value }));
-                         updateLine(trabajo.key, { precioUnitario: parsePrice(event.target.value) });
-                       }}
-                       onBlur={() => setPriceDrafts((all) => {
-                         const next = { ...all };
-                         delete next[trabajo.key];
-                         return next;
-                       })}
-                     />
-                  </label>
+                   <div className="line-price">
+                     <label className="line-currency-label">Moneda
+                       <select value={trabajo.monedaOrigen} disabled={!editable} onChange={(event) => changeLineCurrency(trabajo.key, event.target.value as "ARS" | "USD")}>
+                         <option value="ARS">ARS · Peso</option>
+                         <option value="USD" disabled={!selectedRate && trabajo.monedaOrigen !== "USD"}>USD · Dólar</option>
+                       </select>
+                     </label>
+                     <label className="line-price-label">Precio en {trabajo.monedaOrigen}
+                       <input
+                         type="text"
+                         inputMode="decimal"
+                         value={priceDrafts[trabajo.key] ?? priceInput(trabajo.monedaOrigen === "USD" ? trabajo.precioOrigen : trabajo.precioUnitario)}
+                         disabled={!editable}
+                         onFocus={() => setPriceDrafts((all) => ({ ...all, [trabajo.key]: all[trabajo.key] ?? priceDraft(trabajo.monedaOrigen === "USD" ? trabajo.precioOrigen : trabajo.precioUnitario) }))}
+                         onChange={(event) => {
+                           setPriceDrafts((all) => ({ ...all, [trabajo.key]: event.target.value }));
+                           updateLinePrice(trabajo, event.target.value);
+                         }}
+                         onBlur={() => setPriceDrafts((all) => {
+                           const next = { ...all };
+                           delete next[trabajo.key];
+                           return next;
+                         })}
+                       />
+                     </label>
+                     {trabajo.monedaOrigen === "USD" && <small className="line-exchange-note">{rateForLine(trabajo) ? `Venta ${trabajo.referenciaCotizacion ?? selectedRateCode} · ${foreignMoney(rateForLine(trabajo) ?? 0, "ARS")} por USD${trabajo.fechaCotizacion ? ` · ${new Date(trabajo.fechaCotizacion).toLocaleString("es-AR")}` : ""}` : "Cotización guardada no disponible"}</small>}
+                  </div>
                    <div className="line-total">
                      <span>Total</span>
                      <strong>
                        {trabajo.precioUnitario > 0
-                         ? money(
+                         ? paymentAmount(
                              Number(trabajo.precioUnitario) -
                                Number(trabajo.descuento),
                            )
@@ -599,12 +687,25 @@ export function FichaForm({
             <div><dt>Entrega estimada</dt><dd>{fechaEntregaEstimada || "—"}</dd></div>
           </dl>
           <section className="summary-group">
+            <h3>Cotización para nuevos trabajos USD</h3>
+            <label className="exchange-rate-select">Tipo de cambio
+              <select value={selectedRateCode} disabled={exchangeRatesLoading || !exchangeRates.length} onChange={(event) => setSelectedRateCode(event.target.value as ExchangeRateResponse["codigo"])}>
+                <option value="OFICIAL">Oficial</option>
+                <option value="BLUE">Blue</option>
+                <option value="MEP">MEP · Dólar Bolsa</option>
+              </select>
+            </label>
+            {exchangeRatesLoading && <p className="summary-empty" role="status">Consultando cotizaciones…</p>}
+            {exchangeRateError && <div className="exchange-rate-error" role="alert"><span>{exchangeRateError}</span><button type="button" className="text-button" onClick={refreshExchangeRates}>Reintentar</button></div>}
+            {selectedRate && <p className="exchange-rate-caption">Venta {foreignMoney(selectedRate.venta, "ARS")} por USD · {selectedRate.fuente} · actualizado {new Date(selectedRate.fechaActualizacion).toLocaleString("es-AR")}</p>}
+          </section>
+          <section className="summary-group">
             <h3>Trabajos y servicios</h3>
             <div className="summary-work-list" aria-label="Trabajos de la ficha">
               {trabajos.length ? trabajos.map((trabajo) => (
                 <div key={trabajo.key} className={`summary-work${workStateClass(trabajo.estadoTrabajo, trabajo.realizado)}${trabajo.estadoTrabajo === "Cancelado" ? " cancelled" : ""}`}>
-                  <div className="summary-work-head"><strong>{trabajo.descripcion || "Trabajo sin descripción"}</strong><strong>{money(Math.max(0, trabajo.precioUnitario - trabajo.descuento))}</strong></div>
-                  <div className="summary-work-total"><small>Precio {money(trabajo.precioUnitario)}{trabajo.descuento > 0 && ` · Desc. ${money(trabajo.descuento)}`}</small><small className="work-state-label">{trabajo.estadoTrabajo === "Realizado" || trabajo.realizado ? "Realizado" : trabajo.estadoTrabajo ?? "Pendiente"}</small></div>
+                  <div className="summary-work-head"><strong>{trabajo.descripcion || "Trabajo sin descripción"}</strong><strong>{paymentAmount(Math.max(0, trabajo.precioUnitario - trabajo.descuento))}</strong></div>
+                  <div className="summary-work-total"><small>Precio {trabajo.monedaOrigen === "USD" ? `${foreignMoney(trabajo.precioOrigen)} · ${paymentAmount(trabajo.precioUnitario)}` : paymentAmount(trabajo.precioUnitario)}{trabajo.descuento > 0 && ` · Desc. ${paymentAmount(trabajo.descuento)}`}</small><small className="work-state-label">{trabajo.estadoTrabajo === "Realizado" || trabajo.realizado ? "Realizado" : trabajo.estadoTrabajo ?? "Pendiente"}</small></div>
                   {trabajo.observacionTrabajo && <small>{trabajo.observacionTrabajo}</small>}
                 </div>
               )) : <p className="summary-empty">Agregá trabajos para ver su desglose.</p>}

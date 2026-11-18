@@ -1,4 +1,6 @@
 export const money = (value: number) => new Intl.NumberFormat("es-AR", { style:"currency", currency:"ARS", maximumFractionDigits:0 }).format(value);
+export const foreignMoney = (value: number, currency: "USD" | "ARS" = "USD") => new Intl.NumberFormat("es-AR", { style: "currency", currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+export const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 // Cents are shown only when the amount has them, matching the designer's "$ 70.000" amounts.
 export const paymentAmount = (value: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: Math.round(value * 100) % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 }).format(value);
 export const priceInput = (value: number | string | boolean | null | undefined) => {

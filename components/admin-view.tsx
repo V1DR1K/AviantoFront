@@ -5,13 +5,14 @@ import { Download, Edit3, Eye, Filter, Plus, Trash2 } from "lucide-react";
 import { api, download } from "../lib/api";
 import { parseIntegerInput } from "../lib/format";
 import { matchesSearchText } from "../lib/search";
-import type { AuditoriaResponse, ClienteResponse, ControlResponse, MarcaMotoResponse, MotovehiculoResponse, PageResponse, RolResponse, VentaChecklistPlantillaRequest, VentaChecklistPlantillaResponse } from "../lib/types";
+import type { AuditoriaResponse, ClientCompletionResponse, ClienteResponse, ControlResponse, MarcaMotoResponse, MotovehiculoResponse, PageResponse, RolResponse, VentaChecklistPlantillaRequest, VentaChecklistPlantillaResponse } from "../lib/types";
 import { ConfirmModal, Dialog, EmptyState, FilterBar, LoadingState, Pagination, SearchBox, SelectField, StatusBadge, type Notify } from "./ui";
 import { AbmFormModal, type AbmField, VehicleAbmModal } from "./modal/abm-form-modal";
 import { AviantoRecordList } from "./avianto-records";
 import { AviantoPage, AviantoPageHeader, AviantoPanel } from "./avianto-layout";
 import { BackupSection } from "./backup-panel";
 import { usePermission } from "./permissions-context";
+import { ClientCompletionDialog } from "./client-completion-dialog";
 
 type Resource = "clients" | "vehicles" | "catalog" | "audit";
 type DataRow = Record<string, string | number | boolean | null | undefined>;
@@ -67,6 +68,7 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
   const [total, setTotal] = useState(1);
   const [editing, setEditing] = useState<DataRow | null>(null);
   const [detail, setDetail] = useState<DataRow | null>(null);
+  const [completionClientId, setCompletionClientId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<DataRow | null>(null);
   const [clients, setClients] = useState<ClienteResponse[]>([]);
   const [brands, setBrands] = useState<MarcaMotoResponse[]>([]);
@@ -150,6 +152,7 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
           const titleColumn = resource === "vehicles" ? "Patente" : "Nombre";
           return { id: String(row.id), title: cell(row, titleColumn), fields: config.columns.filter((column) => column !== titleColumn).map((column) => ({ label: column, value: cell(row, column), wide: ["Marca y modelo", "Cliente", "Descripción", "Estado"].includes(column) })), actions: <>
             <button type="button" className="text-button" onClick={() => resource === "vehicles" && onOpenVehicle ? onOpenVehicle(String(row.id)) : setDetail(row)} aria-label={`Ver ${config.singular} ${cell(row, titleColumn)}`}><Eye size={17} />{resource === "vehicles" ? "Abrir perfil" : "Ver detalle"}</button>
+            {resource === "clients" && can("clientes.completar_datos") && <button type="button" className="text-button secondary" onClick={() => setCompletionClientId(String(row.id))} aria-label={`Completar datos de ${cell(row, titleColumn)}`}><Edit3 size={17} />Completar datos</button>}
             {can(`${moduleKey}.editar`) && <button type="button" className="text-button secondary" onClick={() => setEditing(row)} aria-label={`Editar ${config.singular} ${cell(row, titleColumn)}`}><Edit3 size={17} />Editar</button>}
             {can(`${moduleKey}.eliminar`) && <button type="button" className="text-button danger-action" onClick={() => setDeleting(row)} aria-label={`Eliminar ${config.singular} ${cell(row, titleColumn)}`}><Trash2 size={17} />Eliminar</button>}
           </> };
@@ -157,17 +160,18 @@ function Records({ resource, notify, onOpenVehicle, onOpenServices }: { resource
         <Pagination page={page} total={total} onPage={setPage} />
       </AviantoPanel>
       {resource === "vehicles" ? <VehicleAbmModal key={String(editing?.id ?? "new")} open={editing !== null} mode={editing?.id ? "modificar" : "agregar"} initialValues={editing ?? {}} brands={brands} clients={clients} onClose={() => setEditing(null)} onSubmit={submit} onError={(message) => notify(message, "error")} /> : <AbmFormModal key={String(editing?.id ?? "new")} open={editing !== null} resource={config.singular} mode={editing?.id ? "modificar" : "agregar"} fields={fields} initialValues={editing ?? {}} onClose={() => setEditing(null)} onSubmit={submit} onError={(message) => notify(message, "error")} />}
-      <RecordDetail open={detail !== null} title={config.singular} record={detail} onClose={() => setDetail(null)} onEdit={() => { setEditing(detail); setDetail(null); }} />
+      <RecordDetail open={detail !== null} title={config.singular} record={detail} canEdit={can(`${moduleKey}.editar`)} canComplete={resource === "clients" && can("clientes.completar_datos")} onClose={() => setDetail(null)} onEdit={() => { setEditing(detail); setDetail(null); }} onComplete={() => { if (detail?.id) setCompletionClientId(String(detail.id)); setDetail(null); }} />
+      <ClientCompletionDialog clientId={completionClientId} open={completionClientId !== null} onClose={() => setCompletionClientId(null)} onSaved={(client: ClientCompletionResponse) => { setRows((current) => current.map((row) => String(row.id) === client.id ? { ...row, ...client } : row)); notify("Datos del cliente actualizados."); }} />
      <ConfirmModal open={deleting !== null} title={`Eliminar ${config.singular}`} body="El registro seleccionado pasará a inactivo y conservará su historial." confirmLabel={`Eliminar ${config.singular}`} onClose={() => setDeleting(null)} onConfirm={async () => { if (!deleting) return; const selected = deleting; try { await api(`${config.endpoint}/${selected.id}`, { method: "DELETE" }); load(); notify(`${config.singular[0].toUpperCase()}${config.singular.slice(1)} eliminado correctamente.`); setDeleting(null); } catch (reason) { notify(requestError(reason), "error"); throw reason; } }} />
     </AviantoPage>
   );
 }
 
-function RecordDetail({ open, title, record, onClose, onEdit }: { open: boolean; title: string; record: DataRow | null; onClose: () => void; onEdit: () => void }) {
+function RecordDetail({ open, title, record, canEdit, canComplete, onClose, onEdit, onComplete }: { open: boolean; title: string; record: DataRow | null; canEdit: boolean; canComplete: boolean; onClose: () => void; onEdit: () => void; onComplete: () => void }) {
   const labels: Record<string, string> = { nombre: "Nombre", documento: "Documento", telefono: "Teléfono", email: "Email", direccion: "Dirección", descripcion: "Descripción", categorias: "Categorías", obligatorio: "Obligatorio", orden: "Orden", observaciones: "Observaciones", motos: "Motos", fichas: "Fichas", estado: "Estado" };
   return <Dialog open={open} title={`Ficha de ${title}`} onClose={onClose}>
     <dl className="record-detail">{Object.entries(labels).filter(([key]) => record && key in record).map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{key === "obligatorio" ? record?.[key] === "true" ? "Sí" : "No" : String(record?.[key] ?? "—") || "—"}</dd></div>)}</dl>
-    <div className="modal-actions"><button className="button secondary" onClick={onClose}>Cerrar</button><button className="button primary" onClick={onEdit}>Editar</button></div>
+    <div className="modal-actions"><button className="button secondary" onClick={onClose}>Cerrar</button>{canComplete && <button className="button secondary" onClick={onComplete}>Completar datos</button>}{canEdit && <button className="button primary" onClick={onEdit}>Editar</button>}</div>
   </Dialog>;
 }
 
